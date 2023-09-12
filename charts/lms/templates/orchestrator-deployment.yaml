@@ -5,7 +5,6 @@ metadata:
   namespace : {{ .Release.namespace | quote }}
   labels:
     {{- include "molt-lms.labels" . | nindent 4 }}
-    release: {{ .Values.orchestrator.releaseName }}
   {{- with .Values.orchestrator.labels }}
     {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -17,7 +16,6 @@ spec:
   selector:
     matchLabels:
       {{- include "molt-lms.selectorLabels" . | nindent 6 }}
-      release: {{ .Values.orchestrator.releaseName }}
   template:
     metadata:
     {{- with .Values.orchestrator.annotations }}
@@ -25,7 +23,6 @@ spec:
     {{- end }}
       labels:
         {{- include "molt-lms.selectorLabels" . | nindent 8 }}
-        release: {{ .Values.orchestrator.releaseName }}
       {{- with .Values.orchestrator.labels }}
         {{- toYaml . | nindent 4 }}
       {{- end }}
@@ -52,7 +49,7 @@ spec:
             - name: ORCH_SOURCE_DIALECT
               value: {{ .Values.orchestrator.sourceDialect }}
             - name: ORCH_TARGET_DIALECT
-              value: {{ .Values.orchestrator.targetDialect }}
+              value: "cockroach"
             - name: ORCH_ALLOW_ORIGIN
               value: {{ .Values.orchestrator.allowOrigin }}
           {{- with .Values.orchestrator.env }}

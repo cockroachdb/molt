@@ -34,7 +34,6 @@ securityContext: {}
 
 lms:
   replicaCount: 3
-  releaseName: "molt-lms"
   sourceDialect: ""
   shadowMode: none
 
@@ -84,13 +83,11 @@ lms:
   nodeSelector: {}
 
 orchestrator:
-  releaseName: "molt-lms-orchestrator"
   sourceDialect: ""
-  targetDialect: 'cockroach'
   configSecretName: ""
   # allowOrigin specifies the pattern or exact host(s) that should be
   # allowed to make requests from a browser (CORS).
-  allowOrigin: "/.*localhost.*/"
+  allowOrigin: ""
 
   # Used for orchestrator ssl certs.
   # We recommend mounting to /app/certs. If set, make sure to set
@@ -137,4 +134,4 @@ serviceMonitor:
   labels: {}
   annotations: {}
   interval: 30s
-  namespaced: true
+  namespaced: false
