@@ -7,12 +7,16 @@ on:
 
 jobs:
   publish-chart:
+    environment: ${{ github.event_name == 'release' && 'prod' || 'dev' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
     - name: Create release directory
-      run: mkdir -p artifacts
+      run: rm -rf artifacts && mkdir -p artifacts
     - uses: azure/setup-helm@v3
       with:
         version: 'v3.12.2'
@@ -20,16 +24,26 @@ jobs:
     - name: Check helm version
       run: helm version && ls ./charts/lms
     - name: Package and index chart
-      # TODO: merge the old index with this one: curl the old one => merge option.
-      # TODO: package with the version number
       run: |
-        helm package ./charts/lms --destination artifacts/
-        helm repo index artifacts/ --url https://molt.binaries.com/charts 
+        curl -o artifacts/old-index.yaml -s '${{ vars.CHART_URL }}/lms/charts/index.yaml' || touch artifacts/old-index.yaml
+        helm package ./charts/lms --destination artifacts/ --version ${{ startsWith(github.ref_name, 'v') && github.ref_name || 'v0.0.0' }}
+        helm repo index artifacts/ --url '${{ vars.CHART_URL }}/lms/charts' --merge "artifacts/old-index.yaml"
     - name: Check contents of artifacts
       run: |
         cat ./artifacts/index.yaml
         ls ./artifacts
-    # TODO: set the URL conditionally based on environment
-    # TODO: add GCS storage upload
+    - name: 'auth'
+      uses: 'google-github-actions/auth@v1'
+      with:
+        workload_identity_provider: "${{ vars.WORKLOAD_IDENTITY_PROVIDER }}"
+        service_account: "${{ vars.GCP_SERVICE_ACCOUNT }}"
+    - name: Upload to GCP bucket
+      uses: google-github-actions/upload-cloud-storage@v1
+      with:
+        path: 'artifacts'
+        destination: '${{ vars.GCS_BUCKET }}/lms/charts'
+        parent: false
+        headers: |-
+          cache-control:public, max-age=60 
 
 
