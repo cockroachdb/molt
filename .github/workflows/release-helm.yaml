@@ -1,0 +1,21 @@
+name: release-helm
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish-chart:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Create release directory
+      run: mkdir -p artifacts
+    - uses: azure/setup-helm@v3
+      with:
+        version: 'v3.12.2'
+      id: install
+    - name: Check helm version
+      run: helm version && ls ./charts/lms
