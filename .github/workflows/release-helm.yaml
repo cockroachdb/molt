@@ -19,3 +19,13 @@ jobs:
       id: install
     - name: Check helm version
       run: helm version && ls ./charts/lms
+    - name: Package and index chart
+      run: |
+        helm package ./charts/lms --destination artifacts/
+        helm repo index artifacts/ --url https://molt.binaries.com/charts 
+    - name: Check contents of artifacts
+      run: |
+        cat ./artifacts/index.yaml
+        ls ./artifacts
+
+
