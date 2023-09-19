@@ -36,16 +36,16 @@ lms:
   replicaCount: 3
   sourceDialect: ""
   shadowMode: none
+  logLevel: info
 
   # Name of the secret containing the JSON format of 
   # environment variables.
   configSecretName: ""
 
-  # Used for mounting MySQL and/or LMS server side certs.
-  # We recommend mounting to /app/certs. If set, make sure to set
-  # the following env vars as appropriate. 
+  # Used for mounting SSL certs.
+  # We recommend mounting to /app/certs. If enabling SSL for the LMS, 
+  # make sure to set the following env vars as appropriate. 
   # LMS_SSL_CERT, LMS_SSL_KEY, LMS_SSL_CA 
-  # LMS_MYSQL_SSL_CA, LMS_MYSQL_SSL_KEY, LMS_SSL_MYSQL_CERT
   # where the value is the path to the file such as '/app/certs/lms-cert.pem'.
   # sslVolumes:
   #   - name: mysqlca
@@ -88,6 +88,7 @@ orchestrator:
   # allowOrigin specifies the pattern or exact host(s) that should be
   # allowed to make requests from a browser (CORS).
   allowOrigin: ""
+  logLevel: info
 
   # Used for orchestrator ssl certs.
   # We recommend mounting to /app/certs. If set, make sure to set

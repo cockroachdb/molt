@@ -52,6 +52,8 @@ spec:
               value: "cockroach"
             - name: ORCH_ALLOW_ORIGIN
               value: {{ .Values.orchestrator.allowOrigin }}
+            - name: ORCH_LOGGING
+              value: {{ .Values.orchestrator.logLevel }}
           {{- with .Values.orchestrator.env }}
             {{- toYaml . | nindent 12 }}
           {{- end }}
