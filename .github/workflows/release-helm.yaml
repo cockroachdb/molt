@@ -20,6 +20,8 @@ jobs:
     - name: Check helm version
       run: helm version && ls ./charts/lms
     - name: Package and index chart
+      # TODO: merge the old index with this one: curl the old one => merge option.
+      # TODO: package with the version number
       run: |
         helm package ./charts/lms --destination artifacts/
         helm repo index artifacts/ --url https://molt.binaries.com/charts 
@@ -27,5 +29,7 @@ jobs:
       run: |
         cat ./artifacts/index.yaml
         ls ./artifacts
+    # TODO: set the URL conditionally based on environment
+    # TODO: add GCS storage upload
 
 
