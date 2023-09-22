@@ -43,6 +43,10 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
+            {{- if .Values.orchestrator.configSecretName }}
+            - name: ORCH_READ_CONFIG_FILE
+              value: "true"
+            {{- end }}
             - name: ORCH_K8S_LMS_PORT
               value: {{ .Values.lms.service.port | quote }}
             - name: ORCH_K8S_LMS_SERVICE_NAME
