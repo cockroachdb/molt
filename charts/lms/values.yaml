@@ -34,6 +34,7 @@ securityContext: {}
 
 lms:
   replicaCount: 3
+  releaseName: "molt-lms"
   sourceDialect: ""
   shadowMode: none
   logLevel: info
@@ -83,6 +84,7 @@ lms:
   nodeSelector: {}
 
 orchestrator:
+  releaseName: "molt-lms-orchestrator"
   sourceDialect: ""
   configSecretName: ""
   # allowOrigin specifies the pattern or exact host(s) that should be

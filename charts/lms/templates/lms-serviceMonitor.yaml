@@ -6,6 +6,7 @@ metadata:
   namespace : {{ .Release.namespace | quote }}
   labels:
     {{- include "molt-lms.labels" . | nindent 4 }}
+    release: {{ .Values.lms.releaseName }}
   {{- with .Values.serviceMonitor.labels }}
     {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -20,6 +21,7 @@ spec:
   selector:
     matchLabels:
       {{- include "molt-lms.selectorLabels" . | nindent 6 }}
+      release: {{ .Values.lms.releaseName }}
     {{- with .Values.lms.service.labels }}
       {{- toYaml . | nindent 6 }}
     {{- end }}

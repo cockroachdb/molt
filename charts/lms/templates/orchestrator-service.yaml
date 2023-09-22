@@ -5,6 +5,7 @@ metadata:
   namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "molt-lms.labels" . | nindent 4 }}
+    release: {{ .Values.orchestrator.releaseName }}
   {{- with .Values.orchestrator.service.labels }}
     {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -24,6 +25,7 @@ spec:
       name: orch-metrics
   selector:
     {{- include "molt-lms.selectorLabels" . | nindent 4 }}
+    release: {{ .Values.orchestrator.releaseName }}
   {{- with .Values.orchestrator.labels }}
     {{- toYaml . | nindent 4 }}
   {{- end }}
