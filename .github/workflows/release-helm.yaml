@@ -24,8 +24,11 @@ jobs:
     - name: Check helm version
       run: helm version && ls ./charts/lms
     - name: Package and index chart
+      # Default behavior of --merge with a non-existent file is to merge with a new empty file.
+      # So we remove the file created from failed curl.
+      # --fail-with-body will return a bash exit code if the HTTP status code is >= 400.
       run: |
-        curl -o artifacts/old-index.yaml -s '${{ vars.CHART_URL }}/lms/charts/index.yaml' || touch artifacts/old-index.yaml
+        curl --fail-with-body -o artifacts/old-index.yaml -s '${{ vars.CHART_URL }}/lms/charts/index.yaml' || rm artifacts/old-index.yaml
         helm package ./charts/lms --destination artifacts/ --version ${{ startsWith(github.ref_name, 'v') && github.ref_name || 'v0.0.0' }}
         helm repo index artifacts/ --url '${{ vars.CHART_URL }}/lms/charts' --merge "artifacts/old-index.yaml"
     - name: Check contents of artifacts
