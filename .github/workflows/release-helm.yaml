@@ -29,7 +29,8 @@ jobs:
       # --fail-with-body will return a bash exit code if the HTTP status code is >= 400.
       run: |
         curl --fail-with-body -o artifacts/old-index.yaml -s '${{ vars.CHART_URL }}/lms/charts/index.yaml' || rm artifacts/old-index.yaml
-        helm package ./charts/lms --destination artifacts/ --version ${{ startsWith(github.ref_name, 'v') && github.ref_name || 'v0.0.0' }}
+        VERSION=${GITHUB_REF_NAME#v}
+        helm package ./charts/lms --destination artifacts/ --version ${{ startsWith('github.ref_name', 'v') && '$VERSION' || '0.0.0' }}
         helm repo index artifacts/ --url '${{ vars.CHART_URL }}/lms/charts' --merge "artifacts/old-index.yaml"
     - name: Check contents of artifacts
       run: |
