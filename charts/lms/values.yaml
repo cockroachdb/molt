@@ -35,13 +35,13 @@ securityContext: {}
 lms:
   replicaCount: 3
   releaseName: "molt-lms"
-  sourceDialect: ""
+  sourceDialect: "mysql"
   shadowMode: none
   logLevel: info
 
   # Name of the secret containing the JSON format of 
   # environment variables.
-  configSecretName: ""
+  configSecretName: "lms-config"
 
   # Used for mounting SSL certs.
   # We recommend mounting to /app/certs. If enabling SSL for the LMS, 
@@ -85,8 +85,8 @@ lms:
 
 orchestrator:
   releaseName: "molt-lms-orchestrator"
-  sourceDialect: ""
-  configSecretName: ""
+  sourceDialect: "mysql"
+  configSecretName: "orch-config"
   # allowOrigin specifies the pattern or exact host(s) that should be
   # allowed to make requests from a browser (CORS).
   allowOrigin: ""
@@ -105,10 +105,22 @@ orchestrator:
   #   - mountPath: "/app/certs"
   #     name: orch-cert
   #     readOnly: true
-  sslVolumes: {}
-  sslVolumeMounts: {}
+  sslVolumes:
+     - name: orch-tls
+       secret:
+         secretName: orch-tls
+  sslVolumeMounts:
+    - mountPath: "/app/certs"
+      name: orch-tls
+      readOnly: true
 
-  env: []
+  env:
+    - name: ORCH_CA_TLS_CERT
+      value: /app/certs/ca.crt
+    - name: ORCH_TLS_CERT
+      value: /app/certs/tls.crt
+    - name: ORCH_TLS_KEY
+      value: /app/certs/tls.key
   labels: {}
   annotations: {}
 
