@@ -113,6 +113,12 @@ func Command() *cobra.Command {
 		"if set, size (in bytes) before the data source is flushed",
 	)
 	cmd.PersistentFlags().IntVar(
+		&cfg.FlushRows,
+		"flush-rows",
+		0,
+		"if set, number of rows before the data source is flushed",
+	)
+	cmd.PersistentFlags().IntVar(
 		&cfg.Concurrency,
 		"concurrency",
 		4,

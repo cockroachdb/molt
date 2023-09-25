@@ -19,6 +19,7 @@ import (
 
 type Config struct {
 	FlushSize   int
+	FlushRows   int
 	Cleanup     bool
 	Live        bool
 	Truncate    bool
@@ -57,6 +58,7 @@ func Fetch(
 
 	logger.Debug().
 		Int("flush_size", cfg.FlushSize).
+		Int("flush_num_rows", cfg.FlushRows).
 		Str("store", fmt.Sprintf("%T", blobStore)).
 		Msg("initial config")
 
@@ -176,7 +178,7 @@ func fetchTable(
 
 	logger.Info().Msgf("data extraction phase starting")
 
-	e, err := exportTable(ctx, logger, sqlSrc, blobStore, table.VerifiedTable, cfg.FlushSize)
+	e, err := exportTable(ctx, logger, sqlSrc, blobStore, table.VerifiedTable, cfg.FlushSize, cfg.FlushRows)
 	if err != nil {
 		return err
 	}

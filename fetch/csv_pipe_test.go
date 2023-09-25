@@ -17,6 +17,7 @@ func TestCSVPipe(t *testing.T) {
 		toWrite   string
 		files     []string
 		flushSize int
+		flushRows int
 	}{
 		{
 			desc: "one big file",
@@ -63,9 +64,68 @@ multiline part"
 `,
 				`2,a,c
 `,
-				``,
 			},
 			flushSize: 4,
+		},
+		{
+			desc: "flush after 1 row",
+			toWrite: `1,abcd,efgh
+2,efgh,""""
+3,%,g`,
+			files: []string{
+				"1,abcd,efgh\n",
+				`2,efgh,""""
+`,
+				`3,%,g
+`,
+			},
+			flushSize: 1024,
+			flushRows: 1,
+		},
+		{
+			desc: "flush after two rows",
+			toWrite: `1,abcd,efgh
+2,efgh,""""
+3,%,g`,
+			files: []string{
+				"1,abcd,efgh\n2,efgh,\"\"\"\"\n",
+				"3,%,g\n",
+			},
+			flushSize: 1024,
+			flushRows: 2,
+		},
+		{
+			desc: "flush after multiple rows",
+			toWrite: `1,abcd,efgh
+2,efgh,""""
+3,%,g`,
+			files: []string{
+				`1,abcd,efgh
+2,efgh,""""
+3,%,g
+`,
+			},
+			flushSize: 1024,
+			flushRows: 4,
+		},
+		{
+			desc: "flush after mix of flush size and flush rows",
+			toWrite: `1,abcd,efgh
+2,efgh,""""
+3,%,g
+4,a,b
+`,
+			files: []string{
+				`1,abcd,efgh
+`,
+				`2,efgh,""""
+3,%,g
+`,
+				`4,a,b
+`,
+			},
+			flushSize: 10,
+			flushRows: 2,
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -74,6 +134,7 @@ multiline part"
 				strings.NewReader(tc.toWrite),
 				zerolog.New(os.Stdout),
 				tc.flushSize,
+				tc.flushRows,
 				func() io.WriteCloser {
 					bufs = append(bufs, testStringBuf{})
 					return &bufs[len(bufs)-1]

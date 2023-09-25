@@ -28,6 +28,7 @@ func exportTable(
 	datasource datablobstorage.Store,
 	table dbtable.VerifiedTable,
 	flushSize int,
+	flushRows int,
 ) (exportResult, error) {
 	ret := exportResult{
 		StartTime: time.Now(),
@@ -59,7 +60,7 @@ func exportTable(
 	itNum := 0
 	// Errors must be buffered, as pipe can exit without taking the error channel.
 	writerErrCh := make(chan error, 1)
-	pipe := newCSVPipe(sqlRead, logger, flushSize, func() io.WriteCloser {
+	pipe := newCSVPipe(sqlRead, logger, flushSize, flushRows, func() io.WriteCloser {
 		resourceWG.Wait()
 		forwardRead, forwardWrite := io.Pipe()
 		resourceWG.Add(1)
