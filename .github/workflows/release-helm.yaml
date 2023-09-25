@@ -30,7 +30,7 @@ jobs:
       run: |
         curl --fail-with-body -o artifacts/old-index.yaml -s '${{ vars.CHART_URL }}/lms/charts/index.yaml' || rm artifacts/old-index.yaml
         VERSION=${GITHUB_REF_NAME#v}
-        helm package ./charts/lms --destination artifacts/ --version ${{ startsWith('github.ref_name', 'v') && '$VERSION' || '0.0.0' }}
+        helm package ./charts/lms --destination artifacts/ --version ${{ startsWith(github.ref_name, 'v') && '$VERSION' || '0.0.0' }}
         helm repo index artifacts/ --url '${{ vars.CHART_URL }}/lms/charts' --merge "artifacts/old-index.yaml"
     - name: Check contents of artifacts
       run: |
