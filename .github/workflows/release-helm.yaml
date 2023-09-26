@@ -49,6 +49,9 @@ jobs:
         parent: false
         headers: |-
           cache-control:public, max-age=60 
+    - name: 'Set up Google Cloud SDK'
+      if: ${{ github.event_name == 'release' }}
+      uses: 'google-github-actions/setup-gcloud@v1'
     - name: Invalidate CDN cache
       if: ${{ github.event_name == 'release' }}
       run: |
