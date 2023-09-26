@@ -49,5 +49,9 @@ jobs:
         parent: false
         headers: |-
           cache-control:public, max-age=60 
+    - name: Invalidate CDN cache
+      if: ${{ github.event_name == 'release' }}
+      run: |
+        gcloud compute url-maps invalidate-cdn-cache molt-lms-release-artifacts-prod-backend --path "/lms/charts/*" --async
 
 
