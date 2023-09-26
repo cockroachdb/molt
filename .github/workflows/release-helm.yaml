@@ -52,6 +52,6 @@ jobs:
     - name: Invalidate CDN cache
       if: ${{ github.event_name == 'release' }}
       run: |
-        gcloud compute url-maps invalidate-cdn-cache molt-lms-release-artifacts-prod --path "/lms/charts/*" --async
+        gcloud compute url-maps invalidate-cdn-cache molt-lms-release-artifacts-prod-default --path "/lms/charts/*" --async
 
 
