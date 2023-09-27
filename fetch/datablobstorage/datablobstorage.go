@@ -8,7 +8,7 @@ import (
 )
 
 type Store interface {
-	CreateFromReader(ctx context.Context, r io.Reader, table dbtable.VerifiedTable, iteration int) (Resource, error)
+	CreateFromReader(ctx context.Context, r io.Reader, table dbtable.VerifiedTable, iteration int, fileExt string) (Resource, error)
 	CanBeTarget() bool
 	DefaultFlushBatchSize() int
 	Cleanup(ctx context.Context) error

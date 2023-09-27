@@ -4,7 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/cockroachdb/cockroachdb-parser/pkg/sql/sem/tree"
 	"github.com/cockroachdb/errors"
+	"github.com/cockroachdb/molt/compression"
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
@@ -20,6 +22,7 @@ type importResult struct {
 
 func importTable(
 	ctx context.Context,
+	cfg Config,
 	baseConn dbconn.Conn,
 	logger zerolog.Logger,
 	table dbtable.VerifiedTable,
@@ -47,9 +50,17 @@ func importTable(
 		return ret, err
 	}
 	if err := r.Do(func() error {
+		kvOptions := tree.KVOptions{}
+		if cfg.Compression == compression.GZIP {
+			kvOptions = append(kvOptions, tree.KVOption{
+				Key:   "decompress",
+				Value: tree.NewStrVal("gzip"),
+			})
+		}
+
 		if _, err := conn.Exec(
 			ctx,
-			dataquery.ImportInto(table, locs),
+			dataquery.ImportInto(table, locs, kvOptions),
 		); err != nil {
 			return errors.Wrap(err, "error importing data")
 		}

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/cockroachdb/datadriven"
+	"github.com/cockroachdb/molt/compression"
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
 	"github.com/cockroachdb/molt/fetch/dataexport"
@@ -64,6 +65,7 @@ func TestDataDriven(t *testing.T) {
 						truncate := true
 						live := false
 						direct := false
+						compress := false
 
 						for _, cmd := range d.CmdArgs {
 							switch cmd.Key {
@@ -73,6 +75,8 @@ func TestDataDriven(t *testing.T) {
 								truncate = false
 							case "direct":
 								direct = true
+							case "compress":
+								compress = true
 							default:
 								t.Errorf("unknown key %s", cmd.Key)
 							}
@@ -87,6 +91,11 @@ func TestDataDriven(t *testing.T) {
 							require.NoError(t, err)
 						}
 
+						compressionFlag := compression.None
+						if compress {
+							compressionFlag = compression.GZIP
+						}
+
 						err = Fetch(
 							ctx,
 							Config{
@@ -95,6 +104,7 @@ func TestDataDriven(t *testing.T) {
 								ExportSettings: dataexport.Settings{
 									RowBatchSize: 2,
 								},
+								Compression: compressionFlag,
 							},
 							logger,
 							conns,
@@ -106,6 +116,7 @@ func TestDataDriven(t *testing.T) {
 							return err.Error()
 						}
 						require.NoError(t, err)
+						require.NoError(t, src.Cleanup(ctx))
 						return ""
 					default:
 						t.Errorf("unknown command: %s", d.Cmd)

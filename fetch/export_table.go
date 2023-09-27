@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"github.com/cockroachdb/molt/compression"
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
 	"github.com/cockroachdb/molt/fetch/dataexport"
@@ -21,15 +22,28 @@ type exportResult struct {
 	NumRows   int
 }
 
+func getWriter(w *io.PipeWriter, compressionType compression.Flag) io.WriteCloser {
+	switch compressionType {
+	case compression.GZIP:
+		return newGZIPPipeWriter(w)
+	}
+
+	return w
+}
+
 func exportTable(
 	ctx context.Context,
+	cfg Config,
 	logger zerolog.Logger,
 	sqlSrc dataexport.Source,
 	datasource datablobstorage.Store,
 	table dbtable.VerifiedTable,
-	flushSize int,
-	flushRows int,
 ) (exportResult, error) {
+	importFileExt := "csv"
+	if cfg.Compression == compression.GZIP {
+		importFileExt = "tar.gz"
+	}
+
 	ret := exportResult{
 		StartTime: time.Now(),
 	}
@@ -60,15 +74,16 @@ func exportTable(
 	itNum := 0
 	// Errors must be buffered, as pipe can exit without taking the error channel.
 	writerErrCh := make(chan error, 1)
-	pipe := newCSVPipe(sqlRead, logger, flushSize, flushRows, func() io.WriteCloser {
+	pipe := newCSVPipe(sqlRead, logger, cfg.FlushSize, cfg.FlushRows, func() io.WriteCloser {
 		resourceWG.Wait()
 		forwardRead, forwardWrite := io.Pipe()
+		wrappedWriter := getWriter(forwardWrite, cfg.Compression)
 		resourceWG.Add(1)
 		go func() {
 			defer resourceWG.Done()
 			itNum++
 			if err := func() error {
-				resource, err := datasource.CreateFromReader(ctx, forwardRead, table, itNum)
+				resource, err := datasource.CreateFromReader(ctx, forwardRead, table, itNum, importFileExt)
 				if err != nil {
 					return err
 				}
@@ -82,7 +97,7 @@ func exportTable(
 				writerErrCh <- err
 			}
 		}()
-		return forwardWrite
+		return wrappedWriter
 	})
 
 	err := pipe.Pipe(table.Name)

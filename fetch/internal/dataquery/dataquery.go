@@ -25,13 +25,20 @@ func NewPGCopyTo(table dbtable.VerifiedTable) string {
 	return f.CloseAndGetString()
 }
 
-func ImportInto(table dbtable.VerifiedTable, locs []string) string {
+func ImportInto(table dbtable.VerifiedTable, locs []string, opts tree.KVOptions) string {
 	importInto := &tree.Import{
 		Into:       true,
 		Table:      table.NewTableName(),
 		FileFormat: "CSV",
 		IntoCols:   table.Columns,
 	}
+
+	// If we default set the Options parameter when there are no KVOptions,
+	// an incorrect 'WITH' gets appended to the statement.
+	if len(opts) > 0 {
+		importInto.Options = opts
+	}
+
 	for _, loc := range locs {
 		importInto.Files = append(
 			importInto.Files,

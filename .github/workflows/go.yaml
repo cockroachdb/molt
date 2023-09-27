@@ -92,6 +92,6 @@ jobs:
       - name: crlfmt returns no deltas
         if: ${{ always() }}
         run: |
-          DELTA=$(go run github.com/cockroachdb/crlfmt -ignore _gen.go .)
+          DELTA=$(go run github.com/cockroachdb/crlfmt -ignore '_gen\.go|\.gen\.go' .)
           echo $DELTA
           test -z "$DELTA"

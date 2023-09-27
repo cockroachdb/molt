@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"github.com/cockroachdb/molt/compression"
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
 	"github.com/cockroachdb/molt/fetch/dataexport"
@@ -25,6 +26,7 @@ type Config struct {
 	Truncate    bool
 	Concurrency int
 
+	Compression    compression.Flag
 	ExportSettings dataexport.Settings
 }
 
@@ -178,7 +180,7 @@ func fetchTable(
 
 	logger.Info().Msgf("data extraction phase starting")
 
-	e, err := exportTable(ctx, logger, sqlSrc, blobStore, table.VerifiedTable, cfg.FlushSize, cfg.FlushRows)
+	e, err := exportTable(ctx, cfg, logger, sqlSrc, blobStore, table.VerifiedTable)
 	if err != nil {
 		return err
 	}
@@ -217,7 +219,7 @@ func fetchTable(
 				Msgf("starting data import on target")
 
 			if !cfg.Live {
-				r, err := importTable(ctx, targetConn, logger, table.VerifiedTable, e.Resources)
+				r, err := importTable(ctx, cfg, targetConn, logger, table.VerifiedTable, e.Resources)
 				if err != nil {
 					return err
 				}

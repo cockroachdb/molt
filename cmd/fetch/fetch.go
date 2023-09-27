@@ -7,10 +7,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/cmd/internal/cmdutil"
+	"github.com/cockroachdb/molt/compression"
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/fetch"
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
 	"github.com/spf13/cobra"
+	"github.com/thediveo/enumflag/v2"
 	"golang.org/x/oauth2/google"
 )
 
@@ -36,6 +38,18 @@ func Command() *cobra.Command {
 				return err
 			}
 			cmdutil.RunMetricsServer(logger)
+
+			if cfg.Live {
+				if cfg.Compression == compression.GZIP {
+					return errors.New("cannot run live mode with compression")
+				} else if cfg.Compression <= compression.Default {
+					logger.Info().Msgf("default compression to none")
+					cfg.Compression = compression.None
+				}
+			} else {
+				logger.Info().Msgf("default compression to gzip")
+				cfg.Compression = compression.GZIP
+			}
 
 			conns, err := cmdutil.LoadDBConns(ctx)
 			if err != nil {
@@ -183,6 +197,16 @@ func Command() *cobra.Command {
 		"pg-logical-replication-slot-drop-if-exists",
 		false,
 		"if set, drops the replication slot if it exists",
+	)
+	cmd.PersistentFlags().Var(
+		enumflag.New(
+			&cfg.Compression,
+			"compression",
+			compression.CompressionStringRepresentations,
+			enumflag.EnumCaseInsensitive,
+		),
+		"compression",
+		"compression to use (default/gzip/none)",
 	)
 	cmdutil.RegisterDBConnFlags(cmd)
 	cmdutil.RegisterLoggerFlags(cmd)

@@ -20,7 +20,7 @@ type copyCRDBDirect struct {
 }
 
 func (c *copyCRDBDirect) CreateFromReader(
-	ctx context.Context, r io.Reader, table dbtable.VerifiedTable, iteration int,
+	ctx context.Context, r io.Reader, table dbtable.VerifiedTable, iteration int, fileExt string,
 ) (Resource, error) {
 	conn, err := pgx.ConnectConfig(ctx, c.target.Config())
 	if err != nil {

@@ -21,6 +21,7 @@ type localStore struct {
 	basePath       string
 	cleanPaths     map[string]struct{}
 	crdbAccessAddr string
+	server         *http.Server
 }
 
 func NewLocalStore(
@@ -29,6 +30,7 @@ func NewLocalStore(
 	if err := os.MkdirAll(basePath, os.ModePerm); err != nil {
 		return nil, err
 	}
+	var server *http.Server
 	if listenAddr != "" {
 		if crdbAccessAddr == "" {
 			ip := getLocalIP()
@@ -42,12 +44,16 @@ func NewLocalStore(
 			port := splat[1]
 			crdbAccessAddr = ip + ":" + port
 		}
+		server = &http.Server{
+			Addr:    listenAddr,
+			Handler: http.FileServer(http.Dir(basePath)),
+		}
 		go func() {
 			logger.Info().
 				Str("listen-addr", listenAddr).
 				Str("crdb-access-addr", crdbAccessAddr).
 				Msgf("starting file server")
-			if err := http.ListenAndServe(listenAddr, http.FileServer(http.Dir(basePath))); err != nil {
+			if err := server.ListenAndServe(); err != nil {
 				logger.Err(err).Msgf("error starting file server")
 			}
 		}()
@@ -56,6 +62,7 @@ func NewLocalStore(
 		logger:         logger,
 		basePath:       basePath,
 		crdbAccessAddr: crdbAccessAddr,
+		server:         server,
 	}, nil
 }
 
@@ -77,13 +84,13 @@ func getLocalIP() string {
 }
 
 func (l *localStore) CreateFromReader(
-	ctx context.Context, r io.Reader, table dbtable.VerifiedTable, iteration int,
+	ctx context.Context, r io.Reader, table dbtable.VerifiedTable, iteration int, fileExt string,
 ) (Resource, error) {
 	baseDir := path.Join(l.basePath, table.SafeString())
 	if err := os.MkdirAll(baseDir, os.ModePerm); err != nil {
 		return nil, err
 	}
-	p := path.Join(baseDir, fmt.Sprintf("part_%08d.csv", iteration))
+	p := path.Join(baseDir, fmt.Sprintf("part_%08d.%s", iteration, fileExt))
 	logger := l.logger.With().Str("path", p).Logger()
 	logger.Debug().Msgf("creating file")
 	f, err := os.Create(p)
@@ -116,7 +123,8 @@ func (l *localStore) Cleanup(ctx context.Context) error {
 			return err
 		}
 	}
-	return nil
+
+	return l.server.Shutdown(ctx)
 }
 
 func (l *localStore) CanBeTarget() bool {

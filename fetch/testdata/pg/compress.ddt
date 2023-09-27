@@ -1,0 +1,38 @@
+exec all
+CREATE TABLE tbl3(id INT PRIMARY KEY, t TEXT)
+----
+[source] CREATE TABLE
+[target] CREATE TABLE
+
+exec source
+INSERT INTO tbl3 VALUES (4, 'brr'), (5, 'bob')
+----
+[source] INSERT 0 2
+
+exec all
+CREATE TABLE tbl4(id INT PRIMARY KEY, t TEXT)
+----
+[source] CREATE TABLE
+[target] CREATE TABLE
+
+exec source
+INSERT INTO tbl4 VALUES (11, 'aaa'), (22, 'bbb')
+----
+[source] INSERT 0 2
+
+fetch compress
+----
+
+query all
+SELECT * FROM tbl3
+----
+[source]:
+id	t
+4	brr
+5	bob
+tag: SELECT 2
+[target]:
+id	t
+4	brr
+5	bob
+tag: SELECT 2
