@@ -1,7 +1,0 @@
-apiVersion: v2
-name: molt-lms
-description: Helm chart for MOLT Live Migration Service
-type: application
-version: 0.1.0
-appVersion: 0.1.0
-icon: "https://raw.githubusercontent.com/cockroachdb/cockroach/master/docs/media/cockroach_db.png"
