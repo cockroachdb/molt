@@ -124,7 +124,11 @@ func (l *localStore) Cleanup(ctx context.Context) error {
 		}
 	}
 
-	return l.server.Shutdown(ctx)
+	if l.server != nil {
+		return l.server.Shutdown(ctx)
+	}
+
+	return nil
 }
 
 func (l *localStore) CanBeTarget() bool {
