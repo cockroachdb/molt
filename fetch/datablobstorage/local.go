@@ -53,7 +53,9 @@ func NewLocalStore(
 				Str("listen-addr", listenAddr).
 				Str("crdb-access-addr", crdbAccessAddr).
 				Msgf("starting file server")
-			if err := server.ListenAndServe(); err != nil {
+			if err := server.ListenAndServe(); err != nil && err == http.ErrServerClosed {
+				logger.Info().Msgf("http server intentionally shut down")
+			} else if err != nil {
 				logger.Err(err).Msgf("error starting file server")
 			}
 		}()

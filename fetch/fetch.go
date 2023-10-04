@@ -219,6 +219,18 @@ func fetchTable(
 				Msgf("starting data import on target")
 
 			if !cfg.Live {
+				go func() {
+					err := reportImportTableProgress(ctx,
+						targetConn,
+						logger,
+						table.VerifiedTable,
+						time.Now(),
+						false /*testing*/)
+					if err != nil {
+						logger.Err(err).Msg("failed to report import table progress")
+					}
+				}()
+
 				r, err := importTable(ctx, cfg, targetConn, logger, table.VerifiedTable, e.Resources)
 				if err != nil {
 					return err
