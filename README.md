@@ -23,9 +23,10 @@ GOOS=linux GOARCH=amd64 go build -v -o artifacts/molt .
 ## Verification
 
 `molt verify` does the following:
-* Verifies that tables between the two data sources are the same.
-* Verifies that table column definitions between the two data sources are the same.
-* Verifies that tables contain the row values between data sources.
+
+- Verifies that tables between the two data sources are the same.
+- Verifies that table column definitions between the two data sources are the same.
+- Verifies that tables contain the row values between data sources.
 
 It currently supports PostgreSQL and MySQL comparisons with CockroachDB.
 It takes in two connection strings as arguments: `source` and `target`. `source`
@@ -46,20 +47,24 @@ molt verify \
 See `molt verify --help` for all available parameters.
 
 ### Filters
+
 To verify specific tables or schemas, use `--table-filter` or `--schema-filter`.
 
 ### Continuous verification
+
 If you want all tables to be verified in a loop, you can use `--continuous`.
 
 ### Live verification
+
 If you expect data to change as you do data verification, you can use `--live`.
 This makes verifier re-check rows before marking them as problematic.
 
 ### Limitations
-* MySQL set types are not supported.
-* Supports only comparing one MySQL database vs a whole CRDB schema (which is assumed to be "public").
-* Geospatial types cannot yet be compared.
-* We do not handle schema changes between commands well.
+
+- MySQL set types are not supported.
+- Supports only comparing one MySQL database vs a whole CRDB schema (which is assumed to be "public").
+- Geospatial types cannot yet be compared.
+- We do not handle schema changes between commands well.
 
 ## Data movement
 
@@ -89,9 +94,10 @@ It outputs a `cdc_cursor` which can be fed to CDC programs (e.g. cdc-sink, AWS D
 to migrate live data without taking your database offline.
 
 It currently supports the following:
-* Pulling a table, uploading CSVs to S3/GCP/local machine (`--listen-addr` must be set) and running IMPORT on Cockroach for you.
-* Pulling a table, uploading CSVs to S3/GCP/local machine and running COPY TO on Cockroach from that CSV.
-* Pulling a table and running COPY TO directly onto the CRDB table without an intermediate store.
+
+- Pulling a table, uploading CSVs to S3/GCP/local machine (`--listen-addr` must be set) and running IMPORT on Cockroach for you.
+- Pulling a table, uploading CSVs to S3/GCP/local machine and running COPY TO on Cockroach from that CSV.
+- Pulling a table and running COPY TO directly onto the CRDB table without an intermediate store.
 
 By default, data is imported using `IMPORT INTO`. You can use `--live` if you
 need target data to be queriable during loading, which uses `COPY FROM` instead.
@@ -107,6 +113,7 @@ tables with mismatching columns may only be partially migrated.
 ### Example invocations
 
 S3 usage:
+
 ```sh
 # Ensure access tokens are appropriately set in the environment.
 export AWS_REGION='us-east-1'
@@ -118,11 +125,12 @@ molt fetch \
   --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' \
   --table-filter 'good_table' \
   --s3-bucket 'otan-test-bucket' \
-  --truncate \ # automatically truncate destination tables before importing 
+  --truncate \ # automatically truncate destination tables before importing
   --cleanup # cleans up any created s3 files
 ```
 
 GCP usage:
+
 ```sh
 # Ensure credentials are loaded using `gcloud init`.
 # Ensure the GCP bucket is created and accessible from CRDB.
@@ -131,10 +139,12 @@ molt fetch \
   --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' \
   --table-filter 'good_table' \
   --gcp-bucket 'otan-test-bucket' \
+  --bucket-path 'test-migrations' \ # writes to a subpath within the bucket (i.e. gs://otan-test-bucket/test-migrations)
   --cleanup # cleans up any created gcp files
 ```
 
 Using a direct COPY FROM without storing intermediate files:
+
 ```sh
 molt fetch \
   --source 'postgres://postgres@localhost:5432/replicationload' \
@@ -144,6 +154,7 @@ molt fetch \
 ```
 
 Storing CSVs locally before running COPY TO:
+
 ```sh
 molt fetch \
   --source 'postgres://postgres@localhost:5432/replicationload' \
@@ -154,6 +165,7 @@ molt fetch \
 ```
 
 Storing CSVs locally and running a file server:
+
 ```sh
 # set --local-path-crdb-access-addr if the automatic IP detection is incorrect.
 molt fetch \
@@ -165,6 +177,7 @@ molt fetch \
 ```
 
 Creating a replication slot with PG:
+
 ```sh
 molt fetch \
   --source 'postgres://postgres@localhost:5432/replicationload' \
@@ -179,21 +192,26 @@ molt fetch \
 ## Local Setup
 
 ### Running Tests
-* Ensure a local postgres instance is setup and can be logged in using
+
+- Ensure a local postgres instance is setup and can be logged in using
   `postgres://postgres:postgres@localhost:5432/defaultdb` (this can be
   overridden with the `POSTGRES_URL` env var):
+
 ```sql
 CREATE USER 'postgres' PASSWORD 'postgres' ADMIN;
 CREATE DATABASE defaultdb;
 ```
-* Ensure a local, insecure CockroachDB instance is setup
+
+- Ensure a local, insecure CockroachDB instance is setup
   (this can be overriden with the `COCKROACH_URL` env var):
   `cockroach demo --insecure --empty`.
-* Ensure a local MySQL is setup with username `root` and an empty password,
-  with a `defaultdb` database setup 
+- Ensure a local MySQL is setup with username `root` and an empty password,
+  with a `defaultdb` database setup
   (this can be overriden with the `MYSQL_URL` env var):
+
 ```sql
 CREATE DATABASE defaultdb;
 ```
-* Run the tests: `go test ./...`.
-  * Data-driven tests can be run with `-rewrite`, e.g. `go test ./verification -rewrite`.
+
+- Run the tests: `go test ./...`.
+  - Data-driven tests can be run with `-rewrite`, e.g. `go test ./verification -rewrite`.

@@ -20,6 +20,7 @@ func Command() *cobra.Command {
 	var (
 		s3Bucket                string
 		gcpBucket               string
+		bucketPath              string
 		localPath               string
 		localPathListenAddr     string
 		localPathCRDBAccessAddr string
@@ -72,7 +73,7 @@ func Command() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				src = datablobstorage.NewGCPStore(logger, gcpClient, creds, gcpBucket)
+				src = datablobstorage.NewGCPStore(logger, gcpClient, creds, gcpBucket, bucketPath)
 			case s3Bucket != "":
 				sess, err := session.NewSession()
 				if err != nil {
@@ -82,7 +83,7 @@ func Command() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				src = datablobstorage.NewS3Store(logger, sess, creds, s3Bucket)
+				src = datablobstorage.NewS3Store(logger, sess, creds, s3Bucket, bucketPath)
 			case localPath != "":
 				src, err = datablobstorage.NewLocalStore(logger, localPath, localPathListenAddr, localPathCRDBAccessAddr)
 				if err != nil {
@@ -149,6 +150,12 @@ func Command() *cobra.Command {
 		"gcp-bucket",
 		"",
 		"gcp bucket",
+	)
+	cmd.PersistentFlags().StringVar(
+		&bucketPath,
+		"bucket-path",
+		"",
+		"path within the bucket to write intermediate files (i.e. test-migrations/v1 with no ending slash)",
 	)
 	cmd.PersistentFlags().StringVar(
 		&localPath,

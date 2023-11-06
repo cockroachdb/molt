@@ -13,20 +13,26 @@ import (
 )
 
 type gcpStore struct {
-	logger zerolog.Logger
-	bucket string
-	client *storage.Client
-	creds  *google.Credentials
+	logger     zerolog.Logger
+	bucket     string
+	bucketPath string
+	client     *storage.Client
+	creds      *google.Credentials
 }
 
 func NewGCPStore(
-	logger zerolog.Logger, client *storage.Client, creds *google.Credentials, bucket string,
+	logger zerolog.Logger,
+	client *storage.Client,
+	creds *google.Credentials,
+	bucket string,
+	bucketPath string,
 ) *gcpStore {
 	return &gcpStore{
-		bucket: bucket,
-		client: client,
-		logger: logger,
-		creds:  creds,
+		bucket:     bucket,
+		bucketPath: bucketPath,
+		client:     client,
+		logger:     logger,
+		creds:      creds,
 	}
 }
 
@@ -34,6 +40,9 @@ func (s *gcpStore) CreateFromReader(
 	ctx context.Context, r io.Reader, table dbtable.VerifiedTable, iteration int, fileExt string,
 ) (Resource, error) {
 	key := fmt.Sprintf("%s/part_%08d.%s", table.SafeString(), iteration, fileExt)
+	if s.bucketPath != "" {
+		key = fmt.Sprintf("%s/%s/part_%08d.%s", s.bucketPath, table.SafeString(), iteration, fileExt)
+	}
 
 	s.logger.Debug().Str("file", key).Msgf("creating new file")
 	wc := s.client.Bucket(s.bucket).Object(key).NewWriter(ctx)

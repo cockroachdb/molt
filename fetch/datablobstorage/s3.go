@@ -20,6 +20,7 @@ import (
 type s3Store struct {
 	logger      zerolog.Logger
 	bucket      string
+	bucketPath  string
 	session     *session.Session
 	creds       credentials.Value
 	batchDelete struct {
@@ -80,13 +81,18 @@ func (r s3Reader) Close() error {
 }
 
 func NewS3Store(
-	logger zerolog.Logger, session *session.Session, creds credentials.Value, bucket string,
+	logger zerolog.Logger,
+	session *session.Session,
+	creds credentials.Value,
+	bucket string,
+	bucketPath string,
 ) *s3Store {
 	return &s3Store{
-		bucket:  bucket,
-		session: session,
-		logger:  logger,
-		creds:   creds,
+		bucket:     bucket,
+		bucketPath: bucketPath,
+		session:    session,
+		logger:     logger,
+		creds:      creds,
 	}
 }
 
@@ -94,6 +100,10 @@ func (s *s3Store) CreateFromReader(
 	ctx context.Context, r io.Reader, table dbtable.VerifiedTable, iteration int, fileExt string,
 ) (Resource, error) {
 	key := fmt.Sprintf("%s/part_%08d.%s", table.SafeString(), iteration, fileExt)
+	if s.bucketPath != "" {
+		key = fmt.Sprintf("%s/%s/part_%08d.%s", s.bucketPath, table.SafeString(), iteration, fileExt)
+	}
+
 	s.logger.Debug().Str("file", key).Msgf("creating new file")
 	if _, err := s3manager.NewUploader(s.session).UploadWithContext(ctx, &s3manager.UploadInput{
 		Bucket: aws.String(s.bucket),
