@@ -25,6 +25,15 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     ports:
-      - '5432:5432'
-    volumes: 
+      - "5432:5432"
+    volumes:
       - ./pg-init:/docker-entrypoint-initdb.d
+
+  crdb:
+    image: cockroachdb/cockroach:latest-v23.1
+    command: start-single-node --insecure
+    ports:
+      - "8080:8080"
+      - "26257:26257"
+    volumes:
+      - ./cockroach-init:/docker-entrypoint-initdb.d
