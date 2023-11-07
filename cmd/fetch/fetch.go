@@ -40,14 +40,15 @@ func Command() *cobra.Command {
 			}
 			cmdutil.RunMetricsServer(logger)
 
-			if cfg.Live {
+			isCopyMode := cfg.Live || directCRDBCopy
+			if isCopyMode {
 				if cfg.Compression == compression.GZIP {
-					return errors.New("cannot run live mode with compression")
+					return errors.New("cannot run copy mode with compression")
 				} else if cfg.Compression <= compression.Default {
 					logger.Info().Msgf("default compression to none")
 					cfg.Compression = compression.None
 				}
-			} else {
+			} else if !isCopyMode && cfg.Compression == compression.Default {
 				logger.Info().Msgf("default compression to gzip")
 				cfg.Compression = compression.GZIP
 			}
