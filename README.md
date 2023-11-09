@@ -1,4 +1,4 @@
-# molt
+# MOLT
 
 [![Go Tests](https://github.com/cockroachdb/molt/actions/workflows/go.yaml/badge.svg)](https://github.com/cockroachdb/molt/actions/workflows/go.yaml)
 
@@ -20,7 +20,7 @@ go build -o artifacts/molt .
 GOOS=linux GOARCH=amd64 go build -v -o artifacts/molt .
 ```
 
-## Verification
+## MOLT Verify
 
 `molt verify` does the following:
 
@@ -66,7 +66,7 @@ This makes verifier re-check rows before marking them as problematic.
 - Geospatial types cannot yet be compared.
 - We do not handle schema changes between commands well.
 
-## Data movement
+## MOLT Fetch
 
 ```mermaid
 flowchart LR
