@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS workload_table(id INT8 PRIMARY KEY, t TEXT);

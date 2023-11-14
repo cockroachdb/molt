@@ -1,0 +1,10 @@
+global:
+  scrape_interval: 10s
+  evaluation_interval: 10s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    metrics_path: '/vars'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['demo-lms-1:9044', 'demo-lms-2:9044', 'demo-lms-3:9044']

@@ -1,0 +1,141 @@
+version: "3"
+
+services:
+  lms:
+    image: cockroachdb/molt-lms:latest
+    restart: always
+    working_dir: /app
+    ports:
+      - "9046-9048:9043"
+      - "9044"
+    command: 
+      - mysql 
+      - --init-source=mysql://root:password@mysql:3306/defaultdb
+      - --init-target=postgresql://root@crdb:26257/defaultdb?sslmode=disable
+      - --shadow-mode=none 
+    depends_on:
+      - mysql
+      - postgres
+      - crdb
+      - lms-orchestrator
+  
+  lms-orchestrator:
+    image: cockroachdb/molt-lms:latest
+    restart: always
+    working_dir: /app
+    ports:
+      - "4200:4200"
+      - "4201"
+    entrypoint: ./molt-lms-orchestrator
+    environment:
+      - ORCH_ALLOW_ORIGIN=/.*/
+    command: 
+     --source-dialect=mysql
+     --target-dialect=crdb
+     --lms-url=mysql://root:password@demo-lms-1:9043/defaultdb,mysql://root:password@demo-lms-2:9043/defaultdb,mysql://root:password@demo-lms-3:9043/defaultdb
+     --crdb-url=postgresql://root@crdb:26257/defaultdb?sslmode=disable
+  
+  workload:
+    image: jyangcrl/workload:latest
+    restart: always
+    working_dir: /app
+    # Using a low concurency here for the demo so cdcsink catches up quickly and theres not much 
+    # to replicate.
+    command:
+      --truncate 
+      --verbosity=2
+      --conn-str='root:password@(lms:9043)/defaultdb'
+      --concurrency=3
+    depends_on:
+      - lms
+      - cdcsink
+  
+  cdcsink:
+    image: cockroachdb/cdc-sink:master
+    restart: always
+    command:
+      mylogical
+      -v
+      --sourceConn=mysql://root:password@mysql:3306/defaultdb?sslmode=disable
+      --targetConn=postgresql://root@crdb:26257/defaultdb?sslmode=disable
+      --targetSchema='defaultdb.public'
+      --defaultGTIDSet=''
+      --stagingSchema='defaultdb'
+      --metricsAddr=0.0.0.0:30004
+    depends_on:
+      - lms
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/lms.conf:/etc/nginx/lms.conf:ro
+    depends_on:
+      - lms
+    ports:
+      - "9043:9043"
+  
+  mysql:
+    image: mysql:latest
+    restart: always
+    working_dir: /mysql
+    environment:
+      MYSQL_DATABASE: "defaultdb"
+      MYSQL_USER: "admin"
+      MYSQL_PASSWORD: "admin"
+      MYSQL_ROOT_PASSWORD: "password"
+    command:
+      - --enforce-gtid-consistency=ON
+      - --gtid-mode=ON
+      - --default-authentication-plugin=mysql_native_password
+      - --binlog_row_metadata=full
+    ports:
+      - "3306:3306"
+
+  postgres:
+    image: postgres:latest
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+
+  crdb:
+    image: cockroachdb/cockroach:latest-v23.1
+    command: start-single-node --insecure
+    ports:
+      - "8080:8080"
+      - "26257:26257"
+    volumes:
+      - ./cockroach:/docker-entrypoint-initdb.d
+
+  prometheus:
+    image: prom/prometheus:latest
+    restart: always
+    depends_on:
+      - lms
+    working_dir: /prometheus
+    command: --config.file=prometheus.yml
+    ports:
+      - "9090:9090"
+    expose:
+      - "9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    working_dir: /grafana
+    depends_on:
+      - prometheus
+    ports:
+      - 3000:3000
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./grafana/dashboard.json:/grafana/dashboard/dashboard.json
+      - ./grafana/dashboard.yaml:/etc/grafana/provisioning/dashboards/main.yaml
+      - ./grafana/datasource.yml:/etc/grafana/provisioning/datasources/prometheus_ds.yml
+
