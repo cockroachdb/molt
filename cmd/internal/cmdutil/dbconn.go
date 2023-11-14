@@ -14,13 +14,13 @@ func RegisterDBConnFlags(cmd *cobra.Command) {
 		&DBConnConfig.Source,
 		"source",
 		"",
-		"URL of the source database",
+		"Connection string of the source database.",
 	)
 	cmd.PersistentFlags().StringVar(
 		&DBConnConfig.Target,
 		"target",
 		"",
-		"URL of the target database",
+		"Connection string of the target database.",
 	)
 
 	for _, required := range []string{"source", "target"} {

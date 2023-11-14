@@ -28,9 +28,9 @@ func Command() *cobra.Command {
 		cfg                     fetch.Config
 	)
 	cmd := &cobra.Command{
-		Use:  "fetch",
-		Long: `Fetches data from source to directly import into target.`,
-
+		Use:   "fetch",
+		Short: "Moves data from source to target.",
+		Long:  `Imports data from source directly into target tables.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
@@ -108,103 +108,103 @@ func Command() *cobra.Command {
 		&directCRDBCopy,
 		"direct-copy",
 		false,
-		"whether to use direct copy mode",
+		"Enables direct copy mode, which copies data directly from source to target without using an intermediate store.",
 	)
 	cmd.PersistentFlags().BoolVar(
 		&cfg.Cleanup,
 		"cleanup",
 		false,
-		"whether any file resources created should be deleted",
+		"Whether any created resources should be deleted.",
 	)
 	cmd.PersistentFlags().BoolVar(
 		&cfg.Live,
 		"live",
 		false,
-		"whether the table must be queriable during load import",
+		"Whether the table must be queryable during load import.",
 	)
 	cmd.PersistentFlags().IntVar(
 		&cfg.FlushSize,
 		"flush-size",
 		0,
-		"if set, size (in bytes) before the data source is flushed",
+		"If set, size (in bytes) before the source data is flushed to intermediate files.",
 	)
 	cmd.PersistentFlags().IntVar(
 		&cfg.FlushRows,
 		"flush-rows",
 		0,
-		"if set, number of rows before the data source is flushed",
+		"If set, number of rows before the source data is flushed to intermediate files.",
 	)
 	cmd.PersistentFlags().IntVar(
 		&cfg.Concurrency,
 		"concurrency",
 		4,
-		"number of tables to move data with at a time",
+		"Number of tables to move at a time.",
 	)
 	cmd.PersistentFlags().StringVar(
 		&s3Bucket,
 		"s3-bucket",
 		"",
-		"s3 bucket",
+		"Name of the S3 bucket.",
 	)
 	cmd.PersistentFlags().StringVar(
 		&gcpBucket,
 		"gcp-bucket",
 		"",
-		"gcp bucket",
+		"Name of the GCP bucket.",
 	)
 	cmd.PersistentFlags().StringVar(
 		&bucketPath,
 		"bucket-path",
 		"",
-		"path within the bucket to write intermediate files (i.e. test-migrations/v1 with no ending slash)",
+		"Path within the bucket where intermediate files are written (e.g., bucket-name/folder-name).",
 	)
 	cmd.PersistentFlags().StringVar(
 		&localPath,
 		"local-path",
 		"",
-		"path to upload files to locally",
+		"Path to upload files to locally.",
 	)
 	cmd.PersistentFlags().StringVar(
 		&localPathListenAddr,
 		"local-path-listen-addr",
 		"",
-		"local address to listen to for traffic",
+		"Address of a local store server to listen to for traffic.",
 	)
 	cmd.PersistentFlags().StringVar(
 		&localPathCRDBAccessAddr,
 		"local-path-crdb-access-addr",
 		"",
-		"address CockroachDB can access to connect to the --local-path-listen-addr",
+		"Address of data that CockroachDB can access to import from a local store (defaults to local-path-listen-addr).",
 	)
 	cmd.PersistentFlags().BoolVar(
 		&cfg.Truncate,
 		"truncate",
 		false,
-		"whether to truncate the table being imported to",
+		"Whether to truncate the target tables before source data is imported.",
 	)
 	cmd.PersistentFlags().IntVar(
 		&cfg.ExportSettings.RowBatchSize,
 		"row-batch-size",
 		100_000,
-		"how many rows to select at a time for the database",
+		"Number of rows to select at a time for export from the source database.",
 	)
 	cmd.PersistentFlags().StringVar(
 		&cfg.ExportSettings.PG.SlotName,
 		"pg-logical-replication-slot-name",
 		"",
-		"if set, the name of a replication slot that should be created before taking a snapshot of data",
+		"If set, the name of a replication slot that will be created before taking a snapshot of data.",
 	)
 	cmd.PersistentFlags().StringVar(
 		&cfg.ExportSettings.PG.Plugin,
 		"pg-logical-replication-slot-plugin",
 		"pgoutput",
-		"if set, the output plugin used for logical replication under pg-logical-replication-slot-name",
+		"If set, the output plugin used for logical replication under pg-logical-replication-slot-name.",
 	)
 	cmd.PersistentFlags().BoolVar(
 		&cfg.ExportSettings.PG.DropIfExists,
 		"pg-logical-replication-slot-drop-if-exists",
 		false,
-		"if set, drops the replication slot if it exists",
+		"If set, drops the replication slot if it exists.",
 	)
 	cmd.PersistentFlags().Var(
 		enumflag.New(
@@ -214,7 +214,7 @@ func Command() *cobra.Command {
 			enumflag.EnumCaseInsensitive,
 		),
 		"compression",
-		"compression to use (default/gzip/none)",
+		"Compression type (default/gzip/none) to use (IMPORT INTO mode only).",
 	)
 	cmdutil.RegisterDBConnFlags(cmd)
 	cmdutil.RegisterLoggerFlags(cmd)
