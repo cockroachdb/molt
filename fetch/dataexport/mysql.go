@@ -12,6 +12,8 @@ import (
 	"github.com/cockroachdb/molt/rowiterator"
 )
 
+const GTIDHelpInstructions = `please ensure that you have GTID-based replication enabled`
+
 type mysqlSource struct {
 	gtid     string
 	settings Settings
@@ -27,7 +29,7 @@ func NewMySQLSource(
 		if err := conn.QueryRowContext(ctx, "select source_uuid, min(interval_start), max(interval_end) from mysql.gtid_executed group by source_uuid").Scan(
 			&source, &start, &end,
 		); err != nil {
-			return errors.Wrap(err, "failed to export snapshot")
+			return errors.Wrapf(err, "failed to export snapshot: %s", GTIDHelpInstructions)
 		}
 		return nil
 	}(); err != nil {
