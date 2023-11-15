@@ -20,6 +20,38 @@ go build -o artifacts/molt .
 GOOS=linux GOARCH=amd64 go build -v -o artifacts/molt .
 ```
 
+## Encoding passwords
+
+If your password contains [special characters](https://developer.mozilla.org/en-US/docs/Glossary/Percent-encoding), the MOLT tooling may not be able to parse the password. In the event that this happens, you should:
+
+1. Percent/URL-encode the password.
+2. Use the encoded password in your connection string.
+
+```
+# Original connection string
+postgres://postgres:a$52&@localhost:5432/replicationload
+
+# Percent-encoded password
+%3Aa%2452%26
+
+# Percent-encoded connection string
+postgres://postgres:%3Aa%2452%26@localhost:5432/replicationload
+```
+
+To simplify this process, you can use the `escape-password` command:
+
+```
+# Command template
+molt escape-password "<your password string>"
+
+...
+
+# Example output
+molt run . escape-password ";@;"
+Substitute the following encoded password in your original connection url string:
+%3B%40%3B
+```
+
 ## MOLT Verify
 
 `molt verify` does the following:
@@ -44,7 +76,7 @@ molt verify \
   --target 'postgresql://root@127.0.0.1:26257/defaultdb?sslmode=disable'
 ```
 
-See `molt verify --help` for all available parameters.
+See `molt verify --help` for all available parameters. Make sure that your connection strings are [properly encoded](#encoding-passwords).
 
 ### Filters
 
@@ -111,6 +143,8 @@ For now, schemas must be identical on both sides. This is verified upfront -
 tables with mismatching columns may only be partially migrated.
 
 ### Example invocations
+
+Make sure that your connection strings are [properly encoded](#encoding-passwords).
 
 S3 usage:
 

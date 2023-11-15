@@ -32,6 +32,7 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.AddCommand(EscapePasswordCommand())
 	rootCmd.AddCommand(verify.Command())
 	rootCmd.AddCommand(fetch.Command())
 
