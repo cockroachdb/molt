@@ -46,6 +46,6 @@ func DataTypeToOID(dataType, columnType string) oid.Oid {
 	case "set":
 		panic(errors.Newf("enums not yet handled"))
 	default:
-		panic(errors.Newf("unhandled type %s"))
+		panic(errors.Newf("unhandled type %s, column type %s", dataType, columnType))
 	}
 }
