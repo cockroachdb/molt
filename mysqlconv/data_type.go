@@ -37,7 +37,7 @@ func DataTypeToOID(dataType, columnType string) oid.Oid {
 		return oid.T_bytea
 	case "varbinary":
 		return oid.T_bytea
-	case "blob", "text":
+	case "blob", "text", "mediumtext", "longtext":
 		return oid.T_text
 	case "json":
 		return oid.T_jsonb
@@ -46,6 +46,6 @@ func DataTypeToOID(dataType, columnType string) oid.Oid {
 	case "set":
 		panic(errors.Newf("enums not yet handled"))
 	default:
-		panic(errors.Newf("unhandled type %s"))
+		panic(errors.Newf("unhandled data type %s, column type %s", dataType, columnType))
 	}
 }
