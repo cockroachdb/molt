@@ -4,7 +4,7 @@ gen:
 clean_artifacts:
 	cd ./artifacts && rm *
 
-build_cli:
+build_molt_cli:
 	mkdir -p ./artifacts
 	if test "$(version)" = "" ; then \
         echo "tag is not set, try running this command with a tag like 'make build_cli version=1.0.0'"; \

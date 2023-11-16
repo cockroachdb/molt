@@ -1,15 +1,24 @@
 name: release
 
 on:
+  push:
+    branches:
+      - main
   release:
     types: [published]
+  workflow_dispatch: # Allow manual runs to manually define releases
+  
 
 env:
   GO_VERSION: "1.21"
 
 jobs:
-  release-linux:
+  release-cli:
+    environment: ${{ github.event_name == 'release' && 'prod' || 'dev' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -17,50 +26,60 @@ jobs:
       uses: actions/setup-go@v3
       with:
         go-version: ${{ env.GO_VERSION }}
-    - name: Create release directory
-      run: mkdir -p artifacts
-    - name: Build Linux AMD64
-      run: GOOS=linux GOARCH=amd64 go build -v -o artifacts/molt.linux.amd64 .
-    - name: Publish to release
-      uses: AButler/upload-release-assets@v2.0
+    - name: Clean and create release directory
+      run: rm -rf ./artifacts && mkdir -p artifacts
+    - name: Extract the ref or tag from the GITHUB_REF
+      id: extract
+      run: | 
+          echo "Ref: ${GITHUB_REF_NAME#v}"
+          echo "tag=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+    - name: Build for all OS and architecture combinations using tag # When triggered by a release.
+      if: ${{ github.event_name == 'release' }}
+      run: |
+        VERSION=${GITHUB_REF_NAME#v}
+        make build_molt_cli version="$VERSION"
+    - name: Build for all OS and architecture combinations using sha # When kicked off without a release.
+      if: ${{ github.event_name != 'release' }}
+      run: make build_molt_cli version="g${{ github.sha }}"
+    - name: 'auth'
+      uses: 'google-github-actions/auth@v1'
       with:
-        files: 'artifacts/*'
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-  release-windows:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Setup Golang
-        uses: actions/setup-go@v3
-        with:
-          go-version: ${{ env.GO_VERSION }}
-      - name: Create release directory
-        run: mkdir -p artifacts
-      - name: Build Linux AMD64
-        run: GOOS=windows GOARCH=amd64 go build -v -o artifacts/molt.amd64.exe .
-      - name: Publish to release
-        uses: AButler/upload-release-assets@v2.0
-        with:
-          files: 'artifacts/*'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-  release-osx:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Setup Golang
-        uses: actions/setup-go@v3
-        with:
-          go-version: ${{ env.GO_VERSION }}
-      - name: Create release directory
-        run: mkdir -p artifacts
-      - name: Build OSX
-        run: GOOS=darwin GOARCH=amd64 go build -v -o artifacts/molt.darwin.amd64 .
-      - name: Build OSX ARM
-        run: GOOS=darwin GOARCH=arm64 go build -v -o artifacts/molt.darwin.arm64 .
-      - name: Publish to release
-        uses: AButler/upload-release-assets@v2.0
-        with:
-          files: 'artifacts/*'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+        workload_identity_provider: "${{ vars.WORKLOAD_IDENTITY_PROVIDER }}"
+        service_account: "${{ vars.GCP_SERVICE_ACCOUNT }}"
+    - name: Write the versions text file with updated binary links
+      if: ${{ github.event_name == 'release' }}
+      run: |
+        echo "" >> ./versions.txt
+        echo "" >> ./versions.txt
+        for i in $(ls artifacts); do 
+          if [[ ! $i == *"latest"* ]]; then
+            echo "${{ vars.BUCKET_URL }}/molt/cli/$i" >> ./versions.txt
+          fi
+        done
+        cp versions.txt ./artifacts/versions.txt
+        cat ./artifacts/versions.txt
+    - name: Generate the manifest
+      if: ${{ github.event_name == 'release' }}
+      run: go run ./climanifest --version-file ./artifacts/versions.txt --output-file ./artifacts/versions.html --template-file "./climanifest/climanifestHtml.tmpl" --title "MOLT Tools CLI Versions"
+    - name: Upload binaries and manifest to GCP bucket
+      id: 'upload-binaries'
+      uses: google-github-actions/upload-cloud-storage@v1
+      with:
+        path: 'artifacts'
+        destination: '${{ vars.GCS_BUCKET }}/molt/cli'
+        parent: false
+        headers: |-
+            cache-control:public, max-age=60 
+    - name: Output links
+      run: |
+        echo "CLI Binaries" >> $GITHUB_STEP_SUMMARY
+        for i in $(ls artifacts); do 
+          echo "${{ vars.BUCKET_URL }}/molt/cli/$i" >> $GITHUB_STEP_SUMMARY
+        done
+    - name: 'Set up Google Cloud SDK'
+      if: ${{ github.event_name == 'release' }}
+      uses: 'google-github-actions/setup-gcloud@v1'
+    - name: Invalidate CDN cache
+      if: ${{ github.event_name == 'release' }}
+      run: |
+        gcloud compute url-maps invalidate-cdn-cache molt-lms-release-artifacts-prod-default --path "/molt/cli/*" --async
