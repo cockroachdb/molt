@@ -46,6 +46,10 @@ jobs:
       with:
         workload_identity_provider: "${{ vars.WORKLOAD_IDENTITY_PROVIDER }}"
         service_account: "${{ vars.GCP_SERVICE_ACCOUNT }}"
+    - name: Pull the versions text file from GCP
+      if: ${{ github.event_name == 'release' }}
+      run: | 
+        curl --fail-with-body -o versions.txt -s 'https://molt.cockroachdb.com/molt/cli/versions.txt' || cp ./climanifest/base-versions.txt versions.txt
     - name: Write the versions text file with updated binary links
       if: ${{ github.event_name == 'release' }}
       run: |
