@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        a {
+            display: block;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>{{ .Title }}</h1>
+    {{ range .Versions }}
+    <a href="{{ .Link }}">{{ .Name }}</a>
+    {{ end }}
+</body>
+</html>

@@ -1,0 +1,6 @@
+https://molt.cockroachdb.com/molt/cli/molt-latest.darwin-amd64.tgz
+https://molt.cockroachdb.com/molt/cli/molt-latest.darwin-arm64.tgz
+https://molt.cockroachdb.com/molt/cli/molt-latest.linux-amd64.tgz
+https://molt.cockroachdb.com/molt/cli/molt-latest.linux-arm64.tgz
+https://molt.cockroachdb.com/molt/cli/molt-latest.windows-amd64.tgz
+https://molt.cockroachdb.com/molt/cli/molt-latest.windows-arm64.tgz
