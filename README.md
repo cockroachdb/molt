@@ -47,7 +47,7 @@ molt escape-password "<your password string>"
 ...
 
 # Example output
-molt run . escape-password ";@;"
+molt escape-password ";@;"
 Substitute the following encoded password in your original connection url string:
 %3B%40%3B
 ```
