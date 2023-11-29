@@ -225,6 +225,10 @@ molt fetch \
 
 ## Local Setup
 
+### Setup Git Hooks
+
+In order to enforce good developer practices, there are Git hooks that must be synced to your local directory. To do this, run: `make sync_hooks`. Right now, this supports making sure that each commit has a `Release Note:`.
+
 ### Running Tests
 
 - Ensure a local postgres instance is setup and can be logged in using

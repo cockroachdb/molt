@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+#
+# -u: we want the variables to be properly assigned.
+# -o pipefail: we want to test the result of pipes.
+# No -e because we have failing commands and that's OK.
+set -uo pipefail
+
+grep=${GREP:-grep}
+awk=${AWK:-awk}
+sed=${SED:-sed}
+
+notes=($($grep -iE '^release note' "$1"))
+
+if [ 0 = ${#notes[*]} ]; then
+    echo "No release note specified."
+    echo "Try: 'Release Note: ...'" >&2
+    echo >&2
+    exit 1
+fi

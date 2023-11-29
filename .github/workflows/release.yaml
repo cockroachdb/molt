@@ -87,3 +87,52 @@ jobs:
       if: ${{ github.event_name == 'release' }}
       run: |
         gcloud compute url-maps invalidate-cdn-cache molt-lms-release-artifacts-prod-default --path "/molt/cli/*" --async
+
+  create-docs-ticket:
+    if: ${{ github.event_name == 'release' }}
+    needs: [release-cli]
+    environment: ${{ github.event_name == 'release' && 'prod' || 'dev' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Extract short log, ref, and date
+        id: extract
+        run: | 
+          echo "Ref: ${GITHUB_REF_NAME#v}"
+          echo "tag=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+          echo "release_date=$(date '+%Y-%m-%d')" >> $GITHUB_OUTPUT
+          # We are sorting the tags by semver and getting the second highest because that is
+          # the latest released version. The highest semver is the one currently being released
+          # since the tagging happens right before this runs.
+          latest_tag=$(git tag -l | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -2 | head -1)
+          echo "$latest_tag is the latest tag"
+
+          # Filters all commits from latest tag to now, looks for release notes, excludes empty ones, and adds a dash at the front of each line.
+          output=$(git log $latest_tag..HEAD | grep -i "release note:" | grep -vi 'release note: none' | sed 's/^ *Release Note: *//I' | sed 's/^/- /')
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "shortlog<<$EOF" >> $GITHUB_OUTPUT
+          echo "'$output'" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+      - name: Log out the git short log
+        run: |
+          echo ${{steps.extract.outputs.shortlog}}
+      - name: Login to JIRA
+        uses: atlassian/gajira-login@master
+        env:
+          JIRA_BASE_URL: ${{ vars.JIRA_BASE_URL }}
+          JIRA_USER_EMAIL: ${{ vars.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      - name: Create DOC JIRA ticket
+        id: create
+        uses: atlassian/gajira-create@v3
+        with:
+          project: DOC
+          issuetype: Docs
+          summary: MOLT Fetch/Verify (${{steps.extract.outputs.release_date}}) release ${{steps.extract.outputs.tag}}
+          description: ${{steps.extract.outputs.shortlog}}
+          # 10310 is product area - Migrations. 10175 is doc type - release notes. Assignee is Ryan Kuo.
+          fields: '{"customfield_10310": {"id": "11464"}, "assignee": {"id": "5d815e4401e2cb0c301faf7e"}, "customfield_10175": {"id": "11432"}}'
+      - name: Log created issue
+        run: echo "Issue ${{ vars.JIRA_BASE_URL }}/browse/${{ steps.create.outputs.issue }} was created"

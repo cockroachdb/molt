@@ -11,3 +11,6 @@ build_molt_cli:
         exit 1; \
     fi
 	./scripts/build-cross-platform.sh ./ ./artifacts/molt $(version)
+
+sync_hooks:
+	cp -a .githooks/ .git/hooks/
