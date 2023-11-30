@@ -1,7 +1,13 @@
 services:
   cockroachdb:
     image: cockroachdb/cockroach:latest-v23.1
+    command: start-single-node --insecure --store type=mem,size=2G
     network_mode: host
+  cockroachdbtarget:
+    image: cockroachdb/cockroach:latest-v23.1
+    ports:
+      - 8081:8080
+      - 26258:26257
     command: start-single-node --insecure --store type=mem,size=2G
   mysql:
     image: mysql:8.0
