@@ -94,7 +94,7 @@ func (l LogReporter) Report(obj ReportableObject) {
 }
 
 func reportableVal(d tree.Datum) string {
-	f := tree.NewFmtCtx(tree.FmtBareStrings | tree.FmtParsableNumerics)
+	f := tree.NewFmtCtx(tree.FmtExport | tree.FmtParsableNumerics)
 	f.FormatNode(d)
 	return f.CloseAndGetString()
 }
