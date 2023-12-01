@@ -52,6 +52,28 @@ Substitute the following encoded password in your original connection url string
 %3B%40%3B
 ```
 
+## Database-specific setup
+
+### MySQL
+
+A prerequisite of using `molt fetch` with MySQL is that GTID consistency must be enabled. This is necessary for returning the `cdc_cursor`. To enable GTID, pass two flags to the `mysql` start command or define them in `mysl.cnf`:
+
+```
+--gtid-mode=ON
+--enforce-gtid-consistency=ON
+```
+
+Additionally, disable `ONLY_FULL_GROUP_BY`:
+
+```
+// Inside the MySQL shell
+SET PERSIST sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));
+```
+
+References:
+[MySQL Docs for Enabling GTID](https://dev.mysql.com/doc/refman/8.0/en/replication-gtids-howto.html)
+[Enabling for AWS RDS MySQL](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/mysql-replication-gtid.html)
+
 ## MOLT Verify
 
 `molt verify` does the following:
