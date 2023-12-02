@@ -63,7 +63,7 @@ A prerequisite of using `molt fetch` with MySQL is that GTID consistency must be
 --enforce-gtid-consistency=ON
 ```
 
-Additionally, disable `ONLY_FULL_GROUP_BY`:
+Additionally disable `ONLY_FULL_GROUP_BY`:
 
 ```
 // Inside the MySQL shell
