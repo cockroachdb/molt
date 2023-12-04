@@ -36,6 +36,7 @@ func Command() *cobra.Command {
 		}
 		verifyLimitRowsPerSecond int
 		verifyRows               bool
+		verifyLogFile            string
 	)
 
 	cmd := &cobra.Command{
@@ -43,7 +44,7 @@ func Command() *cobra.Command {
 		Short: "Verify table schemas and row data align.",
 		Long:  `Verify ensure table schemas and row data between the two databases are aligned.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			logger, err := cmdutil.Logger()
+			logger, err := cmdutil.Logger(verifyLogFile)
 			if err != nil {
 				return err
 			}
@@ -90,7 +91,12 @@ func Command() *cobra.Command {
 			return nil
 		},
 	}
-
+	cmd.PersistentFlags().StringVar(
+		&verifyLogFile,
+		"log-file",
+		"",
+		"If set, writes to the log file specified. Otherwise, only writes to stdout.",
+	)
 	cmd.PersistentFlags().IntVar(
 		&verifyConcurrency,
 		"concurrency",

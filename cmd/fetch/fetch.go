@@ -24,6 +24,7 @@ func Command() *cobra.Command {
 		localPath               string
 		localPathListenAddr     string
 		localPathCRDBAccessAddr string
+		logFile                 string
 		directCRDBCopy          bool
 		cfg                     fetch.Config
 	)
@@ -34,7 +35,7 @@ func Command() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
-			logger, err := cmdutil.Logger()
+			logger, err := cmdutil.Logger(logFile)
 			if err != nil {
 				return err
 			}
@@ -104,6 +105,12 @@ func Command() *cobra.Command {
 		},
 	}
 
+	cmd.PersistentFlags().StringVar(
+		&logFile,
+		"log-file",
+		"",
+		"If set, writes to the log file specified. Otherwise, only writes to stdout.",
+	)
 	cmd.PersistentFlags().BoolVar(
 		&directCRDBCopy,
 		"direct-copy",
