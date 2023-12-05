@@ -155,9 +155,11 @@ func importTable(
 			})
 		}
 
+		importQuery := dataquery.ImportInto(table, locs, kvOptions)
+		logger.Debug().Msgf("running import query: %q", importQuery)
 		if _, err := conn.Exec(
 			ctx,
-			dataquery.ImportInto(table, locs, kvOptions),
+			importQuery,
 		); err != nil {
 			return errors.Wrap(err, "error importing data")
 		}
