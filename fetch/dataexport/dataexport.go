@@ -65,7 +65,7 @@ func scanWithRowIterator(
 		strings = strings[:0]
 		datums := it.Next(ctx)
 		for _, d := range datums {
-			f := tree.NewFmtCtx(tree.FmtBareStrings | tree.FmtParsableNumerics)
+			f := tree.NewFmtCtx(tree.FmtExport | tree.FmtParsableNumerics)
 			f.FormatNode(d)
 			strings = append(strings, f.CloseAndGetString())
 		}

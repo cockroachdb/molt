@@ -123,7 +123,7 @@ verify
 {"level":"info","message":"starting verify on public.common_table, shard 1/1"}
 {"level":"warn","table_schema":"public","table_name":"common_table","primary_key":["50"],"message":"extraneous row"}
 {"level":"warn","table_schema":"public","table_name":"common_table","primary_key":["125"],"message":"missing row"}
-{"level":"warn","table_schema":"public","table_name":"common_table","source_values":{"str":"'different value'"},"target_values":{"str":"NULL"},"primary_key":["150"],"message":"mismatching row value"}
+{"level":"warn","table_schema":"public","table_name":"common_table","source_values":{"str":"different value"},"target_values":{"str":"NULL"},"primary_key":["150"],"message":"mismatching row value"}
 {"level":"warn","table_schema":"public","table_name":"common_table","primary_key":["250"],"message":"missing row"}
 {"level":"warn","table_schema":"public","table_name":"common_table","primary_key":["300"],"message":"extraneous row"}
 {"level":"info","message":"finished row verification on public.common_table (shard 1/1): truth rows seen: 6, success: 3, missing: 2, mismatch: 1, extraneous: 2, live_retry: 0"}
@@ -140,7 +140,7 @@ verify
 {"level":"info","message":"starting verify on public.common_table, shard 1/1"}
 {"level":"warn","table_schema":"public","table_name":"common_table","primary_key":["50"],"message":"extraneous row"}
 {"level":"warn","table_schema":"public","table_name":"common_table","primary_key":["125"],"message":"missing row"}
-{"level":"warn","table_schema":"public","table_name":"common_table","source_values":{"str":"'different value'"},"target_values":{"str":"NULL"},"primary_key":["150"],"message":"mismatching row value"}
+{"level":"warn","table_schema":"public","table_name":"common_table","source_values":{"str":"different value"},"target_values":{"str":"NULL"},"primary_key":["150"],"message":"mismatching row value"}
 {"level":"warn","table_schema":"public","table_name":"common_table","primary_key":["250"],"message":"missing row"}
 {"level":"warn","table_schema":"public","table_name":"common_table","primary_key":["300"],"message":"extraneous row"}
 {"level":"warn","table_schema":"public","table_name":"common_table","primary_key":["400"],"message":"missing row"}

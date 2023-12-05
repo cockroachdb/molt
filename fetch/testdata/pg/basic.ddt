@@ -5,9 +5,9 @@ CREATE TABLE tbl1(id INT PRIMARY KEY, t TEXT)
 [target] CREATE TABLE
 
 exec source
-INSERT INTO tbl1 VALUES (1, 'aaa'), (2, 'bbb')
+INSERT INTO tbl1 VALUES (1, 'aaa'), (2, 'bb b'), (3, 'ééé'), (4, '🫡🫡🫡'), (5, '娜娜'), (6, 'Лукас'), (7, 'ルカス')
 ----
-[source] INSERT 0 2
+[source] INSERT 0 7
 
 exec all
 CREATE TABLE tbl2(id INT PRIMARY KEY, t TEXT)
@@ -16,9 +16,9 @@ CREATE TABLE tbl2(id INT PRIMARY KEY, t TEXT)
 [target] CREATE TABLE
 
 exec source
-INSERT INTO tbl2 VALUES (11, 'aaa'), (22, 'bbb')
+INSERT INTO tbl2 VALUES (11, 'aaa'), (22, 'bb b'), (33, 'ééé'), (44, '🫡🫡🫡'), (55, '娜娜'), (66, 'Лукас'), (77, 'ルカス')
 ----
-[source] INSERT 0 2
+[source] INSERT 0 7
 
 fetch
 ----
@@ -29,13 +29,23 @@ SELECT * FROM tbl1
 [source]:
 id	t
 1	aaa
-2	bbb
-tag: SELECT 2
+2	bb b
+3	ééé
+4	🫡🫡🫡
+5	娜娜
+6	Лукас
+7	ルカス
+tag: SELECT 7
 [target]:
 id	t
 1	aaa
-2	bbb
-tag: SELECT 2
+2	bb b
+3	ééé
+4	🫡🫡🫡
+5	娜娜
+6	Лукас
+7	ルカス
+tag: SELECT 7
 
 query all
 SELECT * FROM tbl2
@@ -43,16 +53,26 @@ SELECT * FROM tbl2
 [source]:
 id	t
 11	aaa
-22	bbb
-tag: SELECT 2
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
 [target]:
 id	t
 11	aaa
-22	bbb
-tag: SELECT 2
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
 
 exec source
-INSERT INTO tbl2 VALUES (111, 'aaa'), (333, 'bbb')
+INSERT INTO tbl2 VALUES (111, 'aaa'), (333, 'bb b')
 ----
 [source] INSERT 0 2
 
@@ -65,13 +85,23 @@ SELECT * FROM tbl1
 [source]:
 id	t
 1	aaa
-2	bbb
-tag: SELECT 2
+2	bb b
+3	ééé
+4	🫡🫡🫡
+5	娜娜
+6	Лукас
+7	ルカス
+tag: SELECT 7
 [target]:
 id	t
 1	aaa
-2	bbb
-tag: SELECT 2
+2	bb b
+3	ééé
+4	🫡🫡🫡
+5	娜娜
+6	Лукас
+7	ルカス
+tag: SELECT 7
 
 query all
 SELECT * FROM tbl2
@@ -79,14 +109,24 @@ SELECT * FROM tbl2
 [source]:
 id	t
 11	aaa
-22	bbb
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
 111	aaa
-333	bbb
-tag: SELECT 4
+333	bb b
+tag: SELECT 9
 [target]:
 id	t
 11	aaa
-22	bbb
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
 111	aaa
-333	bbb
-tag: SELECT 4
+333	bb b
+tag: SELECT 9
