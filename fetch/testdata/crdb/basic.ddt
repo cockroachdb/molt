@@ -1,0 +1,145 @@
+exec all
+CREATE TABLE tbl1(id INT PRIMARY KEY, t TEXT)
+----
+[source] CREATE TABLE
+[target] CREATE TABLE
+
+exec source
+INSERT INTO tbl1 VALUES (1, 'aaa'), (2, 'bb b'), (3, 'ééé'), (4, '🫡🫡🫡'), (5, '娜娜'), (6, 'Лукас'), (7, 'ルカス')
+----
+[source] INSERT 0 7
+
+exec all
+CREATE TABLE tbl2(id INT PRIMARY KEY, t TEXT)
+----
+[source] CREATE TABLE
+[target] CREATE TABLE
+
+exec source
+INSERT INTO tbl2 VALUES (11, 'aaa'), (22, 'bb b'), (33, 'ééé'), (44, '🫡🫡🫡'), (55, '娜娜'), (66, 'Лукас'), (77, 'ルカス')
+----
+[source] INSERT 0 7
+
+exec source
+SELECT pg_sleep(3)
+----
+[source] SELECT 1
+
+fetch
+----
+
+query all
+SELECT * FROM fetch_crdb_basic.public.tbl1
+----
+[source]:
+id	t
+1	aaa
+2	bb b
+3	ééé
+4	🫡🫡🫡
+5	娜娜
+6	Лукас
+7	ルカス
+tag: SELECT 7
+[target]:
+id	t
+1	aaa
+2	bb b
+3	ééé
+4	🫡🫡🫡
+5	娜娜
+6	Лукас
+7	ルカス
+tag: SELECT 7
+
+query all
+SELECT * FROM tbl2
+----
+[source]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+[target]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+
+exec source
+INSERT INTO tbl2 VALUES (111, 'aaa'), (333, 'bb b')
+----
+[source] INSERT 0 2
+
+
+# We need this sleep as if not, the fetch live won't catch the latest inserted
+# rows with 111 and 333.
+exec source
+SELECT pg_sleep(3)
+----
+[source] SELECT 1
+
+fetch live
+----
+
+query all
+SELECT * FROM tbl1
+----
+[source]:
+id	t
+1	aaa
+2	bb b
+3	ééé
+4	🫡🫡🫡
+5	娜娜
+6	Лукас
+7	ルカス
+tag: SELECT 7
+[target]:
+id	t
+1	aaa
+2	bb b
+3	ééé
+4	🫡🫡🫡
+5	娜娜
+6	Лукас
+7	ルカス
+tag: SELECT 7
+
+query all
+SELECT * FROM tbl2
+----
+[source]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+111	aaa
+333	bb b
+tag: SELECT 9
+[target]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+111	aaa
+333	bb b
+tag: SELECT 9

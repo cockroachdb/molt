@@ -2,9 +2,7 @@
 
 package compression
 
-import (
-	"fmt"
-)
+import "fmt"
 
 const _FlagName = "DefaultGZIPNone"
 

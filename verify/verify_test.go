@@ -104,7 +104,7 @@ func testDataDriven(t *testing.T, path string, connArgs []connArg) {
 		var sb strings.Builder
 		switch d.Cmd {
 		case "exec":
-			return testutils.ExecConnCommand(t, d, conns)
+			return testutils.ExecConnTestdata(t, d, conns)
 		case "query":
 			return testutils.QueryConnCommand(t, d, conns)
 		case "verify":

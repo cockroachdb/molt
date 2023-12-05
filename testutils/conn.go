@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/cockroachdb/datadriven"
+	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/stretchr/testify/require"
 )
@@ -28,6 +29,14 @@ func CRDBConnStr() string {
 	return crdbInstanceURL
 }
 
+func CRDBTargetConnStr() string {
+	crdbInstanceURL := "postgres://root@127.0.0.1:26258/defaultdb?sslmode=disable"
+	if override, ok := os.LookupEnv("COCKROACH_TARGET_URL"); ok {
+		crdbInstanceURL = override
+	}
+	return crdbInstanceURL
+}
+
 func MySQLConnStr() string {
 	mysqlInstanceURL := "jdbc:mysql://root@tcp(localhost:3306)/defaultdb"
 	if override, ok := os.LookupEnv("MYSQL_URL"); ok {
@@ -36,7 +45,30 @@ func MySQLConnStr() string {
 	return mysqlInstanceURL
 }
 
-func ExecConnCommand(t *testing.T, d *datadriven.TestData, conns dbconn.OrderedConns) string {
+func ExecConnQuery(ctx context.Context, q string, conn dbconn.Conn) (res string, err error) {
+	switch ct := conn.(type) {
+	case *dbconn.PGConn:
+		tag, err := ct.Exec(ctx, q)
+		if err != nil {
+			return "", err
+		}
+		return tag.String(), err
+	case *dbconn.MySQLConn:
+		tag, err := ct.ExecContext(ctx, q)
+		if err != nil {
+			return "", err
+		}
+		r, err := tag.RowsAffected()
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("[%s] %d rows affected\n", conn.ID(), r), nil
+	default:
+		return "", errors.AssertionFailedf("unhandled Conn type: %T", conn)
+	}
+}
+
+func ExecConnTestdata(t *testing.T, d *datadriven.TestData, conns dbconn.OrderedConns) string {
 	ctx := context.Background()
 	var sb strings.Builder
 

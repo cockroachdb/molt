@@ -1,0 +1,47 @@
+exec all
+CREATE TABLE tbl3(id INT PRIMARY KEY, t TEXT)
+----
+[source] CREATE TABLE
+[target] CREATE TABLE
+
+exec source
+INSERT INTO tbl3 VALUES (4, 'brr'), (5, 'bo b'), (6, 'дота'), (7, '🇨🇦🇨🇦')
+----
+[source] INSERT 0 4
+
+exec all
+CREATE TABLE tbl4(id INT PRIMARY KEY, t TEXT)
+----
+[source] CREATE TABLE
+[target] CREATE TABLE
+
+exec source
+INSERT INTO tbl4 VALUES (11, 'aaa'), (22, 'bbb'), (33, 'шанкс'), (44, '♦️♦️')
+----
+[source] INSERT 0 4
+
+exec source
+SELECT pg_sleep(1)
+----
+[source] SELECT 1
+
+fetch compress
+----
+
+query all
+SELECT * FROM tbl3
+----
+[source]:
+id	t
+4	brr
+5	bo b
+6	дота
+7	🇨🇦🇨🇦
+tag: SELECT 4
+[target]:
+id	t
+4	brr
+5	bo b
+6	дота
+7	🇨🇦🇨🇦
+tag: SELECT 4

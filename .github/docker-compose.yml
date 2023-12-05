@@ -3,6 +3,15 @@ services:
     image: cockroachdb/cockroach:latest-v23.1
     network_mode: host
     command: start-single-node --insecure --store type=mem,size=2G
+  cockroachdbtarget:
+    image: cockroachdb/cockroach:latest-v23.1
+    # We have to port forward rather than have it run on host, as the docker image
+    # only support start-single-node with listen-addr on hard-coded localhost:26257,
+    # which will conflict with the cockroachdb container.
+    ports:
+      - 26258:26257
+      - 8081:8080
+    command: start-single-node --insecure --store type=mem,size=2G
   mysql:
     image: mysql:8.0
     environment:
