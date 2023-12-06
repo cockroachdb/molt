@@ -49,9 +49,11 @@ func Command() *cobra.Command {
 					logger.Info().Msgf("default compression to none")
 					cfg.Compression = compression.None
 				}
-			} else if !isCopyMode && cfg.Compression == compression.Default {
-				logger.Info().Msgf("default compression to gzip")
+			} else if !isCopyMode && cfg.Compression <= compression.Default {
+				logger.Info().Msgf("default compression to GZIP")
 				cfg.Compression = compression.GZIP
+			} else {
+				logger.Info().Msgf("user set compression to %s", cfg.Compression.String())
 			}
 
 			conns, err := cmdutil.LoadDBConns(ctx)
