@@ -245,6 +245,50 @@ molt fetch \
   --pg-logical-replication-slot-decoding 'pgoutput'
 ```
 
+### Edge case
+#### MacOS + CockroachDB as Source within Docker container
+
+If you encounter an error similar to the following, please contact the support team and we will try to provide a solution.
+
+```
+ERROR: AS OF SYSTEM TIME: cannot specify timestamp in the future (1701836988.000000000,0 > 1701836987.322737000,0) (SQLSTATE XXUUU)
+```
+
+This error is due to the fact that with MacOS as the runtime OS, Docker may have indeterministic time drift from the host machine.[[1](https://github.com/cockroachdb/molt/issues/93)]
+
+Example to reproduce the time drift:
+```bash
+#!/bin/bash
+
+set -e
+docker rm -f random-cont
+docker run -d --name random-cont alpine sh -c "apk add --no-cache coreutils && tail -f /dev/null"
+
+# Wait for the coreutils to be fully installed
+sleep 8
+
+for ((i = 1; i <= 10; i++)); do
+# Capture start time from the Docker container and clean up non-numeric characters
+start_time=$(docker exec -it random-cont date +%s%N | tr -cd '[:digit:]')
+
+# Capture end time from the local host and clean up non-numeric characters
+end_time=$(gdate +%s%N | tr -cd '[:digit:]')
+
+# Calculate the time difference in milliseconds
+time_diff=$(( (end_time - start_time) / 1000000 ))
+
+# Calculate the time difference in seconds
+time_diff_seconds=$(bc <<< "scale=6; $time_diff / 1000")
+
+echo "Time difference: ${time_diff} milliseconds"
+echo "Time difference: ${time_diff_seconds} seconds"
+echo
+
+done
+```
+
+This will cause problem when using `molt fetch` to export data from a CockroachDB within a container, as we run a `SELECT ... AS OF SYSTEM TIME` query to iterate content from the target table.
+
 ## Local Setup
 
 ### Setup Git Hooks
