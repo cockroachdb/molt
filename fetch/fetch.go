@@ -188,6 +188,10 @@ func fetchTable(
 	if cfg.Cleanup {
 		defer func() {
 			for _, r := range e.Resources {
+				if r == nil {
+					continue
+				}
+
 				if err := r.MarkForCleanup(ctx); err != nil {
 					logger.Err(err).Msgf("error cleaning up resource")
 				}

@@ -123,7 +123,7 @@ func Command() *cobra.Command {
 		&cfg.Cleanup,
 		"cleanup",
 		false,
-		"Whether any created resources should be deleted.",
+		"Whether any created resources should be deleted. Ignored if in direct-copy mode.",
 	)
 	cmd.PersistentFlags().BoolVar(
 		&cfg.Live,
