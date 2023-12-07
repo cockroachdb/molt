@@ -14,6 +14,8 @@ import (
 )
 
 func Command() *cobra.Command {
+	const live = "live"
+
 	// TODO: sanity check bounds.
 	var (
 		verifyConcurrency              int
@@ -127,11 +129,11 @@ func Command() *cobra.Command {
 		false,
 		"Whether to fix up inconsistencies found during row verification.",
 	)
-	cmd.PersistentFlags().DurationVar(
-		&verifyContinuousPause,
-		"continuous-pause-between-runs",
-		0,
-		"Amount of time to pause between continuous runs (e.g. 1h, 2m).",
+	cmd.PersistentFlags().BoolVar(
+		&verifyRows,
+		"rows",
+		true,
+		"If true, verify both the schema (columns, types) and row data. If false, verify only the schema.",
 	)
 	cmd.PersistentFlags().BoolVar(
 		&verifyContinuous,
@@ -139,17 +141,19 @@ func Command() *cobra.Command {
 		false,
 		"Whether verification should continuously run on each shard.",
 	)
+	cmd.PersistentFlags().DurationVar(
+		&verifyContinuousPause,
+		"continuous-pause-between-runs",
+		0,
+		"Amount of time to pause between continuous runs (e.g. 1h, 2m).",
+	)
+	cmd.MarkFlagsRequiredTogether("continuous", "continuous-pause-between-runs")
+
 	cmd.PersistentFlags().BoolVar(
 		&verifyLive,
-		"live",
+		live,
 		false,
 		"Enable live mode, which attempts to account for rows that can change in value by retrying them before marking them as inconsistent.",
-	)
-	cmd.PersistentFlags().BoolVar(
-		&verifyRows,
-		"rows",
-		true,
-		"If true, verify both the schema (columns, types) and row data. If false, verify only the schema.",
 	)
 	cmd.PersistentFlags().IntVar(
 		&verifyLiveVerificationSettings.RunsPerSecond,
@@ -157,42 +161,56 @@ func Command() *cobra.Command {
 		verifyLiveVerificationSettings.RunsPerSecond,
 		"Maximum number of retry attempts per second (live mode only).",
 	)
+	cmd.MarkFlagsRequiredTogether(live, "live-runs-per-second")
+
 	cmd.PersistentFlags().IntVar(
 		&verifyLiveVerificationSettings.MaxBatchSize,
 		"live-max-batch-size",
 		verifyLiveVerificationSettings.MaxBatchSize,
 		"Maximum number of rows to retry at a time (live mode only).",
 	)
+	cmd.MarkFlagsRequiredTogether(live, "live-max-batch-size")
+
 	cmd.PersistentFlags().DurationVar(
 		&verifyLiveVerificationSettings.FlushInterval,
 		"live-flush-interval",
 		verifyLiveVerificationSettings.FlushInterval,
 		"Maximum amount of time to wait before retrying rows (live mode only).",
 	)
+	cmd.MarkFlagsRequiredTogether(live, "live-flush-interval")
+
 	cmd.PersistentFlags().IntVar(
 		&verifyLiveVerificationSettings.RetrySettings.MaxRetries,
 		"live-retries-max-iterations",
 		verifyLiveVerificationSettings.RetrySettings.MaxRetries,
 		"Maximum number of retries before marking rows as inconsistent (live mode only).",
 	)
+	cmd.MarkFlagsRequiredTogether(live, "live-retries-max-iterations")
+
 	cmd.PersistentFlags().DurationVar(
 		&verifyLiveVerificationSettings.RetrySettings.MaxBackoff,
 		"live-retry-max-backoff",
 		verifyLiveVerificationSettings.RetrySettings.MaxBackoff,
 		"Maximum amount of time a retry attempt should take before retrying again (live mode only).",
 	)
+	cmd.MarkFlagsRequiredTogether(live, "live-retry-max-backoff")
+
 	cmd.PersistentFlags().DurationVar(
 		&verifyLiveVerificationSettings.RetrySettings.InitialBackoff,
 		"live-retry-initial-backoff",
 		verifyLiveVerificationSettings.RetrySettings.InitialBackoff,
 		"Amount of time live verification should initially backoff for before retrying.",
 	)
+	cmd.MarkFlagsRequiredTogether(live, "live-retry-initial-backoff")
+
 	cmd.PersistentFlags().IntVar(
 		&verifyLiveVerificationSettings.RetrySettings.Multiplier,
 		"live-retry-multiplier",
 		verifyLiveVerificationSettings.RetrySettings.Multiplier,
 		"Multiplier to apply to backoff duration after each failed row verification (live mode only).",
 	)
+	cmd.MarkFlagsRequiredTogether(live, "live-retry-multiplier")
+
 	for _, hidden := range []string{"fixup", "table-splits"} {
 		if err := cmd.PersistentFlags().MarkHidden(hidden); err != nil {
 			panic(err)
