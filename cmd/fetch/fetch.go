@@ -114,16 +114,16 @@ func Command() *cobra.Command {
 		"If set, writes to the log file specified. Otherwise, only writes to stdout.",
 	)
 	cmd.PersistentFlags().BoolVar(
-		&directCRDBCopy,
-		"direct-copy",
-		false,
-		"Enables direct copy mode, which copies data directly from source to target without using an intermediate store.",
-	)
-	cmd.PersistentFlags().BoolVar(
 		&cfg.Cleanup,
 		"cleanup",
 		false,
 		"Whether any created resources should be deleted. Ignored if in direct-copy mode.",
+	)
+	cmd.PersistentFlags().BoolVar(
+		&directCRDBCopy,
+		"direct-copy",
+		false,
+		"Enables direct copy mode, which copies data directly from source to target without using an intermediate store.",
 	)
 	cmd.PersistentFlags().BoolVar(
 		&cfg.Live,
@@ -143,6 +143,7 @@ func Command() *cobra.Command {
 		0,
 		"If set, number of rows before the source data is flushed to intermediate files.",
 	)
+
 	cmd.PersistentFlags().IntVar(
 		&cfg.Concurrency,
 		"concurrency",
@@ -185,6 +186,8 @@ func Command() *cobra.Command {
 		"",
 		"Address of data that CockroachDB can access to import from a local store (defaults to local-path-listen-addr).",
 	)
+	cmd.MarkFlagsMutuallyExclusive("s3-bucket", "gcp-bucket", "local-path")
+
 	cmd.PersistentFlags().BoolVar(
 		&cfg.Truncate,
 		"truncate",
