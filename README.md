@@ -246,15 +246,15 @@ molt fetch \
 ```
 
 ### Edge case
-#### MacOS + CockroachDB as Source within Docker container
+#### MacOS + CockroachDB as source within Docker container
 
-If you encounter an error similar to the following, please contact the support team and we will try to provide a solution.
+If you encounter an error similar to the following, please contact the support team.
 
 ```
 ERROR: AS OF SYSTEM TIME: cannot specify timestamp in the future (1701836988.000000000,0 > 1701836987.322737000,0) (SQLSTATE XXUUU)
 ```
 
-This error is due to the fact that with MacOS as the runtime OS, Docker may have indeterministic time drift from the host machine.[[1](https://github.com/cockroachdb/molt/issues/93)]
+This error is due to the fact that with MacOS as the runtime OS, Docker may have indeterministic time drift from the host machine.[[1](https://github.com/cockroachdb/molt/issues/93)] Because we run a `SELECT ... AS OF SYSTEM TIME` query to iterate content from the target table, time drift can cause a `cannot specify timestamp in the future` error when using `molt fetch` to export data from a CockroachDB cluster within a container.
 
 Example to reproduce the time drift:
 ```bash
@@ -287,7 +287,6 @@ echo
 done
 ```
 
-This will cause problem when using `molt fetch` to export data from a CockroachDB within a container, as we run a `SELECT ... AS OF SYSTEM TIME` query to iterate content from the target table.
 
 ## Local Setup
 
