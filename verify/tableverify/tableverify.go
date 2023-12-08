@@ -302,5 +302,9 @@ func allowableTypes(a oid.Oid, b oid.Oid) bool {
 	if a == oid.T_varchar && b == oid.T_uuid {
 		return true
 	}
+	if a == oid.T_int2 && b == oid.T_bool {
+		return true
+	}
+
 	return false
 }
