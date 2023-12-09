@@ -15,6 +15,7 @@ import (
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
 	"github.com/cockroachdb/molt/fetch/internal/dataquery"
+	"github.com/cockroachdb/molt/moltlogger"
 	"github.com/cockroachdb/molt/retry"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog"
@@ -59,6 +60,7 @@ func reportImportTableProgress(
 	curTime time.Time,
 	testing bool,
 ) error {
+	dataLogger := moltlogger.GetDataLogger(logger)
 	curTimeUTC := curTime.UTC().Format("2006-01-02T15:04:05")
 	r, err := retry.NewRetry(retry.Settings{
 		InitialBackoff: 10 * time.Second,
@@ -98,7 +100,7 @@ func reportImportTableProgress(
 		} else if p[0].FractionCompleted != 1 {
 			frac := p[0].FractionCompleted
 			if frac != 0.0 && prevVal != frac {
-				logger.Info().Str("completion", fmt.Sprintf("%.2f%%", frac*100)).Msgf("progress")
+				dataLogger.Info().Str("completion", fmt.Sprintf("%.2f%%", frac*100)).Msgf("progress")
 			}
 
 			prevVal = p[0].FractionCompleted

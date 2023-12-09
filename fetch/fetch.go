@@ -11,7 +11,9 @@ import (
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
 	"github.com/cockroachdb/molt/fetch/dataexport"
+	"github.com/cockroachdb/molt/moltlogger"
 	"github.com/cockroachdb/molt/molttelemetry"
+	"github.com/cockroachdb/molt/utils"
 	"github.com/cockroachdb/molt/verify/dbverify"
 	"github.com/cockroachdb/molt/verify/tableverify"
 	"github.com/rs/zerolog"
@@ -58,7 +60,8 @@ func Fetch(
 	}
 	reportTelemetry(logger, cfg, conns, blobStore)
 
-	logger.Debug().
+	dataLogger := moltlogger.GetDataLogger(logger)
+	dataLogger.Debug().
 		Int("flush_size", cfg.FlushSize).
 		Int("flush_num_rows", cfg.FlushRows).
 		Str("store", fmt.Sprintf("%T", blobStore)).
@@ -104,7 +107,9 @@ func Fetch(
 			logger.Err(err).Msgf("error closing export source")
 		}
 	}()
-	logger.Info().
+
+	summaryLogger := moltlogger.GetSummaryLogger(logger)
+	summaryLogger.Info().
 		Int("num_tables", len(tables)).
 		Str("cdc_cursor", sqlSrc.CDCCursor()).
 		Msgf("starting fetch")
@@ -148,7 +153,7 @@ func Fetch(
 		return err
 	}
 
-	logger.Info().
+	summaryLogger.Info().
 		Int("num_tables", stats.numImportedTables).
 		Strs("tables", stats.importedTables).
 		Str("cdc_cursor", sqlSrc.CDCCursor()).
@@ -199,9 +204,12 @@ func fetchTable(
 		}()
 	}
 
-	logger.Info().
+	exportDuration := e.EndTime.Sub(e.StartTime)
+	summaryLogger := moltlogger.GetSummaryLogger(logger)
+	summaryLogger.Info().
 		Int("num_rows", e.NumRows).
-		Dur("export_duration", e.EndTime.Sub(e.StartTime)).
+		Dur("export_duration_ms", exportDuration).
+		Str("export_duration", utils.FormatDurationToTimeString(exportDuration)).
 		Msgf("data extraction from source complete")
 
 	if blobStore.CanBeTarget() {
@@ -254,9 +262,16 @@ func fetchTable(
 		if err := targetConn.Close(ctx); err != nil {
 			return err
 		}
-		logger.Info().
-			Dur("net_duration", time.Since(tableStartTime)).
-			Dur("import_duration", importDuration).
+
+		netDuration := time.Since(tableStartTime)
+		summaryLogger.Info().
+			Dur("net_duration_ms", netDuration).
+			Str("net_duration", utils.FormatDurationToTimeString(netDuration)).
+			Dur("import_duration_ms", importDuration).
+			Str("import_duration", utils.FormatDurationToTimeString(importDuration)).
+			Dur("export_duration_ms", exportDuration).
+			Str("export_duration", utils.FormatDurationToTimeString(exportDuration)).
+			Int("num_rows", e.NumRows).
 			Str("cdc_cursor", sqlSrc.CDCCursor()).
 			Msgf("data import on target for table complete")
 		return nil

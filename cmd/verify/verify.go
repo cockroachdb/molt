@@ -6,6 +6,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/cmd/internal/cmdutil"
+	"github.com/cockroachdb/molt/moltlogger"
 	"github.com/cockroachdb/molt/retry"
 	"github.com/cockroachdb/molt/verify"
 	"github.com/cockroachdb/molt/verify/inconsistency"
@@ -38,7 +39,7 @@ func Command() *cobra.Command {
 		}
 		verifyLimitRowsPerSecond int
 		verifyRows               bool
-		verifyLogFile            string
+		logFile                  string
 	)
 
 	cmd := &cobra.Command{
@@ -46,7 +47,7 @@ func Command() *cobra.Command {
 		Short: "Verify table schemas and row data align.",
 		Long:  `Verify ensure table schemas and row data between the two databases are aligned.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			logger, err := cmdutil.Logger(verifyLogFile)
+			logger, err := moltlogger.Logger(logFile)
 			if err != nil {
 				return err
 			}
@@ -94,7 +95,7 @@ func Command() *cobra.Command {
 		},
 	}
 	cmd.PersistentFlags().StringVar(
-		&verifyLogFile,
+		&logFile,
 		"log-file",
 		"",
 		"If set, writes to the log file specified. Otherwise, only writes to stdout.",
@@ -216,8 +217,8 @@ func Command() *cobra.Command {
 			panic(err)
 		}
 	}
+	moltlogger.RegisterLoggerFlags(cmd)
 	cmdutil.RegisterDBConnFlags(cmd)
-	cmdutil.RegisterLoggerFlags(cmd)
 	cmdutil.RegisterNameFilterFlags(cmd)
 	cmdutil.RegisterMetricsFlags(cmd)
 	return cmd

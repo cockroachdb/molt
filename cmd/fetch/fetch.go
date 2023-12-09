@@ -11,6 +11,7 @@ import (
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/fetch"
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
+	"github.com/cockroachdb/molt/moltlogger"
 	"github.com/spf13/cobra"
 	"github.com/thediveo/enumflag/v2"
 	"golang.org/x/oauth2/google"
@@ -34,8 +35,7 @@ func Command() *cobra.Command {
 		Long:  `Imports data from source directly into target tables.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-
-			logger, err := cmdutil.Logger(logFile)
+			logger, err := moltlogger.Logger(logFile)
 			if err != nil {
 				return err
 			}
@@ -228,8 +228,8 @@ func Command() *cobra.Command {
 		"compression",
 		"Compression type (default/gzip/none) to use (IMPORT INTO mode only).",
 	)
+	moltlogger.RegisterLoggerFlags(cmd)
 	cmdutil.RegisterDBConnFlags(cmd)
-	cmdutil.RegisterLoggerFlags(cmd)
 	cmdutil.RegisterNameFilterFlags(cmd)
 	cmdutil.RegisterMetricsFlags(cmd)
 	return cmd
