@@ -8,6 +8,7 @@ import (
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
 	"github.com/cockroachdb/molt/fetch/internal/dataquery"
+	"github.com/cockroachdb/molt/moltlogger"
 	"github.com/rs/zerolog"
 )
 
@@ -23,6 +24,7 @@ func Copy(
 	table dbtable.VerifiedTable,
 	resources []datablobstorage.Resource,
 ) (CopyResult, error) {
+	dataLogger := moltlogger.GetDataLogger(logger)
 	ret := CopyResult{
 		StartTime: time.Now(),
 	}
@@ -30,7 +32,7 @@ func Copy(
 	conn := baseConn.(*dbconn.PGConn).Conn
 
 	for i, resource := range resources {
-		logger.Debug().
+		dataLogger.Debug().
 			Int("idx", i+1).
 			Msgf("reading resource")
 		if err := func() error {
@@ -38,7 +40,7 @@ func Copy(
 			if err != nil {
 				return err
 			}
-			logger.Debug().
+			dataLogger.Debug().
 				Int("idx", i+1).
 				Msgf("running copy from resource")
 			if _, err := conn.PgConn().CopyFrom(
@@ -55,7 +57,7 @@ func Copy(
 	}
 
 	ret.EndTime = time.Now()
-	logger.Info().
+	dataLogger.Info().
 		Dur("duration", ret.EndTime.Sub(ret.StartTime)).
 		Msgf("table COPY complete")
 	return ret, nil

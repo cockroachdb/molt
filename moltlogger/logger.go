@@ -1,4 +1,4 @@
-package cmdutil
+package moltlogger
 
 import (
 	"io"
@@ -8,6 +8,16 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+)
+
+const (
+	LoggerTypeKey = "type"
+	// Summary logs are ones that report on either task or step summaries
+	// (i.e. 500 tables processed; task: "10 minutes")
+	LoggerTypeSummary = "summary"
+	// Data logs are ones that report on row or individual level operations
+	// and quantitiative measures (i.e. 10000 rows completed; failed to verify item with PK 1000)
+	LoggerTypeData = "data"
 )
 
 type loggerConfig struct {
@@ -35,6 +45,10 @@ func RegisterLoggerFlags(cmd *cobra.Command) {
 	)
 }
 
+// The default logger returned without a `type` attribute is considered the task logger.
+// We only mark a log differently if it relates to data and summary fields because
+// those are the minority case and we want people to know that this information
+// is relevant to the performance / operation of their data load.
 func Logger(fileName string) (zerolog.Logger, error) {
 	var writer io.Writer = os.Stdout
 	if loggerConfigInst.useConsoleWriter {
@@ -61,5 +75,14 @@ func Logger(fileName string) (zerolog.Logger, error) {
 	if err != nil {
 		return logger, err
 	}
+
 	return logger.Level(lvl).With().Timestamp().Logger(), err
+}
+
+func GetDataLogger(logger zerolog.Logger) zerolog.Logger {
+	return logger.With().Str(LoggerTypeKey, LoggerTypeData).Logger()
+}
+
+func GetSummaryLogger(logger zerolog.Logger) zerolog.Logger {
+	return logger.With().Str(LoggerTypeKey, LoggerTypeSummary).Logger()
 }
