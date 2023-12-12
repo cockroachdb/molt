@@ -20,3 +20,6 @@ artifacts/
 
 # Go workspace file
 go.work
+
+# Misc
+task.log
