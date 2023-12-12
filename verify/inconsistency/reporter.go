@@ -7,6 +7,7 @@ import (
 	"github.com/cockroachdb/cockroachdb-parser/pkg/sql/sem/tree"
 	"github.com/cockroachdb/cockroachdb-parser/pkg/sql/sem/tree/treecmp"
 	"github.com/cockroachdb/molt/dbconn"
+	"github.com/cockroachdb/molt/moltlogger"
 	"github.com/rs/zerolog"
 )
 
@@ -31,8 +32,17 @@ func (c CombinedReporter) Close() {
 	}
 }
 
+// StatusReport gives status on the running verify task.
+// For example, that the task started, is running at a given table, etc.
 type StatusReport struct {
 	Info string
+}
+
+// SummaryReport gives running summary reports on the running verify task.
+// For example, how many successes, rows are seen, mismatches, etc.
+type SummaryReport struct {
+	Info  string
+	Stats RowStats
 }
 
 // LogReporter reports to `zerolog`.
@@ -41,25 +51,30 @@ type LogReporter struct {
 }
 
 func (l LogReporter) Report(obj ReportableObject) {
+	dataLogger := moltlogger.GetDataLogger(l.Logger)
+	summaryLogger := moltlogger.GetSummaryLogger(l.Logger)
+
 	switch obj := obj.(type) {
 	case MissingTable:
-		l.Warn().
+		dataLogger.Warn().
 			Str("table_schema", string(obj.Schema)).
 			Str("table_name", string(obj.Table)).
 			Msgf("missing table detected")
 	case ExtraneousTable:
-		l.Warn().
+		dataLogger.Warn().
 			Str("table_schema", string(obj.Schema)).
 			Str("table_name", string(obj.Table)).
 			Msgf("extraneous table detected")
 	case MismatchingTableDefinition:
-		l.Warn().
+		dataLogger.Warn().
 			Str("table_schema", string(obj.Schema)).
 			Str("table_name", string(obj.Table)).
 			Str("mismatch_info", obj.Info).
 			Msgf("mismatching table definition")
 	case StatusReport:
 		l.Info().Msg(obj.Info)
+	case SummaryReport:
+		reportRunningSummary(summaryLogger, obj.Stats, obj.Info)
 	case MismatchingRow:
 		sourceValues := zerolog.Dict()
 		targetVals := zerolog.Dict()
@@ -67,7 +82,7 @@ func (l LogReporter) Report(obj ReportableObject) {
 			targetVals = targetVals.Str(string(col), reportableVal(obj.TruthVals[i]))
 			sourceValues = sourceValues.Str(string(col), reportableVal(obj.TargetVals[i]))
 		}
-		l.Warn().
+		dataLogger.Warn().
 			Str("table_schema", string(obj.Schema)).
 			Str("table_name", string(obj.Table)).
 			Dict("source_values", targetVals).
@@ -75,19 +90,19 @@ func (l LogReporter) Report(obj ReportableObject) {
 			Strs("primary_key", zipPrimaryKeysForReporting(obj.PrimaryKeyValues)).
 			Msgf("mismatching row value")
 	case MissingRow:
-		l.Warn().
+		dataLogger.Warn().
 			Str("table_schema", string(obj.Schema)).
 			Str("table_name", string(obj.Table)).
 			Strs("primary_key", zipPrimaryKeysForReporting(obj.PrimaryKeyValues)).
 			Msgf("missing row")
 	case ExtraneousRow:
-		l.Warn().
+		dataLogger.Warn().
 			Str("table_schema", string(obj.Schema)).
 			Str("table_name", string(obj.Table)).
 			Strs("primary_key", zipPrimaryKeysForReporting(obj.PrimaryKeyValues)).
 			Msgf("extraneous row")
 	default:
-		l.Error().
+		dataLogger.Error().
 			Str("type", fmt.Sprintf("%T", obj)).
 			Msgf("unknown object type")
 	}

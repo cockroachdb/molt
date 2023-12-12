@@ -10,7 +10,7 @@ CREATE TABLE tbl (id int primary key, t text, "xXx" text)
 
 verify
 ----
-{"level":"warn","table_schema":"public","table_name":"tbl","mismatch_info":"extraneous column xXx found","message":"mismatching table definition"}
-{"level":"warn","table_schema":"public","table_name":"tbl","mismatch_info":"missing column xxx","message":"mismatching table definition"}
+{"level":"warn","type":"data","table_schema":"public","table_name":"tbl","mismatch_info":"extraneous column xXx found","message":"mismatching table definition"}
+{"level":"warn","type":"data","table_schema":"public","table_name":"tbl","mismatch_info":"missing column xxx","message":"mismatching table definition"}
 {"level":"info","message":"starting verify on public.Tbl, shard 1/1"}
-{"level":"info","message":"finished row verification on public.Tbl (shard 1/1): truth rows seen: 0, success: 0, missing: 0, mismatch: 0, extraneous: 0, live_retry: 0"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"\"Tbl\"","num_truth_rows":0,"num_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.Tbl (shard 1/1)"}

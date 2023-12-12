@@ -16,27 +16,6 @@ import (
 	"golang.org/x/time/rate"
 )
 
-type rowStats struct {
-	numVerified   int
-	numSuccess    int
-	numMissing    int
-	numMismatch   int
-	numExtraneous int
-	numLiveRetry  int
-}
-
-func (s *rowStats) String() string {
-	return fmt.Sprintf(
-		"truth rows seen: %d, success: %d, missing: %d, mismatch: %d, extraneous: %d, live_retry: %d",
-		s.numVerified,
-		s.numSuccess,
-		s.numMissing,
-		s.numMismatch,
-		s.numExtraneous,
-		s.numLiveRetry,
-	)
-}
-
 type TableShard struct {
 	dbtable.VerifiedTable
 
@@ -81,7 +60,11 @@ func VerifyRowsOnShard(
 		}
 	}
 
-	defaultRowEVL := &defaultRowEventListener{reporter: reporter, table: table}
+	defaultRowEVL := &defaultRowEventListener{reporter: reporter, table: table,
+		stats: inconsistency.RowStats{
+			Schema: table.Schema.String(),
+			Table:  table.Table.String(),
+		}}
 	var rowEVL RowEventListener = defaultRowEVL
 	var liveReverifier *liveReverifier
 	if liveReverifySettings != nil {
@@ -102,8 +85,9 @@ func VerifyRowsOnShard(
 	}
 	switch rowEVL := rowEVL.(type) {
 	case *defaultRowEventListener:
-		reporter.Report(inconsistency.StatusReport{
-			Info: fmt.Sprintf("finished row verification on %s.%s (shard %d/%d): %s", table.Schema, table.Table, table.ShardNum, table.TotalShards, rowEVL.stats.String()),
+		reporter.Report(inconsistency.SummaryReport{
+			Info:  fmt.Sprintf("finished row verification on %s.%s (shard %d/%d)", table.Schema, table.Table, table.ShardNum, table.TotalShards),
+			Stats: rowEVL.stats,
 		})
 	case *liveRowEventListener:
 		logger.Trace().Msgf("flushing remaining live reverifier objects")
@@ -111,8 +95,9 @@ func VerifyRowsOnShard(
 		liveReverifier.ScanComplete()
 		logger.Trace().Msgf("waiting for live reverifier to complete")
 		liveReverifier.WaitForDone()
-		reporter.Report(inconsistency.StatusReport{
-			Info: fmt.Sprintf("finished LIVE row verification on %s.%s (shard %d/%d): %s", table.Schema, table.Table, table.ShardNum, table.TotalShards, rowEVL.base.stats.String()),
+		reporter.Report(inconsistency.SummaryReport{
+			Info:  fmt.Sprintf("finished LIVE row verification on %s.%s (shard %d/%d)", table.Schema, table.Table, table.ShardNum, table.TotalShards),
+			Stats: rowEVL.base.stats,
 		})
 	default:
 		return errors.Newf("unknown row event listener: %T", rowEVL)

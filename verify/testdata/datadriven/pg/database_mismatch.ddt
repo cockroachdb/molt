@@ -16,7 +16,7 @@ CREATE TABLE non_truth_table (id INT4 PRIMARY KEY)
 
 verify
 ----
-{"level":"warn","table_schema":"public","table_name":"truth_table","message":"missing table detected"}
-{"level":"warn","table_schema":"public","table_name":"non_truth_table","message":"extraneous table detected"}
+{"level":"warn","type":"data","table_schema":"public","table_name":"truth_table","message":"missing table detected"}
+{"level":"warn","type":"data","table_schema":"public","table_name":"non_truth_table","message":"extraneous table detected"}
 {"level":"info","message":"starting verify on public.in_both, shard 1/1"}
-{"level":"info","message":"finished row verification on public.in_both (shard 1/1): truth rows seen: 0, success: 0, missing: 0, mismatch: 0, extraneous: 0, live_retry: 0"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"in_both","num_truth_rows":0,"num_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.in_both (shard 1/1)"}

@@ -73,7 +73,7 @@ func Command() *cobra.Command {
 				})
 			}
 
-			reporter.Report(inconsistency.StatusReport{Info: "verification in progress"})
+			logger.Info().Msg("verification in progress")
 			if err := verify.Verify(
 				ctx,
 				conns,
@@ -90,7 +90,8 @@ func Command() *cobra.Command {
 			); err != nil {
 				return errors.Wrapf(err, "error verifying")
 			}
-			reporter.Report(inconsistency.StatusReport{Info: "verification complete"})
+
+			logger.Info().Msg("verification complete")
 			return nil
 		},
 	}
