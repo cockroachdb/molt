@@ -32,8 +32,17 @@ func (c CombinedReporter) Close() {
 	}
 }
 
+// StatusReport gives status on the running verify task.
+// For example, that the task started, is running at a given table, etc.
 type StatusReport struct {
 	Info string
+}
+
+// SummaryReport gives running summary reports on the running verify task.
+// For example, how many successes, rows are seen, mismatches, etc.
+type SummaryReport struct {
+	Info  string
+	Stats RowStats
 }
 
 // LogReporter reports to `zerolog`.
@@ -50,20 +59,22 @@ func (l LogReporter) Report(obj ReportableObject) {
 		dataLogger.Warn().
 			Str("table_schema", string(obj.Schema)).
 			Str("table_name", string(obj.Table)).
-			Msgf("missing_table")
+			Msgf("missing table detected")
 	case ExtraneousTable:
 		dataLogger.Warn().
 			Str("table_schema", string(obj.Schema)).
 			Str("table_name", string(obj.Table)).
-			Msgf("extraneous_table")
+			Msgf("extraneous table detected")
 	case MismatchingTableDefinition:
 		dataLogger.Warn().
 			Str("table_schema", string(obj.Schema)).
 			Str("table_name", string(obj.Table)).
 			Str("mismatch_info", obj.Info).
-			Msgf("mismatching_table_def")
+			Msgf("mismatching table definition")
 	case StatusReport:
-		summaryLogger.Info().Msg(obj.Info)
+		l.Info().Msg(obj.Info)
+	case SummaryReport:
+		reportRunningSummary(summaryLogger, obj.Stats, obj.Info)
 	case MismatchingRow:
 		sourceValues := zerolog.Dict()
 		targetVals := zerolog.Dict()
@@ -77,23 +88,23 @@ func (l LogReporter) Report(obj ReportableObject) {
 			Dict("source_values", targetVals).
 			Dict("target_values", sourceValues).
 			Strs("primary_key", zipPrimaryKeysForReporting(obj.PrimaryKeyValues)).
-			Msgf("mismatching_row")
+			Msgf("mismatching row value")
 	case MissingRow:
 		dataLogger.Warn().
 			Str("table_schema", string(obj.Schema)).
 			Str("table_name", string(obj.Table)).
 			Strs("primary_key", zipPrimaryKeysForReporting(obj.PrimaryKeyValues)).
-			Msgf("missing_row")
+			Msgf("missing row")
 	case ExtraneousRow:
 		dataLogger.Warn().
 			Str("table_schema", string(obj.Schema)).
 			Str("table_name", string(obj.Table)).
 			Strs("primary_key", zipPrimaryKeysForReporting(obj.PrimaryKeyValues)).
-			Msgf("extraneous_row")
+			Msgf("extraneous row")
 	default:
 		dataLogger.Error().
 			Str("type", fmt.Sprintf("%T", obj)).
-			Msgf("unknown_type")
+			Msgf("unknown object type")
 	}
 }
 

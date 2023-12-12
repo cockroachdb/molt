@@ -44,41 +44,42 @@ func init() {
 // defaultRowEventListener is the default invocation of the row event listener.
 type defaultRowEventListener struct {
 	reporter inconsistency.Reporter
-	stats    rowStats
+	stats    inconsistency.RowStats
 	table    TableShard
 }
 
 func (n *defaultRowEventListener) OnExtraneousRow(row inconsistency.ExtraneousRow) {
 	n.reporter.Report(row)
-	n.stats.numExtraneous++
+	n.stats.NumExtraneous++
 	rowStatusMetric.WithLabelValues("extraneous").Inc()
 }
 
 func (n *defaultRowEventListener) OnMissingRow(row inconsistency.MissingRow) {
-	n.stats.numMissing++
+	n.stats.NumMissing++
 	n.reporter.Report(row)
 	rowStatusMetric.WithLabelValues("missing").Inc()
 }
 
 func (n *defaultRowEventListener) OnMismatchingRow(row inconsistency.MismatchingRow) {
 	n.reporter.Report(row)
-	n.stats.numMismatch++
+	n.stats.NumMismatch++
 	rowStatusMetric.WithLabelValues("mismatching").Inc()
 }
 
 func (n *defaultRowEventListener) OnMatch() {
-	n.stats.numSuccess++
+	n.stats.NumSuccess++
 	rowStatusMetric.WithLabelValues("success").Inc()
 }
 
 func (n *defaultRowEventListener) OnRowScan() {
-	if n.stats.numVerified%10000 == 0 && n.stats.numVerified > 0 {
-		n.reporter.Report(inconsistency.StatusReport{
-			Info: fmt.Sprintf("progress on %s.%s (shard %d/%d): %s", n.table.Schema, n.table.Table, n.table.ShardNum, n.table.TotalShards, n.stats.String()),
+	if n.stats.NumVerified%10000 == 0 && n.stats.NumVerified > 0 {
+		n.reporter.Report(inconsistency.SummaryReport{
+			Info:  fmt.Sprintf("progress on %s.%s (shard %d/%d)", n.table.Schema, n.table.Table, n.table.ShardNum, n.table.TotalShards),
+			Stats: n.stats,
 		})
 	}
 	rowsReadMetric.Inc()
-	n.stats.numVerified++
+	n.stats.NumVerified++
 }
 
 // liveRowEventListener is used when `live` mode is enabled.
@@ -93,17 +94,17 @@ type liveRowEventListener struct {
 
 func (n *liveRowEventListener) OnExtraneousRow(row inconsistency.ExtraneousRow) {
 	n.pks = append(n.pks, row.PrimaryKeyValues)
-	n.base.stats.numLiveRetry++
+	n.base.stats.NumLiveRetry++
 }
 
 func (n *liveRowEventListener) OnMissingRow(row inconsistency.MissingRow) {
 	n.pks = append(n.pks, row.PrimaryKeyValues)
-	n.base.stats.numLiveRetry++
+	n.base.stats.NumLiveRetry++
 }
 
 func (n *liveRowEventListener) OnMismatchingRow(row inconsistency.MismatchingRow) {
 	n.pks = append(n.pks, row.PrimaryKeyValues)
-	n.base.stats.numLiveRetry++
+	n.base.stats.NumLiveRetry++
 }
 
 func (n *liveRowEventListener) OnMatch() {

@@ -26,5 +26,5 @@ INSERT INTO enum_table VALUES (1, 'a'), (2, 'c')
 verify
 ----
 {"level":"info","message":"starting verify on public.enum_table, shard 1/1"}
-{"level":"warn","table_schema":"public","table_name":"enum_table","source_values":{"s":"b"},"target_values":{"s":"c"},"primary_key":["2"],"message":"mismatching row value"}
-{"level":"info","message":"finished row verification on public.enum_table (shard 1/1): truth rows seen: 2, success: 1, missing: 0, mismatch: 1, extraneous: 0, live_retry: 0"}
+{"level":"warn","type":"data","table_schema":"public","table_name":"enum_table","source_values":{"s":"b"},"target_values":{"s":"c"},"primary_key":["2"],"message":"mismatching row value"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"enum_table","num_truth_rows":2,"num_success":1,"num_missing":0,"num_mismatch":1,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.enum_table (shard 1/1)"}

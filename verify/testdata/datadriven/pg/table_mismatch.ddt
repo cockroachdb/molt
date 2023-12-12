@@ -12,7 +12,7 @@ CREATE TABLE t (id INT4 PRIMARY KEY)
 
 verify
 ----
-{"level":"warn","table_schema":"public","table_name":"t","mismatch_info":"missing a PRIMARY KEY - results cannot be compared","message":"mismatching table definition"}
+{"level":"warn","type":"data","table_schema":"public","table_name":"t","mismatch_info":"missing a PRIMARY KEY - results cannot be compared","message":"mismatching table definition"}
 
 exec all
 DROP TABLE t
@@ -51,10 +51,10 @@ CREATE TABLE different_pk_type (
 
 verify
 ----
-{"level":"warn","table_schema":"public","table_name":"different_pk_type","mismatch_info":"column type mismatch on id: int8 vs float8","message":"mismatching table definition"}
-{"level":"warn","table_schema":"public","table_name":"different_pk_type","mismatch_info":"PRIMARY KEY does not match source of truth (columns and types must match)","message":"mismatching table definition"}
-{"level":"warn","table_schema":"public","table_name":"t","mismatch_info":"extraneous column mismatching_pk found","message":"mismatching table definition"}
-{"level":"warn","table_schema":"public","table_name":"t","mismatch_info":"extraneous column extra_col found","message":"mismatching table definition"}
-{"level":"warn","table_schema":"public","table_name":"t","mismatch_info":"column type mismatch on mismatching_type: int4 vs text","message":"mismatching table definition"}
-{"level":"warn","table_schema":"public","table_name":"t","mismatch_info":"missing column missing_in_lie_col","message":"mismatching table definition"}
-{"level":"warn","table_schema":"public","table_name":"t","mismatch_info":"PRIMARY KEY does not match source of truth (columns and types must match)","message":"mismatching table definition"}
+{"level":"warn","type":"data","table_schema":"public","table_name":"different_pk_type","mismatch_info":"column type mismatch on id: int8 vs float8","message":"mismatching table definition"}
+{"level":"warn","type":"data","table_schema":"public","table_name":"different_pk_type","mismatch_info":"PRIMARY KEY does not match source of truth (columns and types must match)","message":"mismatching table definition"}
+{"level":"warn","type":"data","table_schema":"public","table_name":"t","mismatch_info":"extraneous column mismatching_pk found","message":"mismatching table definition"}
+{"level":"warn","type":"data","table_schema":"public","table_name":"t","mismatch_info":"extraneous column extra_col found","message":"mismatching table definition"}
+{"level":"warn","type":"data","table_schema":"public","table_name":"t","mismatch_info":"column type mismatch on mismatching_type: int4 vs text","message":"mismatching table definition"}
+{"level":"warn","type":"data","table_schema":"public","table_name":"t","mismatch_info":"missing column missing_in_lie_col","message":"mismatching table definition"}
+{"level":"warn","type":"data","table_schema":"public","table_name":"t","mismatch_info":"PRIMARY KEY does not match source of truth (columns and types must match)","message":"mismatching table definition"}

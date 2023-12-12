@@ -16,7 +16,7 @@ CREATE TABLE tbl (
 
 verify
 ----
-{"level":"warn","table_schema":"public","table_name":"tbl","mismatch_info":"PRIMARY KEY has a string field id has a different collation (mysql=latin1_swedish_ci, crdb=en_US.utf8) preventing verification","message":"mismatching table definition"}
+{"level":"warn","type":"data","table_schema":"public","table_name":"tbl","mismatch_info":"PRIMARY KEY has a string field id has a different collation (mysql=latin1_swedish_ci, crdb=en_US.utf8) preventing verification","message":"mismatching table definition"}
 
 exec source
 DROP TABLE tbl;
@@ -34,4 +34,4 @@ CREATE TABLE tbl (
 verify
 ----
 {"level":"info","message":"starting verify on public.tbl, shard 1/1"}
-{"level":"info","message":"finished row verification on public.tbl (shard 1/1): truth rows seen: 0, success: 0, missing: 0, mismatch: 0, extraneous: 0, live_retry: 0"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"tbl","num_truth_rows":0,"num_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.tbl (shard 1/1)"}
