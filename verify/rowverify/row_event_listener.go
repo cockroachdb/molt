@@ -15,6 +15,7 @@ type RowEventListener interface {
 	OnExtraneousRow(row inconsistency.ExtraneousRow)
 	OnMissingRow(row inconsistency.MissingRow)
 	OnMismatchingRow(row inconsistency.MismatchingRow)
+	OnColumnMismatchNoOtherIssues(row inconsistency.MismatchingColumn, reportLog bool)
 	OnMatch()
 	OnRowScan()
 }
@@ -36,7 +37,7 @@ var (
 
 func init() {
 	// Initialise each metric by default.
-	for _, s := range []string{"extraneous", "missing", "mismatching", "success"} {
+	for _, s := range []string{"extraneous", "missing", "mismatching", "mismatching_column", "success", "conditional_success"} {
 		rowStatusMetric.WithLabelValues(s)
 	}
 }
@@ -69,6 +70,21 @@ func (n *defaultRowEventListener) OnMismatchingRow(row inconsistency.Mismatching
 func (n *defaultRowEventListener) OnMatch() {
 	n.stats.NumSuccess++
 	rowStatusMetric.WithLabelValues("success").Inc()
+}
+
+func (n *defaultRowEventListener) OnColumnMismatchNoOtherIssues(
+	row inconsistency.MismatchingColumn, reportLog bool,
+) {
+	// This logic happens at most once per shard per table
+	// so we don't double count mismatching columns and reporting for mismatching columns.
+	if reportLog {
+		n.reporter.Report(row)
+		numMismatchingCols := float64(int(len(row.MismatchingColumns)))
+		rowStatusMetric.WithLabelValues("mismatching_column").Add(numMismatchingCols)
+		n.stats.NumColumnMismatch += len(row.MismatchingColumns)
+	}
+	n.stats.NumConditionalSuccess++
+	rowStatusMetric.WithLabelValues("conditional_success").Inc()
 }
 
 func (n *defaultRowEventListener) OnRowScan() {
@@ -109,6 +125,12 @@ func (n *liveRowEventListener) OnMismatchingRow(row inconsistency.MismatchingRow
 
 func (n *liveRowEventListener) OnMatch() {
 	n.base.OnMatch()
+}
+
+func (n *liveRowEventListener) OnColumnMismatchNoOtherIssues(
+	row inconsistency.MismatchingColumn, reportLog bool,
+) {
+	n.base.OnColumnMismatchNoOtherIssues(row, reportLog)
 }
 
 func (n *liveRowEventListener) OnRowScan() {

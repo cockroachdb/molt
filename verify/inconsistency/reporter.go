@@ -3,6 +3,7 @@ package inconsistency
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/cockroachdb/cockroachdb-parser/pkg/sql/sem/tree"
 	"github.com/cockroachdb/cockroachdb-parser/pkg/sql/sem/tree/treecmp"
@@ -82,6 +83,7 @@ func (l LogReporter) Report(obj ReportableObject) {
 			targetVals = targetVals.Str(string(col), reportableVal(obj.TruthVals[i]))
 			sourceValues = sourceValues.Str(string(col), reportableVal(obj.TargetVals[i]))
 		}
+
 		dataLogger.Warn().
 			Str("table_schema", string(obj.Schema)).
 			Str("table_name", string(obj.Table)).
@@ -89,6 +91,24 @@ func (l LogReporter) Report(obj ReportableObject) {
 			Dict("target_values", sourceValues).
 			Strs("primary_key", zipPrimaryKeysForReporting(obj.PrimaryKeyValues)).
 			Msgf("mismatching row value")
+	case MismatchingColumn:
+		sourceValues := zerolog.Dict()
+		targetVals := zerolog.Dict()
+		for i, col := range obj.MismatchingColumns {
+			targetVals = targetVals.Str(string(col), reportableVal(obj.TruthVals[i]))
+			sourceValues = sourceValues.Str(string(col), reportableVal(obj.TargetVals[i]))
+		}
+
+		joinedInfo := strings.Join(obj.Info, ";")
+		msg := fmt.Sprintf("mismatching column found - %s", joinedInfo)
+
+		dataLogger.Warn().
+			Str("table_schema", string(obj.Schema)).
+			Str("table_name", string(obj.Table)).
+			Dict("source_values", targetVals).
+			Dict("target_values", sourceValues).
+			Strs("primary_key", zipPrimaryKeysForReporting(obj.PrimaryKeyValues)).
+			Msgf(msg)
 	case MissingRow:
 		dataLogger.Warn().
 			Str("table_schema", string(obj.Schema)).

@@ -34,3 +34,15 @@ type MismatchingRow struct {
 	TruthVals          tree.Datums
 	TargetVals         tree.Datums
 }
+
+type MismatchingColumn struct {
+	dbtable.Name
+
+	PrimaryKeyColumns []tree.Name
+	PrimaryKeyValues  tree.Datums
+
+	MismatchingColumns []tree.Name
+	TruthVals          tree.Datums
+	TargetVals         tree.Datums
+	Info               []string
+}
