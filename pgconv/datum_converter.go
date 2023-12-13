@@ -39,7 +39,14 @@ func ConvertRowValue(typMap *pgtype.Map, val any, typOID oid.Oid) (tree.Datum, e
 
 	switch typOID {
 	case pgtype.BoolOID:
-		return tree.MakeDBool(tree.DBool(val.(bool))), nil
+		// Convert the boolean to an integer so that it's reasonable to compare with
+		// another TINYINT for MySQL and other dialects that don't have a BOOL.
+		intVal := 0
+		if val.(bool) {
+			intVal = 1
+		}
+
+		return tree.ParseDInt(fmt.Sprintf("%d", intVal))
 	case pgtype.QCharOID:
 		return tree.NewDString(fmt.Sprintf("%c", val.(int32))), nil
 	case pgtype.VarcharOID, pgtype.TextOID, pgtype.BPCharOID:
@@ -70,7 +77,7 @@ func ConvertRowValue(typMap *pgtype.Map, val any, typOID oid.Oid) (tree.Datum, e
 		if err != nil {
 			return nil, errors.Wrapf(err, "error decoding UUID %v", val)
 		}
-		return tree.NewDUuid(tree.DUuid{UUID: u}), nil
+		return tree.NewDString(u.String()), nil
 	case pgtype.TimestampOID:
 		return tree.MakeDTimestamp(val.(time.Time), time.Microsecond)
 	case pgtype.TimestamptzOID:

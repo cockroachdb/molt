@@ -2,7 +2,7 @@ CREATE DATABASE molt;
 use molt;
 CREATE TABLE employees (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    unique_id BINARY(16),
+    unique_id VARCHAR(100),
     name VARCHAR(50),
     created_at DATETIME,
     updated_at DATE,
@@ -23,7 +23,7 @@ BEGIN
     WHILE i <= 200000 DO
         INSERT INTO employees (unique_id, name, created_at, updated_at, is_hired, age, salary, bonus)
         VALUES (
-            UNHEX(REPLACE('550e8400-e29b-41d4-a716-446655440000', '-', '')),
+            '550e8400-e29b-41d4-a716-446655440000',
             CONCAT('Employee_', i),
             '2023-11-03 09:00:00',
             '2023-11-03',
