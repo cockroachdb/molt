@@ -37,3 +37,31 @@ services:
       - "26257:26257"
     volumes:
       - ./cockroach-init:/docker-entrypoint-initdb.d
+
+  prometheus:
+    image: prom/prometheus:latest
+    restart: always
+    working_dir: /prometheus
+    command: --config.file=prometheus.yml
+    ports:
+      - "9090:9090"
+    expose:
+      - "9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    working_dir: /grafana
+    depends_on:
+      - prometheus
+    ports:
+      - 3000:3000
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      # TODO (rluu): put this in when we have a dashboard template.
+      #  - ./grafana/dashboard.json:/grafana/dashboard/dashboard.json
+      - ./grafana/dashboard.yaml:/etc/grafana/provisioning/dashboards/main.yaml
+      - ./grafana/datasource.yml:/etc/grafana/provisioning/datasources/prometheus_ds.yml
