@@ -16,6 +16,7 @@ import (
 
 func Command() *cobra.Command {
 	const live = "live"
+	const continuous = "continuous"
 
 	// TODO: sanity check bounds.
 	var (
@@ -46,6 +47,23 @@ func Command() *cobra.Command {
 		Use:   "verify",
 		Short: "Verify table schemas and row data align.",
 		Long:  `Verify ensure table schemas and row data between the two databases are aligned.`,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			// Flag dependencies need to be checked here because in this hook is when
+			// we can determine if the flag has been changed by the user (i.e. user set a value).
+			if err := cmdutil.CheckFlagDependency(cmd, continuous, []string{"continuous-pause-between-runs"}); err != nil {
+				return err
+			}
+
+			liveDependents := []string{"live-runs-per-second", "live-max-batch-size",
+				"live-flush-interval", "live-retries-max-iterations", "live-retry-max-backoff",
+				"live-retry-initial-backoff", "live-retry-multiplier",
+			}
+			if err := cmdutil.CheckFlagDependency(cmd, live, liveDependents); err != nil {
+				return err
+			}
+
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger, err := moltlogger.Logger(logFile)
 			if err != nil {
@@ -139,7 +157,7 @@ func Command() *cobra.Command {
 	)
 	cmd.PersistentFlags().BoolVar(
 		&verifyContinuous,
-		"continuous",
+		continuous,
 		false,
 		"Whether verification should continuously run on each shard.",
 	)
@@ -149,7 +167,6 @@ func Command() *cobra.Command {
 		0,
 		"Amount of time to pause between continuous runs (e.g. 1h, 2m).",
 	)
-	cmd.MarkFlagsRequiredTogether("continuous", "continuous-pause-between-runs")
 
 	cmd.PersistentFlags().BoolVar(
 		&verifyLive,
@@ -163,7 +180,6 @@ func Command() *cobra.Command {
 		verifyLiveVerificationSettings.RunsPerSecond,
 		"Maximum number of retry attempts per second (live mode only).",
 	)
-	cmd.MarkFlagsRequiredTogether(live, "live-runs-per-second")
 
 	cmd.PersistentFlags().IntVar(
 		&verifyLiveVerificationSettings.MaxBatchSize,
@@ -171,7 +187,6 @@ func Command() *cobra.Command {
 		verifyLiveVerificationSettings.MaxBatchSize,
 		"Maximum number of rows to retry at a time (live mode only).",
 	)
-	cmd.MarkFlagsRequiredTogether(live, "live-max-batch-size")
 
 	cmd.PersistentFlags().DurationVar(
 		&verifyLiveVerificationSettings.FlushInterval,
@@ -179,7 +194,6 @@ func Command() *cobra.Command {
 		verifyLiveVerificationSettings.FlushInterval,
 		"Maximum amount of time to wait before retrying rows (live mode only).",
 	)
-	cmd.MarkFlagsRequiredTogether(live, "live-flush-interval")
 
 	cmd.PersistentFlags().IntVar(
 		&verifyLiveVerificationSettings.RetrySettings.MaxRetries,
@@ -187,7 +201,6 @@ func Command() *cobra.Command {
 		verifyLiveVerificationSettings.RetrySettings.MaxRetries,
 		"Maximum number of retries before marking rows as inconsistent (live mode only).",
 	)
-	cmd.MarkFlagsRequiredTogether(live, "live-retries-max-iterations")
 
 	cmd.PersistentFlags().DurationVar(
 		&verifyLiveVerificationSettings.RetrySettings.MaxBackoff,
@@ -195,7 +208,6 @@ func Command() *cobra.Command {
 		verifyLiveVerificationSettings.RetrySettings.MaxBackoff,
 		"Maximum amount of time a retry attempt should take before retrying again (live mode only).",
 	)
-	cmd.MarkFlagsRequiredTogether(live, "live-retry-max-backoff")
 
 	cmd.PersistentFlags().DurationVar(
 		&verifyLiveVerificationSettings.RetrySettings.InitialBackoff,
@@ -203,7 +215,6 @@ func Command() *cobra.Command {
 		verifyLiveVerificationSettings.RetrySettings.InitialBackoff,
 		"Amount of time live verification should initially backoff for before retrying.",
 	)
-	cmd.MarkFlagsRequiredTogether(live, "live-retry-initial-backoff")
 
 	cmd.PersistentFlags().IntVar(
 		&verifyLiveVerificationSettings.RetrySettings.Multiplier,
@@ -211,7 +222,6 @@ func Command() *cobra.Command {
 		verifyLiveVerificationSettings.RetrySettings.Multiplier,
 		"Multiplier to apply to backoff duration after each failed row verification (live mode only).",
 	)
-	cmd.MarkFlagsRequiredTogether(live, "live-retry-multiplier")
 
 	for _, hidden := range []string{"fixup", "table-splits"} {
 		if err := cmd.PersistentFlags().MarkHidden(hidden); err != nil {
