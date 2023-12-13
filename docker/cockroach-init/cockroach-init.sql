@@ -5,6 +5,7 @@ CREATE TABLE employees (
 	created_at TIMESTAMPTZ,
 	updated_at DATE,
 	is_hired BOOL,
+	age INT2,
 	salary DECIMAL(8,2),
 	bonus FLOAT4
 );
