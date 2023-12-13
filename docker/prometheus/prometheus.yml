@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 10s
+  evaluation_interval: 10s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+    static_configs:
+      # Using host.docker.internal because MOLT verify/fetch is run on the host.
+      # In the case that we run in a Docker container, we can update the host reference here.
+      - targets: ['host.docker.internal:3030']
