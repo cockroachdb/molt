@@ -100,7 +100,7 @@ func (l LogReporter) Report(obj ReportableObject) {
 		}
 
 		joinedInfo := strings.Join(obj.Info, ";")
-		msg := fmt.Sprintf("mismatching column found - %s", joinedInfo)
+		msg := fmt.Sprintf("mismatching column(s) found - %s", joinedInfo)
 
 		dataLogger.Warn().
 			Str("table_schema", string(obj.Schema)).

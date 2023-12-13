@@ -36,7 +36,7 @@ func (s *RowStats) String() string {
 // during the execution of verify.
 func reportRunningSummary(l zerolog.Logger, s RowStats, m string) {
 	if s.NumConditionalSuccess > 0 {
-		m = fmt.Sprintf("%s - please check all warnings and errors for column mismatches to determine success", m)
+		m = fmt.Sprintf("%s - please check all warnings and errors to determine whether column mismatches can be ignored", m)
 	}
 
 	l.Info().

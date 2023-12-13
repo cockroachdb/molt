@@ -27,4 +27,4 @@ verify
 ----
 {"level":"info","message":"starting verify on public.enum_table, shard 1/1"}
 {"level":"warn","type":"data","table_schema":"public","table_name":"enum_table","source_values":{"s":"b"},"target_values":{"s":"c"},"primary_key":["2"],"message":"mismatching row value"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"enum_table","num_truth_rows":2,"num_success":1,"num_missing":0,"num_mismatch":1,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.enum_table (shard 1/1)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"enum_table","num_truth_rows":2,"num_success":1,"num_conditional_success":0,"num_missing":0,"num_mismatch":1,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.enum_table (shard 1/1)"}

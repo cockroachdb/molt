@@ -79,9 +79,9 @@ func (n *defaultRowEventListener) OnColumnMismatchNoOtherIssues(
 	// so we don't double count mismatching columns and reporting for mismatching columns.
 	if reportLog {
 		n.reporter.Report(row)
-		numMismatchingCols := float64(int(len(row.MismatchingColumns)))
-		rowStatusMetric.WithLabelValues("mismatching_column").Add(numMismatchingCols)
-		n.stats.NumColumnMismatch += len(row.MismatchingColumns)
+		numMismatchingCols := len(row.MismatchingColumns)
+		rowStatusMetric.WithLabelValues("mismatching_column").Add(float64(numMismatchingCols))
+		n.stats.NumColumnMismatch += numMismatchingCols
 	}
 	n.stats.NumConditionalSuccess++
 	rowStatusMetric.WithLabelValues("conditional_success").Inc()
