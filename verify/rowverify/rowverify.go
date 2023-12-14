@@ -109,6 +109,8 @@ func verifyRows(
 	ctx context.Context, iterators [2]rowiterator.Iterator, table TableShard, evl RowEventListener,
 ) error {
 	truth := iterators[0]
+	colIdxToSeen := map[int]bool{}
+
 	for truth.HasNext(ctx) {
 		evl.OnRowScan()
 
@@ -149,21 +151,43 @@ func verifyRows(
 				})
 			case 0:
 				// Matching primary key. Compare values and break loop.
+				reportLog := true
 				targetVals = it.Next(ctx)
 				mismatches := inconsistency.MismatchingRow{
 					Name:              table.Name,
 					PrimaryKeyColumns: table.PrimaryKeyColumns,
 					PrimaryKeyValues:  targetVals[:len(table.PrimaryKeyColumns)],
 				}
+				mismatchColumns := inconsistency.MismatchingColumn{
+					Name:              table.Name,
+					PrimaryKeyColumns: table.PrimaryKeyColumns,
+					PrimaryKeyValues:  targetVals[:len(table.PrimaryKeyColumns)],
+				}
+
 				for valIdx := len(table.PrimaryKeyColumns); valIdx < len(targetVals); valIdx++ {
-					if targetVals[valIdx].Compare(comparectx.CompareContext, truthVals[valIdx]) != 0 {
+					if retVal, err := targetVals[valIdx].CompareError(comparectx.CompareContext, truthVals[valIdx]); err != nil {
+						if _, ok := colIdxToSeen[valIdx]; ok {
+							reportLog = false
+						}
+
+						mismatchColumns.MismatchingColumns = append(mismatchColumns.MismatchingColumns, table.Columns[valIdx])
+						mismatchColumns.TargetVals = append(mismatchColumns.TargetVals, targetVals[valIdx])
+						mismatchColumns.TruthVals = append(mismatchColumns.TruthVals, truthVals[valIdx])
+
+						msg := fmt.Sprintf("%s (%s)", table.Columns[valIdx].String(), err.Error())
+						mismatchColumns.Info = append(mismatchColumns.Info, msg)
+						colIdxToSeen[valIdx] = true
+					} else if retVal != 0 {
 						mismatches.MismatchingColumns = append(mismatches.MismatchingColumns, table.Columns[valIdx])
 						mismatches.TargetVals = append(mismatches.TargetVals, targetVals[valIdx])
 						mismatches.TruthVals = append(mismatches.TruthVals, truthVals[valIdx])
 					}
 				}
+
 				if len(mismatches.MismatchingColumns) > 0 {
 					evl.OnMismatchingRow(mismatches)
+				} else if len(mismatchColumns.MismatchingColumns) > 0 {
+					evl.OnColumnMismatchNoOtherIssues(mismatchColumns, reportLog)
 				} else {
 					evl.OnMatch()
 				}

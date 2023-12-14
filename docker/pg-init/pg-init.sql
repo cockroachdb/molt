@@ -8,6 +8,7 @@ CREATE TABLE employees (
     created_at TIMESTAMPTZ,
     updated_at DATE,
     is_hired BOOLEAN,
+    age SMALLINT,
     salary NUMERIC(8, 2),
     bonus REAL
 );
@@ -18,13 +19,14 @@ DECLARE
 BEGIN
     i := 1;
     WHILE i <= 200000 LOOP
-        INSERT INTO employees (unique_id, name, created_at, updated_at, is_hired, salary, bonus)
+        INSERT INTO employees (unique_id, name, created_at, updated_at, is_hired, age, salary, bonus)
         VALUES (
             ('550e8400-e29b-41d4-a716-446655440000'::uuid),
             'Employee_' || i,
             '2023-11-03 09:00:00'::timestamp,
             '2023-11-03'::date,
             true,
+            24,
             5000.00,
             100.25
         );

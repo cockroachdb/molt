@@ -29,7 +29,7 @@ INSERT INTO test_table (id) VALUES (1), (2), (3), (4), (5), (6), (7), (8), (9), 
 verify
 ----
 {"level":"info","message":"starting verify on public.test_table, shard 1/1"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":10,"num_success":10,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.test_table (shard 1/1)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":10,"num_success":10,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 1/1)"}
 
 exec all
 DROP TABLE test_table
@@ -67,16 +67,16 @@ INSERT INTO test_table (id) VALUES (1), (2), (3), (4), (5), (6), (7), (8), (9), 
 verify
 ----
 {"level":"info","message":"starting verify on public.test_table, shard 1/1"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":10,"num_success":10,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.test_table (shard 1/1)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":10,"num_success":10,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 1/1)"}
 
 verify splits=3
 ----
 {"level":"info","message":"starting verify on public.test_table, shard 1/3, range: [<beginning> - 4)"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":3,"num_success":3,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.test_table (shard 1/3)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":3,"num_success":3,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 1/3)"}
 {"level":"info","message":"starting verify on public.test_table, shard 2/3, range: [4 - 7)"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":3,"num_success":3,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.test_table (shard 2/3)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":3,"num_success":3,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 2/3)"}
 {"level":"info","message":"starting verify on public.test_table, shard 3/3, range: [7 - <end>]"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":4,"num_success":4,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.test_table (shard 3/3)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":4,"num_success":4,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 3/3)"}
 
 exec all
 DROP TABLE test_table
@@ -126,7 +126,7 @@ verify
 {"level":"warn","type":"data","table_schema":"public","table_name":"common_table","source_values":{"str":"different value"},"target_values":{"str":"NULL"},"primary_key":["150"],"message":"mismatching row value"}
 {"level":"warn","type":"data","table_schema":"public","table_name":"common_table","primary_key":["250"],"message":"missing row"}
 {"level":"warn","type":"data","table_schema":"public","table_name":"common_table","primary_key":["300"],"message":"extraneous row"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"common_table","num_truth_rows":6,"num_success":3,"num_missing":2,"num_mismatch":1,"num_extraneous":2,"num_live_retry":0,"message":"finished row verification on public.common_table (shard 1/1)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"common_table","num_truth_rows":6,"num_success":3,"num_conditional_success":0,"num_missing":2,"num_mismatch":1,"num_extraneous":2,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.common_table (shard 1/1)"}
 
 # Verify with extraneous rows on source of truth.
 exec source
@@ -144,7 +144,7 @@ verify
 {"level":"warn","type":"data","table_schema":"public","table_name":"common_table","primary_key":["250"],"message":"missing row"}
 {"level":"warn","type":"data","table_schema":"public","table_name":"common_table","primary_key":["300"],"message":"extraneous row"}
 {"level":"warn","type":"data","table_schema":"public","table_name":"common_table","primary_key":["400"],"message":"missing row"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"common_table","num_truth_rows":7,"num_success":3,"num_missing":3,"num_mismatch":1,"num_extraneous":2,"num_live_retry":0,"message":"finished row verification on public.common_table (shard 1/1)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"common_table","num_truth_rows":7,"num_success":3,"num_conditional_success":0,"num_missing":3,"num_mismatch":1,"num_extraneous":2,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.common_table (shard 1/1)"}
 
 exec all
 DROP TABLE common_table

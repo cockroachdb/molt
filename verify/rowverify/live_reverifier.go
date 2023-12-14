@@ -241,4 +241,10 @@ func (r *reverifyEventListener) OnMatch() {
 	r.BaseListener.OnMatch()
 }
 
+func (r *reverifyEventListener) OnColumnMismatchNoOtherIssues(
+	row inconsistency.MismatchingColumn, reportLog bool,
+) {
+	r.BaseListener.OnColumnMismatchNoOtherIssues(row, reportLog)
+}
+
 func (r *reverifyEventListener) OnRowScan() {}

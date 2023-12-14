@@ -242,4 +242,9 @@ func (m *mockRowEventListener) OnMismatchingRow(row inconsistency.MismatchingRow
 
 func (m *mockRowEventListener) OnMatch() {}
 
+func (m *mockRowEventListener) OnColumnMismatchNoOtherIssues(
+	row inconsistency.MismatchingColumn, reportLog bool,
+) {
+}
+
 func (m *mockRowEventListener) OnRowScan() {}

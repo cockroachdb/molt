@@ -10,7 +10,7 @@ verify splits=4
 ----
 {"level":"info","message":"unable to identify a split for primary key public.test_table, defaulting to a full scan"}
 {"level":"info","message":"starting verify on public.test_table, shard 1/1"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":0,"num_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.test_table (shard 1/1)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":0,"num_success":0,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 1/1)"}
 
 exec all
 INSERT INTO test_table VALUES (1)
@@ -22,7 +22,7 @@ verify splits=4
 ----
 {"level":"info","message":"unable to identify a split for primary key public.test_table, defaulting to a full scan"}
 {"level":"info","message":"starting verify on public.test_table, shard 1/1"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":1,"num_success":1,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.test_table (shard 1/1)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":1,"num_success":1,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 1/1)"}
 
 # 2 rows table can be split, but ranges may be jank.
 
@@ -35,13 +35,13 @@ INSERT INTO test_table VALUES (2)
 verify splits=4
 ----
 {"level":"info","message":"starting verify on public.test_table, shard 1/4, range: [<beginning> - 1)"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":0,"num_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.test_table (shard 1/4)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":0,"num_success":0,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 1/4)"}
 {"level":"info","message":"starting verify on public.test_table, shard 2/4, range: [1 - 1)"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":0,"num_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.test_table (shard 2/4)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":0,"num_success":0,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 2/4)"}
 {"level":"info","message":"starting verify on public.test_table, shard 3/4, range: [1 - 1)"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":0,"num_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.test_table (shard 3/4)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":0,"num_success":0,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 3/4)"}
 {"level":"info","message":"starting verify on public.test_table, shard 4/4, range: [1 - <end>]"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":2,"num_success":2,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.test_table (shard 4/4)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":2,"num_success":2,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 4/4)"}
 
 # UUIDs
 exec all
@@ -57,13 +57,13 @@ INSERT INTO test_table VALUES
 verify splits=4
 ----
 {"level":"info","message":"starting verify on public.test_table, shard 1/4, range: [<beginning> - '3d15fb6c-2682-4991-0000-000000000000')"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":1,"num_success":1,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.test_table (shard 1/4)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":1,"num_success":1,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 1/4)"}
 {"level":"info","message":"starting verify on public.test_table, shard 2/4, range: ['3d15fb6c-2682-4991-0000-000000000000' - '59cbf92e-d230-4b9f-0000-000000000000')"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":0,"num_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.test_table (shard 2/4)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":0,"num_success":0,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 2/4)"}
 {"level":"info","message":"starting verify on public.test_table, shard 3/4, range: ['59cbf92e-d230-4b9f-0000-000000000000' - '7681f6f1-7dde-4dad-0000-000000000000')"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":0,"num_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.test_table (shard 3/4)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":0,"num_success":0,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 3/4)"}
 {"level":"info","message":"starting verify on public.test_table, shard 4/4, range: ['7681f6f1-7dde-4dad-0000-000000000000' - <end>]"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":1,"num_success":1,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.test_table (shard 4/4)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":1,"num_success":1,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 4/4)"}
 
 # Floats
 exec all
@@ -79,13 +79,13 @@ INSERT INTO test_table VALUES
 verify splits=4
 ----
 {"level":"info","message":"starting verify on public.test_table, shard 1/4, range: [<beginning> - -1.446650225e+07)"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":1,"num_success":1,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.test_table (shard 1/4)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":1,"num_success":1,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 1/4)"}
 {"level":"info","message":"starting verify on public.test_table, shard 2/4, range: [-1.446650225e+07 - -8.9335605e+06)"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":0,"num_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.test_table (shard 2/4)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":0,"num_success":0,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 2/4)"}
 {"level":"info","message":"starting verify on public.test_table, shard 3/4, range: [-8.9335605e+06 - -3.40061875e+06)"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":0,"num_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.test_table (shard 3/4)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":0,"num_success":0,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 3/4)"}
 {"level":"info","message":"starting verify on public.test_table, shard 4/4, range: [-3.40061875e+06 - <end>]"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":1,"num_success":1,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"message":"finished row verification on public.test_table (shard 4/4)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":1,"num_success":1,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 4/4)"}
 
 exec all
 INSERT INTO test_table VALUES
@@ -99,4 +99,4 @@ verify splits=4
 {"level":"info","message":"unable to identify a split for primary key public.test_table, defaulting to a full scan"}
 {"level":"info","message":"starting verify on public.test_table, shard 1/1"}
 {"level":"warn","type":"data","table_schema":"public","table_name":"test_table","primary_key":["(-1.9999444e+07)"],"message":"extraneous row"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":3,"num_success":3,"num_missing":0,"num_mismatch":0,"num_extraneous":1,"num_live_retry":0,"message":"finished row verification on public.test_table (shard 1/1)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":3,"num_success":3,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":1,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 1/1)"}
