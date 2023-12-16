@@ -9,6 +9,7 @@ import (
 	"github.com/cockroachdb/cockroachdb-parser/pkg/sql/sem/tree/treecmp"
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/moltlogger"
+	"github.com/cockroachdb/molt/verify/verifymetrics"
 	"github.com/rs/zerolog"
 )
 
@@ -179,6 +180,7 @@ func (l FixReporter) Report(obj ReportableObject) {
 				panic(err)
 			}
 		}
+		verifymetrics.NumRowFixups.WithLabelValues("mismatching").Inc()
 	case MissingRow:
 		l.Logger.Info().
 			Str("table_schema", string(obj.Schema)).
@@ -211,6 +213,7 @@ func (l FixReporter) Report(obj ReportableObject) {
 				panic(err)
 			}
 		}
+		verifymetrics.NumRowFixups.WithLabelValues("missing").Inc()
 	case ExtraneousRow:
 		l.Logger.Info().
 			Str("table_schema", string(obj.Schema)).
@@ -231,6 +234,7 @@ func (l FixReporter) Report(obj ReportableObject) {
 				panic(err)
 			}
 		}
+		verifymetrics.NumRowFixups.WithLabelValues("extraneous").Inc()
 	}
 }
 

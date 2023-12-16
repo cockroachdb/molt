@@ -8,9 +8,12 @@ import (
 	"github.com/cockroachdb/molt/cmd/internal/cmdutil"
 	"github.com/cockroachdb/molt/moltlogger"
 	"github.com/cockroachdb/molt/retry"
+	"github.com/cockroachdb/molt/utils"
 	"github.com/cockroachdb/molt/verify"
 	"github.com/cockroachdb/molt/verify/inconsistency"
 	"github.com/cockroachdb/molt/verify/rowverify"
+	"github.com/cockroachdb/molt/verify/verifymetrics"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cobra"
 )
 
@@ -92,6 +95,7 @@ func Command() *cobra.Command {
 			}
 
 			logger.Info().Msg("verification in progress")
+			timer := prometheus.NewTimer(prometheus.ObserverFunc(verifymetrics.OverallDuration.Set))
 			if err := verify.Verify(
 				ctx,
 				conns,
@@ -108,8 +112,11 @@ func Command() *cobra.Command {
 			); err != nil {
 				return errors.Wrapf(err, "error verifying")
 			}
-
-			logger.Info().Msg("verification complete")
+			verifyDuration := timer.ObserveDuration()
+			logger.Info().
+				Dur("net_duration_ms", verifyDuration).
+				Str("net_duration", utils.FormatDurationToTimeString(verifyDuration)).
+				Msg("verification complete")
 			return nil
 		},
 	}

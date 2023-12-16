@@ -5,9 +5,8 @@ import (
 	"io"
 
 	"github.com/cockroachdb/molt/dbtable"
+	"github.com/cockroachdb/molt/fetch/fetchmetrics"
 	"github.com/cockroachdb/molt/moltlogger"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog"
 )
 
@@ -25,15 +24,6 @@ type csvPipe struct {
 	numRows   int
 	newWriter func() io.WriteCloser
 }
-
-var (
-	importedRows = promauto.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "molt",
-		Subsystem: "fetch",
-		Name:      "rows_imported",
-		Help:      "Number of rows that have been imported in",
-	}, []string{"table"})
-)
 
 func newCSVPipe(
 	in io.Reader,
@@ -54,7 +44,7 @@ func newCSVPipe(
 func (p *csvPipe) Pipe(tn dbtable.Name) error {
 	r := csv.NewReader(p.in)
 	r.ReuseRecord = true
-	m := importedRows.WithLabelValues(tn.SafeString())
+	m := fetchmetrics.ImportedRows.WithLabelValues(tn.SafeString())
 	dataLogger := moltlogger.GetDataLogger(p.logger)
 	for {
 		record, err := r.Read()

@@ -11,8 +11,7 @@ import (
 	"github.com/cockroachdb/molt/retry"
 	"github.com/cockroachdb/molt/rowiterator"
 	"github.com/cockroachdb/molt/verify/inconsistency"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/cockroachdb/molt/verify/verifymetrics"
 	"github.com/rs/zerolog"
 	"golang.org/x/time/rate"
 )
@@ -48,27 +47,6 @@ type liveReverifier struct {
 		blockScan  atomic.Bool
 	}
 }
-
-var (
-	liveReverifiedRows = promauto.NewCounter(prometheus.CounterOpts{
-		Namespace: "molt",
-		Subsystem: "verify",
-		Name:      "live_reverified_rows",
-		Help:      "Number of rows that require reverification by the live reverifier.",
-	})
-	liveReverifyRemainingPKs = promauto.NewGauge(prometheus.GaugeOpts{
-		Namespace: "molt",
-		Subsystem: "verify",
-		Name:      "live_queued_pks",
-		Help:      "Number of rows that are queued by the live reverifier.",
-	})
-	liveReverifyRemainingBatches = promauto.NewGauge(prometheus.GaugeOpts{
-		Namespace: "molt",
-		Subsystem: "verify",
-		Name:      "live_queued_batches",
-		Help:      "Number of batches of rows that require the live reverifier.",
-	})
-)
 
 func newLiveReverifier(
 	ctx context.Context,
@@ -122,8 +100,8 @@ func newLiveReverifier(
 					Int("num_pks", queue.numPKs).
 					Msgf("waiting for live reverifier to complete")
 			}
-			liveReverifyRemainingPKs.Set(float64(queue.numPKs))
-			liveReverifyRemainingBatches.Set(float64(len(queue.items)))
+			verifymetrics.LiveRemainingPKs.Set(float64(queue.numPKs))
+			verifymetrics.LiveRemainingBatches.Set(float64(len(queue.items)))
 
 			// By default, block until we get work.
 			var nextWorkCh <-chan time.Time = noTrafficChannel
@@ -140,7 +118,7 @@ func newLiveReverifier(
 				if !ok {
 					return
 				}
-				liveReverifiedRows.Add(float64(len(it.PrimaryKeys)))
+				verifymetrics.LiveRows.Add(float64(len(it.PrimaryKeys)))
 				queue.heapPush(it)
 			case <-nextWorkCh:
 				if r.testingKnobs.blockScan.Load() {

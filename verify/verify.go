@@ -13,8 +13,7 @@ import (
 	"github.com/cockroachdb/molt/verify/inconsistency"
 	"github.com/cockroachdb/molt/verify/rowverify"
 	"github.com/cockroachdb/molt/verify/tableverify"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/cockroachdb/molt/verify/verifymetrics"
 	"github.com/rs/zerolog"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/time/rate"
@@ -97,15 +96,6 @@ func WithRows(b bool) VerifyOpt {
 	}
 }
 
-var (
-	verificationShards = promauto.NewGauge(prometheus.GaugeOpts{
-		Namespace: "molt",
-		Subsystem: "verify",
-		Name:      "shards_running",
-		Help:      "Number of verification shards that are running.",
-	})
-)
-
 // Verify verifies the given connections have matching tables and contents.
 func Verify(
 	ctx context.Context,
@@ -150,6 +140,8 @@ func Verify(
 	if err != nil {
 		return err
 	}
+
+	reportTableCategories(dbTables)
 
 	// Report mismatching table definitions.
 	for _, tbl := range tbls {
@@ -202,8 +194,8 @@ func Verify(
 	workQueue := make(chan rowverify.TableShard)
 	for goroutineIdx := 0; goroutineIdx < numGoroutines; goroutineIdx++ {
 		g.Go(func() error {
-			verificationShards.Inc()
-			defer verificationShards.Dec()
+			verifymetrics.NumShards.Inc()
+			defer verifymetrics.NumShards.Dec()
 
 			for {
 				shard, ok := <-workQueue
@@ -314,6 +306,12 @@ func verifyRowShard(
 		liveVerifySettings,
 		rateLimiter,
 	)
+}
+
+func reportTableCategories(result dbverify.Result) {
+	verifymetrics.NumTablesProcessed.WithLabelValues("missing").Add(float64(len(result.MissingTables)))
+	verifymetrics.NumTablesProcessed.WithLabelValues("extraneous").Add(float64(len(result.ExtraneousTables)))
+	verifymetrics.NumTablesProcessed.WithLabelValues("verified").Add(float64(len(result.Verified)))
 }
 
 func reportTelemetry(logger zerolog.Logger, opts verifyOpts, conns dbconn.OrderedConns) {

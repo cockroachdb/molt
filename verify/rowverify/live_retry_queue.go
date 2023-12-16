@@ -3,23 +3,7 @@ package rowverify
 import (
 	"container/heap"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-)
-
-var (
-	liveReverifierPrimaryKeys = promauto.NewGauge(prometheus.GaugeOpts{
-		Namespace: "molt",
-		Subsystem: "verify",
-		Name:      "live_primary_keys",
-		Help:      "Number of primary keys that are being reverified.",
-	})
-	liveReverifierBatches = promauto.NewGauge(prometheus.GaugeOpts{
-		Namespace: "molt",
-		Subsystem: "verify",
-		Name:      "live_batches",
-		Help:      "Number of batches that are in the queue to be reverified.",
-	})
+	"github.com/cockroachdb/molt/verify/verifymetrics"
 )
 
 // liveRetryQueue implements the heap interface.
@@ -51,8 +35,8 @@ func (rq liveRetryQueue) Swap(i, j int) {
 func (rq *liveRetryQueue) Push(x any) {
 	rq.items = append(rq.items, x.(*liveRetryItem))
 	rq.numPKs += len(x.(*liveRetryItem).PrimaryKeys)
-	liveReverifierPrimaryKeys.Set(float64(rq.numPKs))
-	liveReverifierBatches.Set(float64(len(rq.items)))
+	verifymetrics.LivePrimaryKeys.Set(float64(rq.numPKs))
+	verifymetrics.LiveBatches.Set(float64(len(rq.items)))
 }
 
 func (rq *liveRetryQueue) Pop() any {
@@ -61,7 +45,7 @@ func (rq *liveRetryQueue) Pop() any {
 	item := old[n-1]
 	rq.items = old[0 : n-1]
 	rq.numPKs -= len(item.PrimaryKeys)
-	liveReverifierPrimaryKeys.Set(float64(rq.numPKs))
-	liveReverifierBatches.Set(float64(len(rq.items)))
+	verifymetrics.LivePrimaryKeys.Set(float64(rq.numPKs))
+	verifymetrics.LiveBatches.Set(float64(len(rq.items)))
 	return item
 }
