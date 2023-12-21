@@ -1,16 +1,15 @@
+import { grey } from '@mui/material/colors';
+import { useNavigate } from "react-router-dom";
+import { useState } from 'react';
 import {
     Typography,
     Box,
     MenuItem,
     Button,
     SelectChangeEvent,
-    List,
-    ListItem
 } from '@mui/material';
-import { grey } from '@mui/material/colors';
-import { useNavigate } from "react-router-dom";
-import { useState } from 'react';
 
+import { MuiMarkdown, getOverrides } from 'mui-markdown';
 import { AddConnection } from './CreateConnection';
 import { CONFIGURE_TASK_PATH } from '..';
 import { SelectGroup } from '../../components';
@@ -63,7 +62,7 @@ export default function SetupConnection() {
                 display: "flex",
                 flexDirection: "row",
                 justifyContent: "center",
-                height: "100vh"
+                height: "100%"
             }
         }>
             <Box sx={{
@@ -132,70 +131,50 @@ export default function SetupConnection() {
                 display: "flex",
                 flexDirection: "column",
                 flex: 5,
-                backgroundColor: grey[200],
+                backgroundColor: grey[50],
                 py: 4,
                 px: 6,
                 gap: 4,
             }}>
                 <Typography variant="h4">Setup Guide</Typography>
-                <Box id="existingSection" sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 1,
+                <MuiMarkdown overrides={{
+                    ...getOverrides(), // This will keep the other default overrides.
+                    code: {
+                        props: {
+                            style: { fontSize: "0.8rem", backgroundColor: grey[200] },
+                        } as React.HTMLProps<HTMLParagraphElement>,
+                    },
+                    p: {
+                        props: {
+                            style: { fontSize: "0.95rem" },
+                        } as React.HTMLProps<HTMLParagraphElement>,
+                    },
                 }}>
-                    <Typography variant="h5">Use existing connections</Typography>
-                    <Typography variant="body2">
-                        Select an existing connection for both the source (`Source Connection`)
-                        and target connection (`Target Connection`). Just a note that you must select
-                        different connections
-                    </Typography>
-                </Box>
-                <Box id="addSection" sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 1,
-                }}>
-                    <Typography variant="h5">Adding new connections</Typography>
-                    <Typography variant="body2">
-                        In order to setup new connections, you must first have a running database that is available
-                        over the internet, or locally (if you are running locally).
-                    </Typography>
-                    <Typography variant="body2">
-                        Here are the details we will need from you...
-                    </Typography>
-                    <List
-                        sx={{
-                            listStyleType: 'disc',
-                            listStylePosition: 'inside',
+                    {`##### Use existing connections
+Select an existing connection for both the source (\`Source Connection\`) and target connection (\`Target Connection\`). 
+Just a note that you must select different connections.
 
-                        }}
-                    >
-                        <ListItem sx={{ display: 'list-item', mb: 0 }}>
-                            Credential Name: unique name for the credential
-                        </ListItem>
-                        <ListItem sx={{ display: 'list-item', mb: 0 }}>
-                            Dialect: dialect for the database (MySQL, Cockroach, PostgreSQL)
-                        </ListItem>
-                        <ListItem sx={{ display: 'list-item', mb: 0 }}>
-                            Host: host URI or IP address of the server running the database (i.e. `http://fetch.com`, `https://127.0.0.1/2333`)
-                        </ListItem>
-                        <ListItem sx={{ display: 'list-item', mb: 0 }}>
-                            Port: port number for the database process
-                        </ListItem>
-                        <ListItem sx={{ display: 'list-item', mb: 0 }}>
-                            Username: name of the SQL user
-                        </ListItem>
-                        <ListItem sx={{ display: 'list-item', mb: 0 }}>
-                            Password: password for the SQL user
-                        </ListItem>
-                        <ListItem sx={{ display: 'list-item', mb: 0 }}>
-                            Database Name: name of the database to access
-                        </ListItem>
-                        <ListItem sx={{ display: 'list-item', mb: 0 }}>
-                            SSL Mode: SSL setting for the database (dictates if a cert must be supplied or not)
-                        </ListItem>
-                    </List>
-                </Box>
+<br/>
+
+##### Adding new connections
+In order to setup new connections, you must first have a running database that is available over the internet, or locally (if you are running locally).
+<br/><br/>Here are the details we will need from you:
+- **Credential Name**: unique name for the credential
+- **Dialect**: dialect for the database (MySQL, Cockroach, PostgreSQL)
+- **Host**: host URI or IP address of the server running the database (i.e. \`http://fetch.com\`, \`https://127.0.0.1/2333\`)
+- **Port**: port number for the database process
+- **Username**: name of the SQL user
+- **Password**: password for the SQL user
+- **Database Name**: name of the database to access
+- **SSL Mode**: SSL setting for the database (dictates if a cert must be supplied or not)
+
+<br/>
+You can obtain the details from the connection string. For example:
+\`\`\`
+postgres://postgres:postgres@localhost:5432/molt?sslmode=disable
+\`\`\`
+`}
+                </MuiMarkdown>
             </Box>
         </Box >
     )

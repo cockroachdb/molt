@@ -18,6 +18,7 @@
     "Menu": "link:@mui/icons-material/Menu",
     "Pending": "link:@material-ui/icons/Pending",
     "eslint-config-react-app": "^7.0.1",
+    "mui-markdown": "^1.1.12",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-redux": "^9.0.4",
