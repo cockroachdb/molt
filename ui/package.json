@@ -15,6 +15,7 @@
     "@types/node": "^16.18.68",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
+    "@uiw/react-codemirror": "^4.21.21",
     "Menu": "link:@mui/icons-material/Menu",
     "Pending": "link:@material-ui/icons/Pending",
     "eslint-config-react-app": "^7.0.1",

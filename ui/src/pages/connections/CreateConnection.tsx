@@ -1,12 +1,9 @@
 import {
     Typography,
     Box,
-    FormControl,
-    Select,
     MenuItem,
     Button,
     IconButton,
-    InputLabel,
     SelectChangeEvent,
 } from '@mui/material';
 import CloseIcon from '@material-ui/icons/Close';

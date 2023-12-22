@@ -37,10 +37,10 @@ const mockConnections: Connection[] = [
     }]
 
 const createConnectionMap = (connections: Connection[]): Map<string, Connection> => {
-    const connMap = new Map<string, Connection>;
+    const connMap = new Map<string, Connection>();
 
     connections.map(item => {
-        connMap.set(item.id, item);
+        return connMap.set(item.id, item);
     })
 
     return connMap;
@@ -69,9 +69,10 @@ export default function SetupConnection() {
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "stretch",
-                flex: 6,
+                flex: 1,
                 py: 4,
                 px: 10,
+                maxWidth: "50%"
             }}>
                 <Typography variant="h4" sx={{
                     mb: 5,
@@ -130,7 +131,7 @@ export default function SetupConnection() {
             <Box sx={{
                 display: "flex",
                 flexDirection: "column",
-                flex: 5,
+                flex: 1,
                 backgroundColor: grey[50],
                 py: 4,
                 px: 6,
@@ -145,6 +146,11 @@ export default function SetupConnection() {
                         } as React.HTMLProps<HTMLParagraphElement>,
                     },
                     p: {
+                        props: {
+                            style: { fontSize: "0.95rem" },
+                        } as React.HTMLProps<HTMLParagraphElement>,
+                    },
+                    strong: {
                         props: {
                             style: { fontSize: "0.95rem" },
                         } as React.HTMLProps<HTMLParagraphElement>,

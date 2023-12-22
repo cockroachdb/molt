@@ -1,5 +1,3 @@
-import { useState } from 'react';
-import { purple } from "@mui/material/colors";
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -7,6 +5,7 @@ import IconButton from '@mui/material/IconButton';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
+import { purple } from "@mui/material/colors";
 
 import { useNavigate } from "react-router-dom";
 

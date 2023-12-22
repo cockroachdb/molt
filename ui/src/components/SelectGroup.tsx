@@ -1,17 +1,9 @@
 import {
-    Typography,
-    Box,
     FormControl,
     Select,
-    MenuItem,
-    Button,
-    IconButton,
     InputLabel,
-    SelectChangeEvent,
     SelectProps
 } from '@mui/material';
-import CloseIcon from '@material-ui/icons/Close';
-import { FormEvent, useState } from 'react';
 
 type LabelProps = {
     label: string;
