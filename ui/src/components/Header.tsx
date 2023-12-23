@@ -28,7 +28,7 @@ export default function Header() {
                     <Logo type="cockroach-color-dark-bg" size="default" />
                     <Box sx={{ display: "flex", gap: 2 }}>
                         {navItems.map((item) => (
-                            <Button disableRipple onClick={() => navigate(item.path)} key={item.name}
+                            <Button onClick={() => navigate(item.path)} key={item.name}
                                 sx={
                                     {
                                         color: location.pathname === item.path ? neutral[0] : neutral[400],

@@ -121,7 +121,7 @@ export default function SetupConnection() {
                             my: 2,
                             gap: 1,
                         }}>
-                            <Button onClick={(e) => setShowAddConnection(true)} variant="outlined">Add Connection</Button>
+                            <Button onClick={(e) => setShowAddConnection(true)} variant="secondary">Add Connection</Button>
                             <Button onClick={() => navigate(CONFIGURE_TASK_PATH)} variant="contained">Next</Button>
                         </Box>
                     </form>
