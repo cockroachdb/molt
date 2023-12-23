@@ -186,7 +186,7 @@ export const AddConnection = (props: AddConnectionProps) => {
                             })}
                         </SelectGroup>
                     </Box>
-                    <Button type="submit" color="secondary" variant="contained">Add</Button>
+                    <Button type="submit" variant="contained">Add</Button>
                 </Box>
             </form>
         </Box>

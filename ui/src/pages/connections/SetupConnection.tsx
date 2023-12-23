@@ -13,6 +13,7 @@ import { MuiMarkdown, getOverrides } from 'mui-markdown';
 import { AddConnection } from './CreateConnection';
 import { CONFIGURE_TASK_PATH } from '..';
 import { SelectGroup } from '../../components';
+import { neutral } from '../../styles/colors';
 
 export interface Connection {
     id: string;
@@ -72,6 +73,7 @@ export default function SetupConnection() {
                 flex: 1,
                 py: 4,
                 px: 10,
+                width: "50%",
                 maxWidth: "50%"
             }}>
                 <Typography variant="h4" sx={{
@@ -132,10 +134,11 @@ export default function SetupConnection() {
                 display: "flex",
                 flexDirection: "column",
                 flex: 1,
-                backgroundColor: grey[50],
+                backgroundColor: neutral[100],
                 py: 4,
                 px: 6,
                 gap: 4,
+                maxWidth: "50%",
             }}>
                 <Typography variant="h4">Setup Guide</Typography>
                 <MuiMarkdown overrides={{

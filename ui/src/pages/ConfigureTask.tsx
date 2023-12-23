@@ -16,6 +16,7 @@ import CodeMirror from "@uiw/react-codemirror";
 
 import { InputGroup, SelectCard, SelectGroup } from '../components';
 import { SelectCardProps } from '../components/SelectCard';
+import { neutral } from '../styles/colors';
 
 const compressionTypes = ["default", "none", "gzip"] as const;
 type CompressionType = typeof compressionTypes[number];
@@ -246,6 +247,7 @@ const getFetchCmdFromTaskFormState = (tf: TaskFormState, source: string, target:
     return cmd.trimEnd().endsWith(`\\`) ? cmd.trimEnd().slice(0, -1) : cmd.trimEnd();
 }
 
+const cardMediaQuery = '@media screen and (min-width: 1200px)';
 
 export default function ConfigureTask() {
     const [formState, setFormState] = useState<TaskFormState>(defaultFormState);
@@ -300,16 +302,24 @@ export default function ConfigureTask() {
                             <AccordionDetails>
                                 <Box sx={{
                                     display: "flex",
-                                    flexDirection: "row",
-                                    alignItems: "stretch",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    justifyContent: "stretch",
                                     gap: 2,
+                                    [cardMediaQuery]: {
+                                        flexDirection: "row",
+                                        alignItems: "stretch"
+                                    },
                                 }}>
                                     {
                                         modeCardDetails.map(item => {
                                             return <SelectCard
                                                 key={item.id}
                                                 sx={{
-                                                    width: "33%",
+                                                    width: "80%",
+                                                    [cardMediaQuery]: {
+                                                        width: "33%",
+                                                    },
                                                 }}
                                                 id={item.id}
                                                 title={item.title}
@@ -346,16 +356,24 @@ export default function ConfigureTask() {
                                 }}>
                                     <Box sx={{
                                         display: "flex",
-                                        flexDirection: "row",
-                                        alignItems: "stretch",
+                                        flexDirection: "column",
+                                        alignItems: "center",
+                                        justifyContent: "stretch",
                                         gap: 2,
+                                        [cardMediaQuery]: {
+                                            flexDirection: "row",
+                                            alignItems: "stretch"
+                                        },
                                     }}>
                                         {
                                             storesCardDetails.map(item => {
                                                 return <SelectCard
                                                     key={item.id}
                                                     sx={{
-                                                        width: "33%",
+                                                        width: "80%",
+                                                        [cardMediaQuery]: {
+                                                            width: "33%",
+                                                        },
                                                     }}
                                                     id={item.id}
                                                     title={item.title}
@@ -617,11 +635,13 @@ export default function ConfigureTask() {
                                 </Box>
                             </AccordionDetails>
                         </Accordion>
-                        <CodeMirror
-                            value={outputCmd}
-                            height="100px"
-                        />
-                        <Button sx={{ mt: 2 }} type="submit" variant="contained">Run Task</Button>
+                        <Box sx={{ my: 2 }} >
+                            <CodeMirror
+                                value={outputCmd}
+                                height="100px"
+                            />
+                        </Box>
+                        <Button type="submit" variant="contained">Run Task</Button>
                     </Box>
                 </form >
             </Box>
@@ -629,10 +649,11 @@ export default function ConfigureTask() {
                 display: "flex",
                 flexDirection: "column",
                 flex: 1,
-                backgroundColor: grey[50],
+                backgroundColor: neutral[100],
                 py: 4,
                 px: 6,
                 gap: 4,
+                maxWidth: "50%"
             }}>
                 <Typography variant="h4">Setup Guide</Typography>
                 <MuiMarkdown overrides={{
