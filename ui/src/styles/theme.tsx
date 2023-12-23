@@ -62,6 +62,45 @@ export const MOLT_THEME = createTheme({
                 disableRipple: true,
             },
         },
+        MuiOutlinedInput: {
+            styleOverrides: {
+                root: {
+                    "& .MuiOutlinedInput-notchedOutline": {
+                        border: `1px solid ${neutral[500]}`,
+                    },
+                    "&.Mui-focused": {
+                        "& .MuiOutlinedInput-notchedOutline": {
+                            border: `2px solid ${info[3]}`,
+                        },
+                    },
+                    "&.Mui-error": {
+                        backgroundColor: danger[1],
+                        color: danger[4],
+                        "& .MuiOutlinedInput-notchedOutline": {
+                            border: `1px solid ${danger[4]}`,
+                        },
+                    },
+                    "&.Mui-disabled": {
+                        backgroundColor: neutral[100],
+                        color: neutral[900],
+                        "& .MuiOutlinedInput-notchedOutline": {
+                            border: `1px solid ${neutral[400]}`,
+                        },
+                    },
+                },
+            }
+        },
+        MuiFormHelperText: {
+            styleOverrides: {
+                root: {
+                    '&.MuiFormHelperText-root': {
+                        color: danger[4],
+                        padding: 0,
+                        margin: 0
+                    }
+                },
+            },
+        },
         MuiButton: {
             variants: [
                 {

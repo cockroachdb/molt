@@ -316,7 +316,7 @@ export default function ConfigureTask() {
                                             return <SelectCard
                                                 key={item.id}
                                                 sx={{
-                                                    width: "80%",
+                                                    width: "90%",
                                                     [cardMediaQuery]: {
                                                         width: "33%",
                                                     },
@@ -370,7 +370,7 @@ export default function ConfigureTask() {
                                                 return <SelectCard
                                                     key={item.id}
                                                     sx={{
-                                                        width: "80%",
+                                                        width: "90%",
                                                         [cardMediaQuery]: {
                                                             width: "33%",
                                                         },
