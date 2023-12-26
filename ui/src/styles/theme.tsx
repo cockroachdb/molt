@@ -10,7 +10,7 @@ declare module '@mui/material/Button' {
     }
 }
 
-const DEFAULT_SPACING = 8;
+export const DEFAULT_SPACING = 8;
 
 export const MOLT_THEME = createTheme({
     spacing: DEFAULT_SPACING,
@@ -211,6 +211,13 @@ export const MOLT_THEME = createTheme({
                     },
                 },
             ],
+        },
+        MuiCardActionArea: {
+            styleOverrides: {
+                focusHighlight: {
+                    background: "transparent"
+                }
+            }
         },
     }
 });

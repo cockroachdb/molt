@@ -283,7 +283,7 @@ export default function ConfigureTask() {
                 px: 10,
                 maxWidth: "50%"
             }}>
-                <Typography variant='h4'>Configure Task</Typography>
+                <Typography sx={{ mb: 1 }} variant='h4'>Configure Task</Typography>
                 <form onSubmit={handleSubmit}>
                     <Box sx={{
                         display: "flex",

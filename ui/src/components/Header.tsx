@@ -16,7 +16,7 @@ export default function Header() {
     const location = useLocation();
 
     return (
-        <Box sx={{ display: 'flex', pt: 4 }}>
+        <Box sx={{ display: 'flex', pt: 5 }}>
             <CssBaseline />
             <AppBar sx={{ backgroundColor: neutral[900] }} component="nav">
                 <Toolbar sx={{

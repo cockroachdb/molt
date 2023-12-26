@@ -7,3 +7,10 @@ export const fontSizes = {
     xl: 20,
     xxl: 24,
 };
+
+export const fontWeights = {
+    light: 100,
+    medium: 400,
+    heavy: 600,
+    heaviest: 800
+}
