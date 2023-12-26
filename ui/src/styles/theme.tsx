@@ -10,8 +10,10 @@ declare module '@mui/material/Button' {
     }
 }
 
+const DEFAULT_SPACING = 8;
+
 export const MOLT_THEME = createTheme({
-    spacing: 8,
+    spacing: DEFAULT_SPACING,
     // TODO: figure out the font size/weights for each typography component.
     typography: {
         fontFamily: [
@@ -100,6 +102,59 @@ export const MOLT_THEME = createTheme({
                     }
                 },
             },
+        },
+        MuiFormControlLabel: {
+            styleOverrides: {
+                label: {
+                    fontSize: '0.9rem',
+                    color: neutral[600],
+                }
+            }
+        },
+        MuiSwitch: {
+            styleOverrides: {
+                root: {
+                    width: DEFAULT_SPACING * 5,
+                    height: DEFAULT_SPACING * 3,
+                    padding: 0,
+                    display: 'flex',
+                    '&:active': {
+                        '& .MuiSwitch-thumb': {
+                            width: 15,
+                        },
+                        '& .MuiSwitch-switchBase.Mui-checked': {
+                            transform: 'translateX(20px)',
+                        },
+                    },
+                },
+                track: {
+                    // Controls default (unchecked) color for the track
+                    borderRadius: DEFAULT_SPACING * 3 / 2,
+                    opacity: 1,
+                    backgroundColor: neutral[400],
+                    boxSizing: 'border-box',
+                },
+                switchBase: {
+                    padding: 2,
+                    '&.Mui-checked': {
+                        transform: `translateX(${DEFAULT_SPACING * 2}px)`,
+                        color: '#fff',
+                        '& + .MuiSwitch-track': {
+                            opacity: 1,
+                            backgroundColor: info[2]
+                        },
+                    },
+                },
+                // This needs to be after the track so track styles take precedence first.
+                thumb: {
+                    // TODO: figure out how to change this when checked.
+                    border: `1px solid ${neutral[200]}`,
+                    boxShadow: '0 2px 4px 0 rgb(0 35 11 / 20%)',
+                    width: 20,
+                    height: 20,
+                    borderRadius: 10,
+                }
+            }
         },
         MuiButton: {
             variants: [

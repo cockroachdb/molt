@@ -14,7 +14,7 @@ import { MuiMarkdown, getOverrides } from 'mui-markdown';
 import { ExpandMore } from '@material-ui/icons';
 import CodeMirror from "@uiw/react-codemirror";
 
-import { InputGroup, SelectCard, SelectGroup } from '../components';
+import { InputGroup, SelectCard, SelectGroup, Switch } from '../components';
 import { SelectCardProps } from '../components/SelectCard';
 import { neutral } from '../styles/colors';
 
@@ -66,8 +66,6 @@ const storesCardDetails: SelectCardProps[] = [
         link: "https://github.com/cockroachdb/molt/blob/main/docs/RFCS/20231113_molt_fetch.md#options",
     },
 ]
-
-const booleanTexts = ["No", "Yes"] as const;
 
 const isCloudStore = (is: IntermediateStore) => {
     return is === "GCS" || is === "S3";
@@ -456,22 +454,18 @@ export default function ConfigureTask() {
                                             }}
                                             onChange={handleInputChange} />
                                     </Box>}
-                                    <SelectGroup
+                                    <Switch
                                         required
                                         label="Cleanup intermediary store?"
                                         id="truncate"
-                                        value={formState.cleanup ? booleanTexts[1] : booleanTexts[0]}
+                                        value={formState.cleanup}
                                         onChange={(event: SelectChangeEvent) => {
                                             setFormState({
                                                 ...formState,
-                                                cleanup: event.target.value === booleanTexts[1]
+                                                cleanup: !formState.cleanup
                                             })
                                         }}
-                                    >
-                                        {booleanTexts.map(item => {
-                                            return <MenuItem key={item} value={item}>{item}</MenuItem>
-                                        })}
-                                    </SelectGroup>
+                                    />
                                 </Box>
                             </AccordionDetails>
                         </Accordion>}
@@ -511,22 +505,18 @@ export default function ConfigureTask() {
                                             return <MenuItem key={item} value={item}>{item}</MenuItem>
                                         })}
                                     </SelectGroup>
-                                    <SelectGroup
+                                    <Switch
                                         required
                                         label="Truncate tables (before running fetch)"
                                         id="truncate"
-                                        value={formState.truncate ? booleanTexts[1] : booleanTexts[0]}
-                                        onChange={(event: SelectChangeEvent) => {
+                                        value={formState.truncate}
+                                        onChange={(_: SelectChangeEvent) => {
                                             setFormState({
                                                 ...formState,
-                                                truncate: event.target.value === booleanTexts[1]
+                                                truncate: !formState.truncate
                                             })
                                         }}
-                                    >
-                                        {booleanTexts.map(item => {
-                                            return <MenuItem key={item} value={item}>{item}</MenuItem>
-                                        })}
-                                    </SelectGroup>
+                                    />
                                 </Box>
                             </AccordionDetails>
                         </Accordion>
@@ -617,21 +607,17 @@ export default function ConfigureTask() {
                                         value={formState.pgLogicalSlotPlugin}
                                         validation={(value) => { return "" }}
                                         onChange={handleInputChange} />
-                                    <SelectGroup
+                                    <Switch
                                         label="Drop logical replication slot (if exists)"
                                         id="dropPgLogicalSlot"
-                                        value={formState.dropPgLogicalSlot ? booleanTexts[1] : booleanTexts[0]}
-                                        onChange={(event: SelectChangeEvent) => {
+                                        value={formState.dropPgLogicalSlot}
+                                        onChange={(_: SelectChangeEvent) => {
                                             setFormState({
                                                 ...formState,
-                                                dropPgLogicalSlot: event.target.value === booleanTexts[1]
+                                                dropPgLogicalSlot: !formState.dropPgLogicalSlot
                                             })
                                         }}
-                                    >
-                                        {booleanTexts.map(item => {
-                                            return <MenuItem key={item} value={item}>{item}</MenuItem>
-                                        })}
-                                    </SelectGroup>
+                                    />
                                 </Box>
                             </AccordionDetails>
                         </Accordion>
