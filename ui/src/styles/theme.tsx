@@ -15,7 +15,7 @@ declare module '@mui/material/Chip' {
         success: true;
         info: true;
         danger: true;
-        warn: true;
+        warning: true;
     }
 }
 
@@ -242,7 +242,7 @@ export const MOLT_THEME = createTheme({
                     },
                 },
                 {
-                    props: { variant: 'warn' },
+                    props: { variant: 'warning' },
                     style: {
                         backgroundColor: warning[3]
                     },
@@ -261,5 +261,12 @@ export const MOLT_THEME = createTheme({
                 },
             ]
         },
+        MuiPaper: {
+            styleOverrides: {
+                root: {
+                    boxShadow: "0 1px 5px 0px rgba(0,41,77,.17)"
+                }
+            }
+        }
     }
 });

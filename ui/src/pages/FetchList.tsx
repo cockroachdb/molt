@@ -10,7 +10,7 @@ import { info } from '../styles/colors';
 
 type FetchStatus = "In Progress" | "Ready for Review" | "Completed" | "Failed"
 
-interface FetchRun {
+export interface FetchRun {
     key: string;
     id: string;
     name: string;
@@ -27,7 +27,7 @@ const getChipFromStatus = (status: FetchStatus) => {
         case "Failed":
             return <Chip size="small" label={status} variant="danger" />
         case "Ready for Review":
-            return <Chip size="small" label={status} variant="warn" />
+            return <Chip size="small" label={status} variant="warning" />
     }
 
     return <Chip size="small" label={status} variant="info" />

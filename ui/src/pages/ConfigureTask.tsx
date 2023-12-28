@@ -18,7 +18,7 @@ import CodeMirror from "@uiw/react-codemirror";
 import { InputGroup, SelectCard, SelectGroup, Switch } from '../components';
 import { SelectCardProps } from '../components/cards/SelectCard';
 import { neutral } from '../styles/colors';
-import { CONFIGURE_TASK_PATH, HOME_PATH } from '.';
+import { HOME_PATH } from '.';
 
 const compressionTypes = ["default", "none", "gzip"] as const;
 type CompressionType = typeof compressionTypes[number];
@@ -650,6 +650,11 @@ export default function ConfigureTask() {
                     code: {
                         props: {
                             style: { fontSize: "0.8rem", backgroundColor: grey[200] },
+                        } as React.HTMLProps<HTMLParagraphElement>,
+                    },
+                    li: {
+                        props: {
+                            style: { fontSize: "0.9rem" },
                         } as React.HTMLProps<HTMLParagraphElement>,
                     },
                     p: {

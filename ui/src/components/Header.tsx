@@ -3,9 +3,10 @@ import Box from '@mui/material/Box';
 import CssBaseline from '@mui/material/CssBaseline';
 import Toolbar from '@mui/material/Toolbar';
 import Button from '@mui/material/Button';
+import ButtonBase from '@mui/material/ButtonBase';
 
 import { useNavigate, useLocation } from "react-router-dom";
-import { ROUTES } from '../pages/index';
+import { HOME_PATH, ROUTES } from '../pages/index';
 import { neutral } from '../styles/colors';
 import Logo from './Logo';
 
@@ -25,7 +26,7 @@ export default function Header() {
                     alignItems: "center",
                     gap: 2,
                 }}>
-                    <Logo type="cockroach-color-dark-bg" size="default" />
+                    <ButtonBase onClick={() => navigate(HOME_PATH)}><Logo type="cockroach-color-dark-bg" size="default" /></ButtonBase>
                     <Box sx={{ display: "flex", gap: 2 }}>
                         {navItems.map((item) => (
                             <Button onClick={() => navigate(item.path)} key={item.name}

@@ -148,9 +148,14 @@ export default function SetupConnection() {
                             style: { fontSize: "0.8rem", backgroundColor: grey[200] },
                         } as React.HTMLProps<HTMLParagraphElement>,
                     },
+                    li: {
+                        props: {
+                            style: { fontSize: "0.9rem" },
+                        } as React.HTMLProps<HTMLParagraphElement>,
+                    },
                     p: {
                         props: {
-                            style: { fontSize: "0.95rem" },
+                            style: { fontSize: "0.9rem" },
                         } as React.HTMLProps<HTMLParagraphElement>,
                     },
                     strong: {

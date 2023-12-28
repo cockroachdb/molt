@@ -9,13 +9,43 @@ import {
     TableRow,
     SxProps,
     Theme,
-    Paper
+    Paper,
+    Box
 } from '@mui/material';
 import { useMemo, useState } from 'react';
 import { fontWeights } from '../../styles/fonts';
 import { neutral, primary } from '../../styles/colors';
 
 type Order = "asc" | "desc";
+
+// TODO: figure out how to restrict sort directions
+export interface TableColumnProps<T> {
+    id: keyof T;
+    title: React.ReactNode;
+    sortDirections?: Order[];
+    defaultSortOrder?: Order;
+    width?: number | string;
+    cellStyle?: SxProps<Theme>;
+    align?: "left" | "center" | "right";
+    render: (record: T, idx: number) => React.ReactNode;
+}
+
+type SimpleTableProps<T> = {
+    columns: TableColumnProps<T>[];
+    dataSource: T[];
+    containerStyle?: SxProps<Theme>;
+    elevated?: boolean;
+} & TableProps;
+
+export interface DataSourceType {
+    // key can be the same thing as the id.
+    key: string;
+    [x: string]: any;
+}
+
+function findFirstDefaultSortRuleColumn<T>(columns: TableColumnProps<T>[]) {
+    return columns.find(item => item.defaultSortOrder !== undefined)
+}
 
 function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
     if (b[orderBy] < a[orderBy]) {
@@ -39,36 +69,8 @@ function getComparator<Key extends keyof any>(
         : (a, b) => -descendingComparator(a, b, orderBy);
 }
 
-// TODO: figure out how to restrict sort directions
-export interface TableColumnProps<T> {
-    id: keyof T;
-    title: React.ReactNode;
-    sortDirections?: Order[];
-    defaultSortOrder?: Order;
-    width?: number | string;
-    cellStyle?: SxProps<Theme>;
-    align?: "left" | "center" | "right";
-    render: (record: T, idx: number) => React.ReactNode;
-}
-
-type SimpleTableProps<T> = {
-    columns: TableColumnProps<T>[];
-    dataSource: T[];
-    containerStyle?: SxProps<Theme>;
-} & TableProps;
-
-export interface DataSourceType {
-    // key can be the same thing as the id.
-    key: string;
-    [x: string]: any;
-}
-
-function findFirstDefaultSortRuleColumn<T>(columns: TableColumnProps<T>[]) {
-    return columns.find(item => item.defaultSortOrder !== undefined)
-}
-
 export default function SimpleTable<T extends DataSourceType>(props: SimpleTableProps<T>) {
-    const { sx, containerStyle } = props;
+    const { sx, containerStyle, elevated = true } = props;
     const defaultSortCol = findFirstDefaultSortRuleColumn(props.columns);
     const [order, setOrder] = useState<Order>(defaultSortCol?.defaultSortOrder || "asc");
     const [orderBy, setOrderBy] = useState<string>(defaultSortCol?.id as string || "");
@@ -91,7 +93,7 @@ export default function SimpleTable<T extends DataSourceType>(props: SimpleTable
         (props.dataSource.sort(getComparator(order, orderBy || ""))), [props.dataSource, order, orderBy])
 
     return (
-        <TableContainer sx={containerStyle} component={Paper}>
+        <TableContainer sx={containerStyle} component={elevated ? Paper : Box}>
             <Table sx={{ minWidth: 650, ...sx }} aria-label="simple table">
                 <TableHead>
                     <TableRow>
