@@ -10,6 +10,15 @@ declare module '@mui/material/Button' {
     }
 }
 
+declare module '@mui/material/Chip' {
+    interface ChipPropsVariantOverrides {
+        success: true;
+        info: true;
+        danger: true;
+        warn: true;
+    }
+}
+
 export const DEFAULT_SPACING = 8;
 
 export const MOLT_THEME = createTheme({
@@ -218,6 +227,39 @@ export const MOLT_THEME = createTheme({
                     background: "transparent"
                 }
             }
+        },
+        MuiChip: {
+            styleOverrides: {
+                root: {
+                    color: neutral[0]
+                }
+            },
+            variants: [
+                {
+                    props: { variant: 'success' },
+                    style: {
+                        backgroundColor: success[3]
+                    },
+                },
+                {
+                    props: { variant: 'warn' },
+                    style: {
+                        backgroundColor: warning[3]
+                    },
+                },
+                {
+                    props: { variant: 'danger' },
+                    style: {
+                        backgroundColor: danger[3]
+                    },
+                },
+                {
+                    props: { variant: 'info' },
+                    style: {
+                        backgroundColor: info[3]
+                    },
+                },
+            ]
         },
     }
 });

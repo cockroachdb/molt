@@ -8,9 +8,9 @@ import {
     Typography
 } from "@mui/material";
 import { CheckCircle } from '@material-ui/icons';
-import { fontSizes, fontWeights } from "../styles/fonts";
-import { DEFAULT_SPACING } from "../styles/theme";
-import { info, neutral } from "../styles/colors";
+import { fontSizes, fontWeights } from "../../styles/fonts";
+import { DEFAULT_SPACING } from "../../styles/theme";
+import { info, neutral } from "../../styles/colors";
 
 
 export type SelectCardProps = {

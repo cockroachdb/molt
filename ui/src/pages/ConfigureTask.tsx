@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
+import { useNavigate } from "react-router-dom";
 import {
     Typography,
     Box,
@@ -15,8 +16,9 @@ import { ExpandMore } from '@material-ui/icons';
 import CodeMirror from "@uiw/react-codemirror";
 
 import { InputGroup, SelectCard, SelectGroup, Switch } from '../components';
-import { SelectCardProps } from '../components/SelectCard';
+import { SelectCardProps } from '../components/cards/SelectCard';
 import { neutral } from '../styles/colors';
+import { CONFIGURE_TASK_PATH, HOME_PATH } from '.';
 
 const compressionTypes = ["default", "none", "gzip"] as const;
 type CompressionType = typeof compressionTypes[number];
@@ -248,6 +250,7 @@ const getFetchCmdFromTaskFormState = (tf: TaskFormState, source: string, target:
 const cardMediaQuery = '@media screen and (min-width: 1200px)';
 
 export default function ConfigureTask() {
+    const navigate = useNavigate();
     const [formState, setFormState] = useState<TaskFormState>(defaultFormState);
     const [outputCmd, setOutputCmd] = useState<string>(getFetchCmdFromTaskFormState(defaultFormState, mockSource, mockTarget));
 
@@ -627,7 +630,7 @@ export default function ConfigureTask() {
                                 height="100px"
                             />
                         </Box>
-                        <Button type="submit" variant="contained">Run Task</Button>
+                        <Button onClick={() => navigate(HOME_PATH)} type="submit" variant="contained">Run Task</Button>
                     </Box>
                 </form >
             </Box>
