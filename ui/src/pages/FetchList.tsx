@@ -2,11 +2,13 @@ import {
     Typography,
     Box,
     Link,
-    Chip
+    Chip,
+    Button,
 } from '@mui/material';
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import SimpleTable, { TableColumnProps } from '../components/tables/Table';
 import { info } from '../styles/colors';
+import { SETUP_CONNECTION_PATH } from '.';
 
 type FetchStatus = "In Progress" | "Ready for Review" | "Completed" | "Failed"
 
@@ -113,16 +115,23 @@ const mockData: FetchRun[] = [
 ];
 
 export default function FetchList() {
+    const navigate = useNavigate();
+
     return (
         <Box sx={{
             display: "flex",
             flexDirection: "column",
+            width: "80%",
             gap: 2,
             py: 4,
             px: 2
         }}>
             <Typography sx={{ mb: 1 }} variant='h4'>Fetch Runs</Typography>
-            <SimpleTable containerStyle={{ width: "80%" }} columns={mockColumns} dataSource={mockData} />
+            <Button sx={{ width: "120px", alignSelf: "flex-end" }} fullWidth={false} variant="contained"
+                onClick={() => {
+                    navigate(SETUP_CONNECTION_PATH);
+                }}>Create New</Button>
+            <SimpleTable columns={mockColumns} dataSource={mockData} />
         </Box>
     )
 }

@@ -11,9 +11,9 @@ type LabelProps = {
 type InputGroupProps = ValidatedTextFieldProps & LabelProps;
 
 export default function InputGroup(props: InputGroupProps) {
-    const { label, required, id, value, validation, onChange, ...rest } = props;
+    const { label, required, id, value, validation, fullWidth = true, onChange, ...rest } = props;
     return (
-        <FormControl fullWidth>
+        <FormControl fullWidth={fullWidth}>
             <InputLabel id={`${id}-label`}
                 required={required}
                 shrink={false}

@@ -7,6 +7,7 @@ declare module '@mui/material/Button' {
     interface ButtonPropsVariantOverrides {
         secondary: true;
         tertiary: true;
+        icon: true;
     }
 }
 
@@ -169,6 +170,32 @@ export const MOLT_THEME = createTheme({
             variants: [
                 {
                     props: { variant: 'secondary' },
+                    style: {
+                        textTransform: 'none',
+                        color: neutral[900],
+                        backgroundColor: neutral[0],
+                        border: `1px solid ${neutral[500]}`,
+                        "&:hover": {
+                            backgroundColor: neutral[100],
+                            border: `1px solid ${neutral[700]}`,
+                        },
+                        "&:active": {
+                            backgroundColor: neutral[100],
+                            border: `1px solid ${neutral[700]}`,
+                        },
+                        "&:focus": {
+                            backgroundColor: neutral[100],
+                            border: `1px solid ${neutral[700]}`,
+                        },
+                        "&:disabled": {
+                            backgroundColor: neutral[0],
+                            border: `1px solid ${neutral[300]}`,
+                            color: neutral[600],
+                        }
+                    },
+                },
+                {
+                    props: { variant: 'icon' },
                     style: {
                         textTransform: 'none',
                         color: neutral[900],

@@ -1,15 +1,19 @@
+import { useState, FormEvent } from 'react';
+import { useParams } from 'react-router-dom';
 import {
     Typography,
     Box,
     Button,
     Paper,
-    Chip
+    Chip,
 } from '@mui/material';
+import { Search, ChevronLeft } from '@material-ui/icons';
 import { useNavigate } from "react-router-dom";
 import SimpleTable, { TableColumnProps } from '../components/tables/Table';
 import { neutral } from '../styles/colors';
 import { fontWeights } from '../styles/fonts';
 import { DEFAULT_SPACING } from '../styles/theme';
+import { InputGroup } from '../components';
 
 export type LogLevel = "info" | "warning" | "danger";
 
@@ -43,7 +47,7 @@ export interface FetchLogs {
 
 const mockStats: FetchStats = {
     percentComplete: {
-        description: "Percentage Complete",
+        description: "% Complete",
         data: 99
     },
     numTables: {
@@ -125,7 +129,22 @@ const mockData: FetchLogs[] = [
 ];
 
 export default function DetailedFetch() {
+    const { fetchId } = useParams();
+    const [searchTerm, setSearchTerm] = useState("");
+    const [data, setData] = useState(mockData);
     const navigate = useNavigate();
+
+    const handleSubmit = (e: FormEvent) => {
+        e.preventDefault();
+
+        if (searchTerm === "") {
+            setData(mockData);
+            return;
+        }
+
+        const filteredData = data.filter(item => item.message.includes(searchTerm));
+        setData(filteredData);
+    }
 
     return (
         <Box sx={{
@@ -140,8 +159,10 @@ export default function DetailedFetch() {
                 flexDirection: "column",
                 gap: 2,
             }}>
-                <Button onClick={() => navigate(-1)} sx={{ width: DEFAULT_SPACING * 2 }} variant="secondary" >Back</Button>
-                <Typography sx={{ mb: 1 }} variant='h4'>Fetch Runs</Typography>
+                <Button onClick={() => navigate(-1)} sx={{ width: DEFAULT_SPACING }} variant="icon" >
+                    <ChevronLeft />
+                </Button>
+                <Typography sx={{ mb: 1 }} variant='h4'>Fetch Run #{fetchId}</Typography>
                 <Paper sx={{
                     display: "flex",
                     flexDirection: "row",
@@ -150,8 +171,8 @@ export default function DetailedFetch() {
                 }}>
                     {Object.keys(mockStats).map(key => {
                         const desc = mockStats[key as keyof typeof mockStats];
-                        return <Box sx={{ borderRight: `1px solid ${neutral[400]}`, px: 2 }}>
-                            <Typography fontWeight={fontWeights["heaviest"]} variant='body1'>
+                        return <Box key={key} sx={{ borderRight: `1px solid ${neutral[400]}`, px: 2 }}>
+                            <Typography color="primary" fontWeight={fontWeights["heaviest"]} variant='body1'>
                                 {desc.data}
                             </Typography>
                             <Typography fontWeight={fontWeights["light"]} variant='body2'>
@@ -160,9 +181,36 @@ export default function DetailedFetch() {
                         </Box>
                     })}
                 </Paper>
-
-                <SimpleTable containerStyle={{ width: "100%" }} columns={mockColumns} dataSource={mockData} />
-            </Box>
-        </Box>
+                <Paper sx={{
+                    p: 2
+                }}>
+                    <Box sx={{
+                        display: "flex",
+                        flexDirection: "row",
+                        gap: 1,
+                    }}>
+                        <Box sx={{
+                            display: "flex",
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 1
+                        }} component={"form"} onSubmit={handleSubmit}>
+                            <InputGroup sx={{
+                                width: 400,
+                            }} fullWidth={false} placeholder="Search for Logs" id="log" label="" validation={() => { return "" }} value={searchTerm} onChange={(e) => {
+                                setSearchTerm(e.target.value)
+                            }} />
+                            <Button sx={{
+                                height: "100%",
+                                borderColor: neutral[800],
+                            }} type="submit" variant="icon" aria-label='search for logs'>
+                                <Search style={{ color: neutral[900] }} />
+                            </Button>
+                        </Box>
+                    </Box>
+                    <SimpleTable containerStyle={{ width: "100%" }} columns={mockColumns} dataSource={data} elevated={false} />
+                </Paper>
+            </Box >
+        </Box >
     )
 }
