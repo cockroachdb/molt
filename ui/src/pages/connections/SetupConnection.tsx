@@ -1,6 +1,5 @@
-import { grey } from '@mui/material/colors';
-import { useNavigate } from "react-router-dom";
 import { useState } from 'react';
+import { useNavigate } from "react-router-dom";
 import {
     Typography,
     Box,
@@ -8,12 +7,35 @@ import {
     Button,
     SelectChangeEvent,
 } from '@mui/material';
-
-import { MuiMarkdown, getOverrides } from 'mui-markdown';
 import { AddConnection } from './CreateConnection';
 import { CONFIGURE_TASK_PATH } from '..';
-import { SelectGroup } from '../../components';
+import { Markdown, SelectGroup } from '../../components';
 import { neutral } from '../../styles/colors';
+
+const setupConnectionsMD = `##### Use existing connections
+Select an existing connection for both the source (\`Source Connection\`) and target connection (\`Target Connection\`). 
+Just a note that you must select different connections.
+
+<br/>
+
+##### Adding new connections
+In order to setup new connections, you must first have a running database that is available over the internet, or locally (if you are running locally).
+<br/><br/>Here are the details we will need from you:
+- **Credential Name**: unique name for the credential
+- **Dialect**: dialect for the database (MySQL, Cockroach, PostgreSQL)
+- **Host**: host URI or IP address of the server running the database (i.e. \`http://fetch.com\`, \`https://127.0.0.1/2333\`)
+- **Port**: port number for the database process
+- **Username**: name of the SQL user
+- **Password**: password for the SQL user
+- **Database Name**: name of the database to access
+- **SSL Mode**: SSL setting for the database (dictates if a cert must be supplied or not)
+
+<br/>
+You can obtain the details from the connection string. For example:
+\`\`\`
+postgres://postgres:postgres@localhost:5432/molt?sslmode=disable
+\`\`\`
+`
 
 export interface Connection {
     id: string;
@@ -46,7 +68,6 @@ const createConnectionMap = (connections: Connection[]): Map<string, Connection>
 
     return connMap;
 }
-
 
 export default function SetupConnection() {
     const navigate = useNavigate();
@@ -141,54 +162,9 @@ export default function SetupConnection() {
                 maxWidth: "50%",
             }}>
                 <Typography variant="h4">Setup Guide</Typography>
-                <MuiMarkdown overrides={{
-                    ...getOverrides(), // This will keep the other default overrides.
-                    code: {
-                        props: {
-                            style: { fontSize: "0.8rem", backgroundColor: grey[200] },
-                        } as React.HTMLProps<HTMLParagraphElement>,
-                    },
-                    li: {
-                        props: {
-                            style: { fontSize: "0.9rem" },
-                        } as React.HTMLProps<HTMLParagraphElement>,
-                    },
-                    p: {
-                        props: {
-                            style: { fontSize: "0.9rem" },
-                        } as React.HTMLProps<HTMLParagraphElement>,
-                    },
-                    strong: {
-                        props: {
-                            style: { fontSize: "0.95rem" },
-                        } as React.HTMLProps<HTMLParagraphElement>,
-                    },
-                }}>
-                    {`##### Use existing connections
-Select an existing connection for both the source (\`Source Connection\`) and target connection (\`Target Connection\`). 
-Just a note that you must select different connections.
-
-<br/>
-
-##### Adding new connections
-In order to setup new connections, you must first have a running database that is available over the internet, or locally (if you are running locally).
-<br/><br/>Here are the details we will need from you:
-- **Credential Name**: unique name for the credential
-- **Dialect**: dialect for the database (MySQL, Cockroach, PostgreSQL)
-- **Host**: host URI or IP address of the server running the database (i.e. \`http://fetch.com\`, \`https://127.0.0.1/2333\`)
-- **Port**: port number for the database process
-- **Username**: name of the SQL user
-- **Password**: password for the SQL user
-- **Database Name**: name of the database to access
-- **SSL Mode**: SSL setting for the database (dictates if a cert must be supplied or not)
-
-<br/>
-You can obtain the details from the connection string. For example:
-\`\`\`
-postgres://postgres:postgres@localhost:5432/molt?sslmode=disable
-\`\`\`
-`}
-                </MuiMarkdown>
+                <Markdown>
+                    {setupConnectionsMD}
+                </Markdown>
             </Box>
         </Box >
     )

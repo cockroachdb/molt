@@ -10,12 +10,10 @@ import {
     AccordionSummary,
     AccordionDetails
 } from '@mui/material';
-import { grey } from '@mui/material/colors';
-import { MuiMarkdown, getOverrides } from 'mui-markdown';
 import { ExpandMore } from '@material-ui/icons';
 import CodeMirror from "@uiw/react-codemirror";
 
-import { InputGroup, SelectCard, SelectGroup, Switch } from '../components';
+import { InputGroup, Markdown, SelectCard, SelectGroup, Switch } from '../components';
 import { SelectCardProps } from '../components/cards/SelectCard';
 import { neutral } from '../styles/colors';
 import { HOME_PATH } from '.';
@@ -645,31 +643,9 @@ export default function ConfigureTask() {
                 maxWidth: "50%"
             }}>
                 <Typography variant="h4">Setup Guide</Typography>
-                <MuiMarkdown overrides={{
-                    ...getOverrides(), // This will keep the other default overrides.
-                    code: {
-                        props: {
-                            style: { fontSize: "0.8rem", backgroundColor: grey[200] },
-                        } as React.HTMLProps<HTMLParagraphElement>,
-                    },
-                    li: {
-                        props: {
-                            style: { fontSize: "0.9rem" },
-                        } as React.HTMLProps<HTMLParagraphElement>,
-                    },
-                    p: {
-                        props: {
-                            style: { fontSize: "0.9rem" },
-                        } as React.HTMLProps<HTMLParagraphElement>,
-                    },
-                    strong: {
-                        props: {
-                            style: { fontSize: "0.95rem" },
-                        } as React.HTMLProps<HTMLParagraphElement>,
-                    },
-                }}>
+                <Markdown>
                     {configureTaskMD}
-                </MuiMarkdown>
+                </Markdown>
             </Box>
         </Box >
     )
