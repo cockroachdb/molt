@@ -3,20 +3,25 @@ import { useNavigate } from "react-router-dom";
 import {
     Typography,
     Box,
+    Paper,
     MenuItem,
     Button,
     SelectChangeEvent,
     Accordion,
     AccordionSummary,
-    AccordionDetails
+    AccordionDetails,
+    Snackbar,
+    Alert,
 } from '@mui/material';
-import { ExpandMore } from '@material-ui/icons';
+import { ExpandMore, FileCopy } from '@material-ui/icons';
 import CodeMirror from "@uiw/react-codemirror";
+import { materialLightInit } from '@uiw/codemirror-theme-material';
 
-import { InputGroup, Markdown, SelectCard, SelectGroup, Switch } from '../components';
+import { InputGroup, Markdown, SelectCard, SelectGroup, Switch, } from '../components';
 import { SelectCardProps } from '../components/cards/SelectCard';
 import { neutral } from '../styles/colors';
 import { HOME_PATH } from '.';
+import { fontSizes } from '../styles/fonts';
 
 const compressionTypes = ["default", "none", "gzip"] as const;
 type CompressionType = typeof compressionTypes[number];
@@ -245,16 +250,23 @@ const getFetchCmdFromTaskFormState = (tf: TaskFormState, source: string, target:
     return cmd.trimEnd().endsWith(`\\`) ? cmd.trimEnd().slice(0, -1) : cmd.trimEnd();
 }
 
+const ALERT_AUTO_HIDE_DURATION_MS = 3000;
 const cardMediaQuery = '@media screen and (min-width: 1200px)';
 
 export default function ConfigureTask() {
     const navigate = useNavigate();
+    const [copyAlertOpen, setCopyAlertOpen] = useState(false);
+
     const [formState, setFormState] = useState<TaskFormState>(defaultFormState);
     const [outputCmd, setOutputCmd] = useState<string>(getFetchCmdFromTaskFormState(defaultFormState, mockSource, mockTarget));
 
     useEffect(() => {
         setOutputCmd(getFetchCmdFromTaskFormState(formState, mockSource, mockTarget));
     }, [formState])
+
+    const handleClose = () => {
+        setCopyAlertOpen(false);
+    }
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setFormState({
@@ -622,13 +634,44 @@ export default function ConfigureTask() {
                                 </Box>
                             </AccordionDetails>
                         </Accordion>
-                        <Box sx={{ my: 2 }} >
+                        <Paper sx={{ display: "flex", flexDirection: "column", mb: 2, p: 2 }} >
+                            <Typography sx={{ pb: 2 }} variant="body1">Output</Typography>
                             <CodeMirror
+                                style={{
+                                    fontSize: fontSizes["sm"]
+                                }}
+                                lang="shell"
                                 value={outputCmd}
                                 height="100px"
+                                theme={materialLightInit({})}
                             />
-                        </Box>
+                            <Button onClick={() => {
+                                navigator.clipboard.writeText(outputCmd)
+                                setCopyAlertOpen(true);
+                            }}
+                                sx={{
+                                    position: "relative",
+                                    top: "-20px",
+                                    backgroundColor: neutral[0],
+                                    border: `1px solid ${neutral[700]}`,
+                                    alignSelf: "flex-end",
+                                    minWidth: 0,
+                                    width: "36px",
+                                    height: "36px",
+                                    borderRadius: "18px",
+                                }}>
+                                <FileCopy style={{ color: neutral[700] }} />
+                            </Button>
+                        </Paper>
                         <Button onClick={() => navigate(HOME_PATH)} type="submit" variant="contained">Run Task</Button>
+                        <Snackbar anchorOrigin={{
+                            vertical: "top",
+                            horizontal: "center",
+                        }} open={copyAlertOpen} autoHideDuration={ALERT_AUTO_HIDE_DURATION_MS} onClose={handleClose}>
+                            <Alert onClose={handleClose} severity="success" sx={{ width: '100%' }}>
+                                Successfully copied output command to clipboard.
+                            </Alert>
+                        </Snackbar>
                     </Box>
                 </form >
             </Box>

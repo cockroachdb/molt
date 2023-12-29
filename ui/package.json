@@ -15,6 +15,8 @@
     "@types/node": "^16.18.68",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
+    "@uiw/codemirror-theme-material": "^4.21.21",
+    "@uiw/codemirror-theme-xcode": "^4.21.21",
     "@uiw/react-codemirror": "^4.21.21",
     "Menu": "link:@mui/icons-material/Menu",
     "Pending": "link:@material-ui/icons/Pending",
