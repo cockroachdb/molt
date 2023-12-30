@@ -22,12 +22,22 @@ paths:
                             bucket_name: http://localhost:5000
                             bucket_path: fetch/export
                             cleanup_intermediary_store: true
+                            compression: none
                             local_path: /usr/Documents/fetch
                             local_path_crdb_address: http://localhost:5000
                             local_path_listen_address: http://localhost:5000
                             log_file: task.log
-                            mode: DIRECT COPY
+                            mode: DIRECT_COPY
+                            num_batch_rows_export: 100000
+                            num_concurrent_tables: 4
+                            num_flush_bytes: 2000
+                            num_flush_rows: 200000
+                            pg_drop_slot: false
+                            pg_logical_plugin: my_plugin
+                            pg_logical_slot_name: my_slot
+                            source_conn: postgres://postgres:postgres@localhost:5432/molt?sslmode=disable
                             store: Local
+                            target_conn: postgres://root@localhost:26257/defaultdb?sslmode=disable
                             truncate: true
             responses:
                 "200":
@@ -74,6 +84,13 @@ components:
                     type: boolean
                     description: whether the intermediate store should be cleaned up after the fetch task
                     example: true
+                compression:
+                    type: string
+                    description: compression type
+                    example: none
+                    enum:
+                        - gzip
+                        - none
                 local_path:
                     type: string
                     description: the absolute or relative path to write export files
@@ -93,11 +110,60 @@ components:
                 mode:
                     type: string
                     description: Mode of operation for fetch
-                    example: DIRECT COPY
+                    example: DIRECT_COPY
+                    enum:
+                        - IMPORT_INTO
+                        - COPY_FROM
+                        - DIRECT_COPY
+                num_batch_rows_export:
+                    type: integer
+                    description: number of rows to export at a given time for each iteration; tune this so that you get most out of CPU and can batch the most data together
+                    example: 100000
+                    format: int64
+                num_concurrent_tables:
+                    type: integer
+                    description: number of tables to process at the same time; this is usually sized based on number of CPUs
+                    example: 4
+                    format: int64
+                num_flush_bytes:
+                    type: integer
+                    description: number of bytes for the export before data is flushed to the disk
+                    example: 2000
+                    format: int64
+                num_flush_rows:
+                    type: integer
+                    description: number of rows for the export before data is flushed to the disk (persisted)
+                    example: 200000
+                    format: int64
+                pg_drop_slot:
+                    type: boolean
+                    description: if set and exists, drops the existing replication slot
+                    example: false
+                pg_logical_plugin:
+                    type: string
+                    description: name for pg replication plugin
+                    example: my_plugin
+                pg_logical_slot_name:
+                    type: string
+                    description: name for pg replication slot
+                    example: my_slot
+                source_conn:
+                    type: string
+                    description: source database connection string
+                    example: postgres://postgres:postgres@localhost:5432/molt?sslmode=disable
                 store:
                     type: string
                     description: Type of intermediary store
                     example: Local
+                    enum:
+                        - None
+                        - AWS
+                        - GCP
+                        - Local
+                target_conn:
+                    type: string
+                    description: target database connection string
+                    example: postgres://root@localhost:26257/defaultdb?sslmode=disable
                 truncate:
                     type: boolean
                     description: if specified, truncates the target tables before running the data load
@@ -106,13 +172,44 @@ components:
                 bucket_name: http://localhost:5000
                 bucket_path: fetch/export
                 cleanup_intermediary_store: true
+                compression: none
                 local_path: /usr/Documents/fetch
                 local_path_crdb_address: http://localhost:5000
                 local_path_listen_address: http://localhost:5000
                 log_file: task.log
-                mode: DIRECT COPY
+                mode: DIRECT_COPY
+                num_batch_rows_export: 100000
+                num_concurrent_tables: 4
+                num_flush_bytes: 2000
+                num_flush_rows: 200000
+                pg_drop_slot: false
+                pg_logical_plugin: my_plugin
+                pg_logical_slot_name: my_slot
+                source_conn: postgres://postgres:postgres@localhost:5432/molt?sslmode=disable
                 store: Local
+                target_conn: postgres://root@localhost:26257/defaultdb?sslmode=disable
                 truncate: true
+            required:
+                - source_conn
+                - target_conn
+                - mode
+                - store
+                - cleanup_intermediary_store
+                - local_path
+                - local_path_listen_address
+                - local_path_crdb_address
+                - bucket_name
+                - bucket_path
+                - log_file
+                - truncate
+                - compression
+                - num_flush_rows
+                - num_flush_bytes
+                - num_concurrent_tables
+                - num_batch_rows_export
+                - pg_logical_slot_name
+                - pg_logical_plugin
+                - pg_drop_slot
 tags:
     - name: moltservice
       description: MOLT service performs operations using MOLT tooling

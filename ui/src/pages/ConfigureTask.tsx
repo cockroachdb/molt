@@ -238,13 +238,13 @@ const getFetchCmdFromTaskFormState = (tf: TaskFormState, source: string, target:
     // TODO: make it so that this only triggers on postgresql
     // replication settings
     if (tf.pgLogicalSlotName.trim() !== "") {
-        cmd = `${cmd} --pg-logical-replication-slot-name ${tf.pgLogicalSlotName} \\\n`
+        cmd = `${cmd}   --pg-logical-replication-slot-name ${tf.pgLogicalSlotName} \\\n`
     }
     if (tf.pgLogicalSlotPlugin.trim() !== "") {
-        cmd = `${cmd} --pg-logical-replication-slot-plugin ${tf.pgLogicalSlotPlugin} \\\n`
+        cmd = `${cmd}   --pg-logical-replication-slot-plugin ${tf.pgLogicalSlotPlugin} \\\n`
     }
     if (tf.dropPgLogicalSlot) {
-        cmd = `${cmd} --pg-logical-replication-slot-drop-if-exists`
+        cmd = `${cmd}   --pg-logical-replication-slot-drop-if-exists`
     }
 
     return cmd.trimEnd().endsWith(`\\`) ? cmd.trimEnd().slice(0, -1) : cmd.trimEnd();

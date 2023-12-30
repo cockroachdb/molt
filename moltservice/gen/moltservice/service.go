@@ -30,27 +30,49 @@ var MethodNames = [1]string{"create_fetch_task"}
 // CreateFetchPayload is the payload type of the moltservice service
 // create_fetch_task method.
 type CreateFetchPayload struct {
+	// source database connection string
+	SourceConn string
+	// target database connection string
+	TargetConn string
 	// Mode of operation for fetch
-	Mode *string
+	Mode string
 	// Type of intermediary store
-	Store *string
+	Store string
 	// whether the intermediate store should be cleaned up after the fetch task
-	CleanupIntermediaryStore *bool
+	CleanupIntermediaryStore bool
 	// the absolute or relative path to write export files
-	LocalPath *string
+	LocalPath string
 	// the local address where the file server will be spun up
-	LocalPathListenAddress *string
+	LocalPathListenAddress string
 	// the local address CRDB will use to access the import files
-	LocalPathCrdbAddress *string
+	LocalPathCrdbAddress string
 	// the local address CRDB will use to access the import files
-	BucketName *string
+	BucketName string
 	// the sub-path within the bucket to write the export files
-	BucketPath *string
+	BucketPath string
 	// if specified, writes task execution logs to a file and stdout; otherwise,
 	// just writes to stdout
-	LogFile *string
+	LogFile string
 	// if specified, truncates the target tables before running the data load
-	Truncate *bool
+	Truncate bool
+	// compression type
+	Compression string
+	// number of rows for the export before data is flushed to the disk (persisted)
+	NumFlushRows int
+	// number of bytes for the export before data is flushed to the disk
+	NumFlushBytes int
+	// number of tables to process at the same time; this is usually sized based on
+	// number of CPUs
+	NumConcurrentTables int
+	// number of rows to export at a given time for each iteration; tune this so
+	// that you get most out of CPU and can batch the most data together
+	NumBatchRowsExport int
+	// name for pg replication slot
+	PgLogicalSlotName string
+	// name for pg replication plugin
+	PgLogicalPlugin string
+	// if set and exists, drops the existing replication slot
+	PgDropSlot bool
 }
 
 // FetchAttemptID is the result type of the moltservice service

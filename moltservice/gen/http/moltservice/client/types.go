@@ -14,33 +14,57 @@ import (
 // CreateFetchTaskRequestBody is the type of the "moltservice" service
 // "create_fetch_task" endpoint HTTP request body.
 type CreateFetchTaskRequestBody struct {
+	// source database connection string
+	SourceConn string `form:"source_conn" json:"source_conn" xml:"source_conn"`
+	// target database connection string
+	TargetConn string `form:"target_conn" json:"target_conn" xml:"target_conn"`
 	// Mode of operation for fetch
-	Mode *string `form:"mode,omitempty" json:"mode,omitempty" xml:"mode,omitempty"`
+	Mode string `form:"mode" json:"mode" xml:"mode"`
 	// Type of intermediary store
-	Store *string `form:"store,omitempty" json:"store,omitempty" xml:"store,omitempty"`
+	Store string `form:"store" json:"store" xml:"store"`
 	// whether the intermediate store should be cleaned up after the fetch task
-	CleanupIntermediaryStore *bool `form:"cleanup_intermediary_store,omitempty" json:"cleanup_intermediary_store,omitempty" xml:"cleanup_intermediary_store,omitempty"`
+	CleanupIntermediaryStore bool `form:"cleanup_intermediary_store" json:"cleanup_intermediary_store" xml:"cleanup_intermediary_store"`
 	// the absolute or relative path to write export files
-	LocalPath *string `form:"local_path,omitempty" json:"local_path,omitempty" xml:"local_path,omitempty"`
+	LocalPath string `form:"local_path" json:"local_path" xml:"local_path"`
 	// the local address where the file server will be spun up
-	LocalPathListenAddress *string `form:"local_path_listen_address,omitempty" json:"local_path_listen_address,omitempty" xml:"local_path_listen_address,omitempty"`
+	LocalPathListenAddress string `form:"local_path_listen_address" json:"local_path_listen_address" xml:"local_path_listen_address"`
 	// the local address CRDB will use to access the import files
-	LocalPathCrdbAddress *string `form:"local_path_crdb_address,omitempty" json:"local_path_crdb_address,omitempty" xml:"local_path_crdb_address,omitempty"`
+	LocalPathCrdbAddress string `form:"local_path_crdb_address" json:"local_path_crdb_address" xml:"local_path_crdb_address"`
 	// the local address CRDB will use to access the import files
-	BucketName *string `form:"bucket_name,omitempty" json:"bucket_name,omitempty" xml:"bucket_name,omitempty"`
+	BucketName string `form:"bucket_name" json:"bucket_name" xml:"bucket_name"`
 	// the sub-path within the bucket to write the export files
-	BucketPath *string `form:"bucket_path,omitempty" json:"bucket_path,omitempty" xml:"bucket_path,omitempty"`
+	BucketPath string `form:"bucket_path" json:"bucket_path" xml:"bucket_path"`
 	// if specified, writes task execution logs to a file and stdout; otherwise,
 	// just writes to stdout
-	LogFile *string `form:"log_file,omitempty" json:"log_file,omitempty" xml:"log_file,omitempty"`
+	LogFile string `form:"log_file" json:"log_file" xml:"log_file"`
 	// if specified, truncates the target tables before running the data load
-	Truncate *bool `form:"truncate,omitempty" json:"truncate,omitempty" xml:"truncate,omitempty"`
+	Truncate bool `form:"truncate" json:"truncate" xml:"truncate"`
+	// compression type
+	Compression string `form:"compression" json:"compression" xml:"compression"`
+	// number of rows for the export before data is flushed to the disk (persisted)
+	NumFlushRows int `form:"num_flush_rows" json:"num_flush_rows" xml:"num_flush_rows"`
+	// number of bytes for the export before data is flushed to the disk
+	NumFlushBytes int `form:"num_flush_bytes" json:"num_flush_bytes" xml:"num_flush_bytes"`
+	// number of tables to process at the same time; this is usually sized based on
+	// number of CPUs
+	NumConcurrentTables int `form:"num_concurrent_tables" json:"num_concurrent_tables" xml:"num_concurrent_tables"`
+	// number of rows to export at a given time for each iteration; tune this so
+	// that you get most out of CPU and can batch the most data together
+	NumBatchRowsExport int `form:"num_batch_rows_export" json:"num_batch_rows_export" xml:"num_batch_rows_export"`
+	// name for pg replication slot
+	PgLogicalSlotName string `form:"pg_logical_slot_name" json:"pg_logical_slot_name" xml:"pg_logical_slot_name"`
+	// name for pg replication plugin
+	PgLogicalPlugin string `form:"pg_logical_plugin" json:"pg_logical_plugin" xml:"pg_logical_plugin"`
+	// if set and exists, drops the existing replication slot
+	PgDropSlot bool `form:"pg_drop_slot" json:"pg_drop_slot" xml:"pg_drop_slot"`
 }
 
 // NewCreateFetchTaskRequestBody builds the HTTP request body from the payload
 // of the "create_fetch_task" endpoint of the "moltservice" service.
 func NewCreateFetchTaskRequestBody(p *moltservice.CreateFetchPayload) *CreateFetchTaskRequestBody {
 	body := &CreateFetchTaskRequestBody{
+		SourceConn:               p.SourceConn,
+		TargetConn:               p.TargetConn,
 		Mode:                     p.Mode,
 		Store:                    p.Store,
 		CleanupIntermediaryStore: p.CleanupIntermediaryStore,
@@ -51,6 +75,14 @@ func NewCreateFetchTaskRequestBody(p *moltservice.CreateFetchPayload) *CreateFet
 		BucketPath:               p.BucketPath,
 		LogFile:                  p.LogFile,
 		Truncate:                 p.Truncate,
+		Compression:              p.Compression,
+		NumFlushRows:             p.NumFlushRows,
+		NumFlushBytes:            p.NumFlushBytes,
+		NumConcurrentTables:      p.NumConcurrentTables,
+		NumBatchRowsExport:       p.NumBatchRowsExport,
+		PgLogicalSlotName:        p.PgLogicalSlotName,
+		PgLogicalPlugin:          p.PgLogicalPlugin,
+		PgDropSlot:               p.PgDropSlot,
 	}
 	return body
 }

@@ -9,11 +9,16 @@ package server
 
 import (
 	moltservice "github.com/cockroachdb/molt/moltservice/gen/moltservice"
+	goa "goa.design/goa/v3/pkg"
 )
 
 // CreateFetchTaskRequestBody is the type of the "moltservice" service
 // "create_fetch_task" endpoint HTTP request body.
 type CreateFetchTaskRequestBody struct {
+	// source database connection string
+	SourceConn *string `form:"source_conn,omitempty" json:"source_conn,omitempty" xml:"source_conn,omitempty"`
+	// target database connection string
+	TargetConn *string `form:"target_conn,omitempty" json:"target_conn,omitempty" xml:"target_conn,omitempty"`
 	// Mode of operation for fetch
 	Mode *string `form:"mode,omitempty" json:"mode,omitempty" xml:"mode,omitempty"`
 	// Type of intermediary store
@@ -35,23 +40,132 @@ type CreateFetchTaskRequestBody struct {
 	LogFile *string `form:"log_file,omitempty" json:"log_file,omitempty" xml:"log_file,omitempty"`
 	// if specified, truncates the target tables before running the data load
 	Truncate *bool `form:"truncate,omitempty" json:"truncate,omitempty" xml:"truncate,omitempty"`
+	// compression type
+	Compression *string `form:"compression,omitempty" json:"compression,omitempty" xml:"compression,omitempty"`
+	// number of rows for the export before data is flushed to the disk (persisted)
+	NumFlushRows *int `form:"num_flush_rows,omitempty" json:"num_flush_rows,omitempty" xml:"num_flush_rows,omitempty"`
+	// number of bytes for the export before data is flushed to the disk
+	NumFlushBytes *int `form:"num_flush_bytes,omitempty" json:"num_flush_bytes,omitempty" xml:"num_flush_bytes,omitempty"`
+	// number of tables to process at the same time; this is usually sized based on
+	// number of CPUs
+	NumConcurrentTables *int `form:"num_concurrent_tables,omitempty" json:"num_concurrent_tables,omitempty" xml:"num_concurrent_tables,omitempty"`
+	// number of rows to export at a given time for each iteration; tune this so
+	// that you get most out of CPU and can batch the most data together
+	NumBatchRowsExport *int `form:"num_batch_rows_export,omitempty" json:"num_batch_rows_export,omitempty" xml:"num_batch_rows_export,omitempty"`
+	// name for pg replication slot
+	PgLogicalSlotName *string `form:"pg_logical_slot_name,omitempty" json:"pg_logical_slot_name,omitempty" xml:"pg_logical_slot_name,omitempty"`
+	// name for pg replication plugin
+	PgLogicalPlugin *string `form:"pg_logical_plugin,omitempty" json:"pg_logical_plugin,omitempty" xml:"pg_logical_plugin,omitempty"`
+	// if set and exists, drops the existing replication slot
+	PgDropSlot *bool `form:"pg_drop_slot,omitempty" json:"pg_drop_slot,omitempty" xml:"pg_drop_slot,omitempty"`
 }
 
 // NewCreateFetchTaskCreateFetchPayload builds a moltservice service
 // create_fetch_task endpoint payload.
 func NewCreateFetchTaskCreateFetchPayload(body *CreateFetchTaskRequestBody) *moltservice.CreateFetchPayload {
 	v := &moltservice.CreateFetchPayload{
-		Mode:                     body.Mode,
-		Store:                    body.Store,
-		CleanupIntermediaryStore: body.CleanupIntermediaryStore,
-		LocalPath:                body.LocalPath,
-		LocalPathListenAddress:   body.LocalPathListenAddress,
-		LocalPathCrdbAddress:     body.LocalPathCrdbAddress,
-		BucketName:               body.BucketName,
-		BucketPath:               body.BucketPath,
-		LogFile:                  body.LogFile,
-		Truncate:                 body.Truncate,
+		SourceConn:               *body.SourceConn,
+		TargetConn:               *body.TargetConn,
+		Mode:                     *body.Mode,
+		Store:                    *body.Store,
+		CleanupIntermediaryStore: *body.CleanupIntermediaryStore,
+		LocalPath:                *body.LocalPath,
+		LocalPathListenAddress:   *body.LocalPathListenAddress,
+		LocalPathCrdbAddress:     *body.LocalPathCrdbAddress,
+		BucketName:               *body.BucketName,
+		BucketPath:               *body.BucketPath,
+		LogFile:                  *body.LogFile,
+		Truncate:                 *body.Truncate,
+		Compression:              *body.Compression,
+		NumFlushRows:             *body.NumFlushRows,
+		NumFlushBytes:            *body.NumFlushBytes,
+		NumConcurrentTables:      *body.NumConcurrentTables,
+		NumBatchRowsExport:       *body.NumBatchRowsExport,
+		PgLogicalSlotName:        *body.PgLogicalSlotName,
+		PgLogicalPlugin:          *body.PgLogicalPlugin,
+		PgDropSlot:               *body.PgDropSlot,
 	}
 
 	return v
+}
+
+// ValidateCreateFetchTaskRequestBody runs the validations defined on
+// create_fetch_task_request_body
+func ValidateCreateFetchTaskRequestBody(body *CreateFetchTaskRequestBody) (err error) {
+	if body.SourceConn == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("source_conn", "body"))
+	}
+	if body.TargetConn == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("target_conn", "body"))
+	}
+	if body.Mode == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("mode", "body"))
+	}
+	if body.Store == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("store", "body"))
+	}
+	if body.CleanupIntermediaryStore == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("cleanup_intermediary_store", "body"))
+	}
+	if body.LocalPath == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("local_path", "body"))
+	}
+	if body.LocalPathListenAddress == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("local_path_listen_address", "body"))
+	}
+	if body.LocalPathCrdbAddress == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("local_path_crdb_address", "body"))
+	}
+	if body.BucketName == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("bucket_name", "body"))
+	}
+	if body.BucketPath == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("bucket_path", "body"))
+	}
+	if body.LogFile == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("log_file", "body"))
+	}
+	if body.Truncate == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("truncate", "body"))
+	}
+	if body.Compression == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("compression", "body"))
+	}
+	if body.NumFlushRows == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("num_flush_rows", "body"))
+	}
+	if body.NumFlushBytes == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("num_flush_bytes", "body"))
+	}
+	if body.NumConcurrentTables == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("num_concurrent_tables", "body"))
+	}
+	if body.NumBatchRowsExport == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("num_batch_rows_export", "body"))
+	}
+	if body.PgLogicalSlotName == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("pg_logical_slot_name", "body"))
+	}
+	if body.PgLogicalPlugin == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("pg_logical_plugin", "body"))
+	}
+	if body.PgDropSlot == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("pg_drop_slot", "body"))
+	}
+	if body.Mode != nil {
+		if !(*body.Mode == "IMPORT_INTO" || *body.Mode == "COPY_FROM" || *body.Mode == "DIRECT_COPY") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.mode", *body.Mode, []any{"IMPORT_INTO", "COPY_FROM", "DIRECT_COPY"}))
+		}
+	}
+	if body.Store != nil {
+		if !(*body.Store == "None" || *body.Store == "AWS" || *body.Store == "GCP" || *body.Store == "Local") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.store", *body.Store, []any{"None", "AWS", "GCP", "Local"}))
+		}
+	}
+	if body.Compression != nil {
+		if !(*body.Compression == "gzip" || *body.Compression == "none") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.compression", *body.Compression, []any{"gzip", "none"}))
+		}
+	}
+	return
 }

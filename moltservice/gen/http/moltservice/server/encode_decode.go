@@ -44,6 +44,10 @@ func DecodeCreateFetchTaskRequest(mux goahttp.Muxer, decoder func(*http.Request)
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
+		err = ValidateCreateFetchTaskRequestBody(&body)
+		if err != nil {
+			return nil, err
+		}
 		payload := NewCreateFetchTaskCreateFetchPayload(&body)
 
 		return payload, nil
