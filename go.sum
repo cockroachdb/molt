@@ -751,6 +751,8 @@ github.com/pingcap/tidb-dashboard v0.0.0-20211031170437-08e58c069a2a/go.mod h1:O
 github.com/pingcap/tidb-tools v5.2.2-0.20211019062242-37a8bef2fa17+incompatible h1:c7+izmker91NkjkZ6FgTlmD4k1A5FLOAq+li6Ki2/GY=
 github.com/pingcap/tidb-tools v5.2.2-0.20211019062242-37a8bef2fa17+incompatible/go.mod h1:XGdcy9+yqlDSEMTpOXnwf3hiTeqrV6MN/u1se9N8yIM=
 github.com/pingcap/tidb/parser v0.0.0-20211011031125-9b13dc409c5e/go.mod h1:e1MGCA9Sg3T8jid8PKAEq5eYVuMMCq4n8gJ+Kqp4Plg=
+github.com/pingcap/tidb/parser v0.0.0-20211124132551-4a1b2e9fe5b5 h1:P29WkuSmY8T61TI2uQRqnBzgm0T0LHedfuAzqGFPEl8=
+github.com/pingcap/tidb/parser v0.0.0-20211124132551-4a1b2e9fe5b5/go.mod h1:MAa22tagoj7nv5b1NBcxPkc5CiUNhqj1wuSQnw4f9WE=
 github.com/pingcap/tidb/parser v0.0.0-20221126021158-6b02a5d8ba7d h1:1DyyRrgYeNjqPkgjrdEsaIbX+kHpuTTk5ZOCtrcRFcQ=
 github.com/pingcap/tidb/parser v0.0.0-20221126021158-6b02a5d8ba7d/go.mod h1:ElJiub4lRy6UZDb+0JHDkGEdr6aOli+ykhyej7VCLoI=
 github.com/pingcap/tipb v0.0.0-20211105090418-71142a4d40e3 h1:xnp/Qkk5gELlB8TaY6oro0JNXMBXTafNVxU/vbrNU8I=

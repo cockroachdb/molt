@@ -17,7 +17,7 @@ require (
 	github.com/jstemmer/go-junit-report v1.0.0
 	github.com/lib/pq v1.10.9
 	github.com/pingcap/tidb v1.1.0-beta.0.20211124132551-4a1b2e9fe5b5
-	github.com/pingcap/tidb/parser v0.0.0-20221126021158-6b02a5d8ba7d
+	github.com/pingcap/tidb/parser v0.0.0-20211124132551-4a1b2e9fe5b5
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.18.0
 	github.com/rs/zerolog v1.31.0

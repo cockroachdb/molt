@@ -1,5 +1,5 @@
 gen_molt_service:
-	go run goa.design/goa/v3/cmd/goa gen github.com/cockroachdb/molt/moltservice/design -o ./moltservice && go mod tidy
+	go run goa.design/goa/v3/cmd/goa gen github.com/cockroachdb/molt/moltservice/design -o ./moltservice
 
 gen:
 	@$(MAKE) gen_molt_service
