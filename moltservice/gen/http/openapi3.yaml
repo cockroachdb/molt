@@ -1,0 +1,118 @@
+openapi: 3.0.3
+info:
+    title: MOLT Service
+    description: Service for coordinating between clients (CLI + Web UI) and MOLT tooling
+    version: "1.0"
+servers:
+    - url: http://localhost:4500
+paths:
+    /api/v1/fetch:
+        post:
+            tags:
+                - moltservice
+            summary: create_fetch_task moltservice
+            operationId: moltservice#create_fetch_task
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateFetchTaskRequestBody'
+                        example:
+                            bucket_name: http://localhost:5000
+                            bucket_path: fetch/export
+                            cleanup_intermediary_store: true
+                            local_path: /usr/Documents/fetch
+                            local_path_crdb_address: http://localhost:5000
+                            local_path_listen_address: http://localhost:5000
+                            log_file: task.log
+                            mode: DIRECT COPY
+                            store: Local
+                            truncate: true
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                type: integer
+                                example: 7069463171098769724
+                                format: int64
+                            example: 414233157926902712
+    /docs.html:
+        get:
+            tags:
+                - moltservice
+            summary: Download ./assets/docs.html
+            operationId: moltservice#/docs.html
+            responses:
+                "200":
+                    description: File downloaded
+    /openapi.json:
+        get:
+            tags:
+                - moltservice
+            summary: Download ./gen/http/openapi.json
+            operationId: moltservice#/openapi.json
+            responses:
+                "200":
+                    description: File downloaded
+components:
+    schemas:
+        CreateFetchTaskRequestBody:
+            type: object
+            properties:
+                bucket_name:
+                    type: string
+                    description: the local address CRDB will use to access the import files
+                    example: http://localhost:5000
+                bucket_path:
+                    type: string
+                    description: the sub-path within the bucket to write the export files
+                    example: fetch/export
+                cleanup_intermediary_store:
+                    type: boolean
+                    description: whether the intermediate store should be cleaned up after the fetch task
+                    example: true
+                local_path:
+                    type: string
+                    description: the absolute or relative path to write export files
+                    example: /usr/Documents/fetch
+                local_path_crdb_address:
+                    type: string
+                    description: the local address CRDB will use to access the import files
+                    example: http://localhost:5000
+                local_path_listen_address:
+                    type: string
+                    description: the local address where the file server will be spun up
+                    example: http://localhost:5000
+                log_file:
+                    type: string
+                    description: if specified, writes task execution logs to a file and stdout; otherwise, just writes to stdout
+                    example: task.log
+                mode:
+                    type: string
+                    description: Mode of operation for fetch
+                    example: DIRECT COPY
+                store:
+                    type: string
+                    description: Type of intermediary store
+                    example: Local
+                truncate:
+                    type: boolean
+                    description: if specified, truncates the target tables before running the data load
+                    example: true
+            example:
+                bucket_name: http://localhost:5000
+                bucket_path: fetch/export
+                cleanup_intermediary_store: true
+                local_path: /usr/Documents/fetch
+                local_path_crdb_address: http://localhost:5000
+                local_path_listen_address: http://localhost:5000
+                log_file: task.log
+                mode: DIRECT COPY
+                store: Local
+                truncate: true
+tags:
+    - name: moltservice
+      description: MOLT service performs operations using MOLT tooling

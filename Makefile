@@ -1,4 +1,8 @@
+gen_molt_service:
+	go run goa.design/goa/v3/cmd/goa gen github.com/cockroachdb/molt/moltservice/design -o ./moltservice && go mod tidy
+
 gen:
+	@$(MAKE) gen_molt_service
 	go generate ./...
 
 clean_artifacts:
@@ -14,3 +18,6 @@ build_molt_cli:
 
 sync_hooks:
 	cp -a .githooks/ .git/hooks/
+
+run_molt_svc:
+	cd moltservice && MOLT_SERVICE_ALLOW_ORIGIN="/.*localhost.*/" go run .
