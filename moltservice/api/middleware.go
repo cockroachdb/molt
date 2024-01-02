@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"regexp"
 	"time"
 
 	"github.com/cockroachdb/molt/moltservice/gen/http/moltservice/server"
@@ -16,8 +15,6 @@ import (
 	"goa.design/goa/v3/http/middleware"
 	goa "goa.design/goa/v3/pkg"
 )
-
-var versionPattern = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
 
 type CheckAPIVersionError struct {
 	Message string `json:"message"`

@@ -8,6 +8,7 @@ artifacts/
 *.dll
 *.so
 *.dylib
+molt
 
 # Test binary, built with `go test -c`
 *.test

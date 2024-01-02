@@ -19,14 +19,8 @@ import (
 	"regexp"
 
 	"github.com/cockroachdb/molt/moltservice/gen/http/moltservice/server"
-	"github.com/coreos/go-semver/semver"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
-
-const failedToConnectErrorPattern = "cannot connect to the LMS from the orchestrator for dialect %s"
-const failedToParseUrlErrorPattern = "cannot parse the url to LMS from the orchestrator for dialect %s"
-
-const parseErrorPattern = "cannot parse the connection string for %s"
 
 // PathPatternDetails holds information about the original path pattern
 // and the regexp pattern to match.
@@ -77,18 +71,4 @@ func findMatchingPattern(path string, dtls []*PathPatternDetails) (string, error
 	}
 
 	return "", nil
-}
-
-// checkVersionsMatch checks to see if the semvers match. If not, returns an actionable help string.
-func checkVersionsMatch(clientVer, serverVer string) string {
-	client := semver.New(clientVer)
-	server := semver.New(serverVer)
-
-	if client.LessThan(*server) {
-		return fmt.Sprintf("Please upgrade your client version to %s.", serverVer)
-	} else if server.LessThan(*client) {
-		return fmt.Sprintf("Please upgrade your server version to %s.", clientVer)
-	}
-
-	return ""
 }

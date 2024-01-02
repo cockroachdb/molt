@@ -22,6 +22,7 @@ type ServerConfig struct {
 	Logger            zerolog.Logger
 	ShowDocsHTML      bool
 	SkipMetrics       bool
+	DebugMode         bool
 }
 
 type Server struct {
@@ -38,7 +39,7 @@ func NewServer(ctx context.Context, cfg *ServerConfig) (*Server, error) {
 	}
 
 	endpoints := moltservice.NewEndpoints(s)
-	//registerEndpointMiddlewares(s.Logger, endpoints)
+	registerEndpointMiddlewares(s.logger, endpoints)
 
 	mux := goahttp.NewMuxer()
 
