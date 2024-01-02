@@ -73,6 +73,8 @@ type CreateFetchPayload struct {
 	PgLogicalPlugin string
 	// if set and exists, drops the existing replication slot
 	PgDropSlot bool
+	// the name of the fetch run
+	Name string
 }
 
 // FetchAttemptID is the result type of the moltservice service

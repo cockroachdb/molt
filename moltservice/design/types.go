@@ -141,6 +141,10 @@ var CreateFetchPayload = Type("create_fetch_payload", func() {
 		},
 	)
 
+	Field(21, "name", String, "the name of the fetch run", func() {
+		Example("rluu pg to cockroach")
+	})
+
 	Required(
 		"source_conn",
 		"target_conn",
@@ -162,6 +166,7 @@ var CreateFetchPayload = Type("create_fetch_payload", func() {
 		"pg_logical_slot_name",
 		"pg_logical_plugin",
 		"pg_drop_slot",
+		"name",
 	)
 })
 

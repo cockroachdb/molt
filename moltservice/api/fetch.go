@@ -22,6 +22,7 @@ const (
 )
 
 type FetchDetail struct {
+	RunName      string                     `json:"run_name"`
 	ID           moltservice.FetchAttemptID `json:"id"`
 	LogTimestamp time.Time                  `json:"time"`
 	Status       FetchStatus                `json:"status"`
@@ -129,6 +130,7 @@ func (m *moltService) CreateFetchTask(
 
 	args := getFetchArgsFromPayload(payload)
 	fetchDetail := FetchDetail{
+		RunName:      payload.Name,
 		ID:           id,
 		LogTimestamp: time.Now(),
 		LogFile:      payload.LogFile,
@@ -175,6 +177,10 @@ func (m *moltService) CreateFetchTask(
 		m.fetchState.Lock()
 		m.fetchState.idToRun[id] = fetchDetail
 		m.fetchState.Unlock()
+
+		if m.debugEnabled {
+			fmt.Println(m.fetchState.idToRun[id])
+		}
 	}(fetchDetail)
 
 	return moltservice.FetchAttemptID(id), err

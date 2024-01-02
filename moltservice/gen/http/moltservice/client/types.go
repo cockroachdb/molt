@@ -57,6 +57,8 @@ type CreateFetchTaskRequestBody struct {
 	PgLogicalPlugin string `form:"pg_logical_plugin" json:"pg_logical_plugin" xml:"pg_logical_plugin"`
 	// if set and exists, drops the existing replication slot
 	PgDropSlot bool `form:"pg_drop_slot" json:"pg_drop_slot" xml:"pg_drop_slot"`
+	// the name of the fetch run
+	Name string `form:"name" json:"name" xml:"name"`
 }
 
 // NewCreateFetchTaskRequestBody builds the HTTP request body from the payload
@@ -83,6 +85,7 @@ func NewCreateFetchTaskRequestBody(p *moltservice.CreateFetchPayload) *CreateFet
 		PgLogicalSlotName:        p.PgLogicalSlotName,
 		PgLogicalPlugin:          p.PgLogicalPlugin,
 		PgDropSlot:               p.PgDropSlot,
+		Name:                     p.Name,
 	}
 	return body
 }

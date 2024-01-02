@@ -28,6 +28,7 @@ paths:
                             local_path_listen_address: http://localhost:5000
                             log_file: task.log
                             mode: DIRECT_COPY
+                            name: rluu pg to cockroach
                             num_batch_rows_export: 100000
                             num_concurrent_tables: 4
                             num_flush_bytes: 2000
@@ -115,6 +116,10 @@ components:
                         - IMPORT_INTO
                         - COPY_FROM
                         - DIRECT_COPY
+                name:
+                    type: string
+                    description: the name of the fetch run
+                    example: rluu pg to cockroach
                 num_batch_rows_export:
                     type: integer
                     description: number of rows to export at a given time for each iteration; tune this so that you get most out of CPU and can batch the most data together
@@ -178,6 +183,7 @@ components:
                 local_path_listen_address: http://localhost:5000
                 log_file: task.log
                 mode: DIRECT_COPY
+                name: rluu pg to cockroach
                 num_batch_rows_export: 100000
                 num_concurrent_tables: 4
                 num_flush_bytes: 2000
@@ -210,6 +216,7 @@ components:
                 - pg_logical_slot_name
                 - pg_logical_plugin
                 - pg_drop_slot
+                - name
 tags:
     - name: moltservice
       description: MOLT service performs operations using MOLT tooling

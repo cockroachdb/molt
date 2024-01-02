@@ -58,6 +58,8 @@ type CreateFetchTaskRequestBody struct {
 	PgLogicalPlugin *string `form:"pg_logical_plugin,omitempty" json:"pg_logical_plugin,omitempty" xml:"pg_logical_plugin,omitempty"`
 	// if set and exists, drops the existing replication slot
 	PgDropSlot *bool `form:"pg_drop_slot,omitempty" json:"pg_drop_slot,omitempty" xml:"pg_drop_slot,omitempty"`
+	// the name of the fetch run
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 }
 
 // NewCreateFetchTaskCreateFetchPayload builds a moltservice service
@@ -84,6 +86,7 @@ func NewCreateFetchTaskCreateFetchPayload(body *CreateFetchTaskRequestBody) *mol
 		PgLogicalSlotName:        *body.PgLogicalSlotName,
 		PgLogicalPlugin:          *body.PgLogicalPlugin,
 		PgDropSlot:               *body.PgDropSlot,
+		Name:                     *body.Name,
 	}
 
 	return v
@@ -151,6 +154,9 @@ func ValidateCreateFetchTaskRequestBody(body *CreateFetchTaskRequestBody) (err e
 	}
 	if body.PgDropSlot == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("pg_drop_slot", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
 	if body.Mode != nil {
 		if !(*body.Mode == "IMPORT_INTO" || *body.Mode == "COPY_FROM" || *body.Mode == "DIRECT_COPY") {
