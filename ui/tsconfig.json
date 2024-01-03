@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    // Need this to be ES6 to satisfy generated API code and 
+    // newer language features.
+    "target": "es6",
     "lib": [
       "dom",
       "dom.iterable",
@@ -21,6 +23,7 @@
     "jsx": "react-jsx"
   },
   "include": [
-    "src"
+    "src",
+    "src/apigen"
   ]
 }

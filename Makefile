@@ -1,8 +1,12 @@
 gen_molt_service:
 	go run goa.design/goa/v3/cmd/goa gen github.com/cockroachdb/molt/moltservice/design -o ./moltservice
 
+gen_ts_api:
+	cd ui && pnpm openapi --input ../moltservice/gen/http/openapi3.yaml --output ./src/apigen/
+
 gen:
 	@$(MAKE) gen_molt_service
+	@$(MAKE) gen_ts_api
 	go generate ./...
 
 clean_artifacts:
