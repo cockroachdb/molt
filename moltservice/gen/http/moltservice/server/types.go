@@ -62,6 +62,101 @@ type CreateFetchTaskRequestBody struct {
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 }
 
+// GetFetchTasksResponseBody is the type of the "moltservice" service
+// "get_fetch_tasks" endpoint HTTP response body.
+type GetFetchTasksResponseBody []*FetchRunResponse
+
+// GetSpecificFetchTaskResponseBody is the type of the "moltservice" service
+// "get_specific_fetch_task" endpoint HTTP response body.
+type GetSpecificFetchTaskResponseBody struct {
+	// ID of the run
+	ID int `form:"id" json:"id" xml:"id"`
+	// name of the fetch run
+	Name string `form:"name" json:"name" xml:"name"`
+	// status of the fetch run
+	Status string `form:"status" json:"status" xml:"status"`
+	// started at time
+	StartedAt int `form:"started_at" json:"started_at" xml:"started_at"`
+	// finished at time
+	FinishedAt int `form:"finished_at" json:"finished_at" xml:"finished_at"`
+	// fetch statistics
+	Stats *FetchStatsDetailedResponseBody `form:"stats,omitempty" json:"stats,omitempty" xml:"stats,omitempty"`
+	// logs for fetch run
+	Logs []*LogResponseBody `form:"logs" json:"logs" xml:"logs"`
+}
+
+// FetchRunResponse is used to define fields on response body types.
+type FetchRunResponse struct {
+	// ID of the run
+	ID int `form:"id" json:"id" xml:"id"`
+	// name of the fetch run
+	Name string `form:"name" json:"name" xml:"name"`
+	// status of the fetch run
+	Status string `form:"status" json:"status" xml:"status"`
+	// started at time
+	StartedAt int `form:"started_at" json:"started_at" xml:"started_at"`
+	// finished at time
+	FinishedAt int `form:"finished_at" json:"finished_at" xml:"finished_at"`
+}
+
+// FetchStatsDetailedResponseBody is used to define fields on response body
+// types.
+type FetchStatsDetailedResponseBody struct {
+	// percentage complete of fetch run
+	PercentComplete string `form:"percent_complete" json:"percent_complete" xml:"percent_complete"`
+	// number of errors processed
+	NumErrors int `form:"num_errors" json:"num_errors" xml:"num_errors"`
+	// number of tables processed
+	NumTables int `form:"num_tables" json:"num_tables" xml:"num_tables"`
+	// number of rows
+	NumRows int `form:"num_rows" json:"num_rows" xml:"num_rows"`
+}
+
+// LogResponseBody is used to define fields on response body types.
+type LogResponseBody struct {
+	// timestamp of log
+	Timestamp int `form:"timestamp" json:"timestamp" xml:"timestamp"`
+	// level for logging
+	Level string `form:"level" json:"level" xml:"level"`
+	// message for the logging
+	Message string `form:"message" json:"message" xml:"message"`
+}
+
+// NewGetFetchTasksResponseBody builds the HTTP response body from the result
+// of the "get_fetch_tasks" endpoint of the "moltservice" service.
+func NewGetFetchTasksResponseBody(res []*moltservice.FetchRun) GetFetchTasksResponseBody {
+	body := make([]*FetchRunResponse, len(res))
+	for i, val := range res {
+		body[i] = marshalMoltserviceFetchRunToFetchRunResponse(val)
+	}
+	return body
+}
+
+// NewGetSpecificFetchTaskResponseBody builds the HTTP response body from the
+// result of the "get_specific_fetch_task" endpoint of the "moltservice"
+// service.
+func NewGetSpecificFetchTaskResponseBody(res *moltservice.FetchRunDetailed) *GetSpecificFetchTaskResponseBody {
+	body := &GetSpecificFetchTaskResponseBody{
+		ID:         res.ID,
+		Name:       res.Name,
+		Status:     res.Status,
+		StartedAt:  res.StartedAt,
+		FinishedAt: res.FinishedAt,
+	}
+	if res.Stats != nil {
+		body.Stats = marshalMoltserviceFetchStatsDetailedToFetchStatsDetailedResponseBody(res.Stats)
+	}
+	if res.Logs != nil {
+		body.Logs = make([]*LogResponseBody, len(res.Logs))
+		for i, val := range res.Logs {
+			body.Logs[i] = marshalMoltserviceLogToLogResponseBody(val)
+		}
+	} else {
+		body.Logs = []*LogResponseBody{}
+	}
+	return body
+}
+
 // NewCreateFetchTaskCreateFetchPayload builds a moltservice service
 // create_fetch_task endpoint payload.
 func NewCreateFetchTaskCreateFetchPayload(body *CreateFetchTaskRequestBody) *moltservice.CreateFetchPayload {
@@ -88,6 +183,15 @@ func NewCreateFetchTaskCreateFetchPayload(body *CreateFetchTaskRequestBody) *mol
 		PgDropSlot:               *body.PgDropSlot,
 		Name:                     *body.Name,
 	}
+
+	return v
+}
+
+// NewGetSpecificFetchTaskPayload builds a moltservice service
+// get_specific_fetch_task endpoint payload.
+func NewGetSpecificFetchTaskPayload(id int) *moltservice.GetSpecificFetchTaskPayload {
+	v := &moltservice.GetSpecificFetchTaskPayload{}
+	v.ID = id
 
 	return v
 }

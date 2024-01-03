@@ -21,6 +21,14 @@ type Client struct {
 	// create_fetch_task endpoint.
 	CreateFetchTaskDoer goahttp.Doer
 
+	// GetFetchTasks Doer is the HTTP client used to make requests to the
+	// get_fetch_tasks endpoint.
+	GetFetchTasksDoer goahttp.Doer
+
+	// GetSpecificFetchTask Doer is the HTTP client used to make requests to the
+	// get_specific_fetch_task endpoint.
+	GetSpecificFetchTaskDoer goahttp.Doer
+
 	// CORS Doer is the HTTP client used to make requests to the  endpoint.
 	CORSDoer goahttp.Doer
 
@@ -44,13 +52,15 @@ func NewClient(
 	restoreBody bool,
 ) *Client {
 	return &Client{
-		CreateFetchTaskDoer: doer,
-		CORSDoer:            doer,
-		RestoreResponseBody: restoreBody,
-		scheme:              scheme,
-		host:                host,
-		decoder:             dec,
-		encoder:             enc,
+		CreateFetchTaskDoer:      doer,
+		GetFetchTasksDoer:        doer,
+		GetSpecificFetchTaskDoer: doer,
+		CORSDoer:                 doer,
+		RestoreResponseBody:      restoreBody,
+		scheme:                   scheme,
+		host:                     host,
+		decoder:                  dec,
+		encoder:                  enc,
 	}
 }
 
@@ -73,6 +83,44 @@ func (c *Client) CreateFetchTask() goa.Endpoint {
 		resp, err := c.CreateFetchTaskDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("moltservice", "create_fetch_task", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// GetFetchTasks returns an endpoint that makes HTTP requests to the
+// moltservice service get_fetch_tasks server.
+func (c *Client) GetFetchTasks() goa.Endpoint {
+	var (
+		decodeResponse = DecodeGetFetchTasksResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildGetFetchTasksRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.GetFetchTasksDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("moltservice", "get_fetch_tasks", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// GetSpecificFetchTask returns an endpoint that makes HTTP requests to the
+// moltservice service get_specific_fetch_task server.
+func (c *Client) GetSpecificFetchTask() goa.Endpoint {
+	var (
+		decodeResponse = DecodeGetSpecificFetchTaskResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildGetSpecificFetchTaskRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.GetSpecificFetchTaskDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("moltservice", "get_specific_fetch_task", err)
 		}
 		return decodeResponse(resp)
 	}

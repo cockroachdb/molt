@@ -7,7 +7,21 @@
 
 package server
 
+import (
+	"fmt"
+)
+
 // CreateFetchTaskMoltservicePath returns the URL path to the moltservice service create_fetch_task HTTP endpoint.
 func CreateFetchTaskMoltservicePath() string {
 	return "/api/v1/fetch"
+}
+
+// GetFetchTasksMoltservicePath returns the URL path to the moltservice service get_fetch_tasks HTTP endpoint.
+func GetFetchTasksMoltservicePath() string {
+	return "/api/v1/fetch"
+}
+
+// GetSpecificFetchTaskMoltservicePath returns the URL path to the moltservice service get_specific_fetch_task HTTP endpoint.
+func GetSpecificFetchTaskMoltservicePath(id int) string {
+	return fmt.Sprintf("/api/v1/fetch/%v", id)
 }

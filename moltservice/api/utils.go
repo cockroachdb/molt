@@ -17,6 +17,7 @@ package api
 import (
 	"fmt"
 	"regexp"
+	"time"
 
 	"github.com/cockroachdb/molt/moltservice/gen/http/moltservice/server"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -71,4 +72,12 @@ func findMatchingPattern(path string, dtls []*PathPatternDetails) (string, error
 	}
 
 	return "", nil
+}
+
+func normalizeTimestamp(ts time.Time) int {
+	if ts.Unix() < 0 {
+		return 0
+	}
+
+	return int(ts.Unix())
 }

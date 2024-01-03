@@ -7,6 +7,47 @@ servers:
     - url: http://localhost:4500
 paths:
     /api/v1/fetch:
+        get:
+            tags:
+                - moltservice
+            summary: get_fetch_tasks moltservice
+            operationId: moltservice#get_fetch_tasks
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/FetchRun'
+                                example:
+                                    - finished_at: 1704233521
+                                      id: 1704233521
+                                      name: jyang pg to crdb
+                                      started_at: 1704233519
+                                      status: IN_PROGRESS
+                                    - finished_at: 1704233521
+                                      id: 1704233521
+                                      name: jyang pg to crdb
+                                      started_at: 1704233519
+                                      status: IN_PROGRESS
+                                    - finished_at: 1704233521
+                                      id: 1704233521
+                                      name: jyang pg to crdb
+                                      started_at: 1704233519
+                                      status: IN_PROGRESS
+                            example:
+                                - finished_at: 1704233521
+                                  id: 1704233521
+                                  name: jyang pg to crdb
+                                  started_at: 1704233519
+                                  status: IN_PROGRESS
+                                - finished_at: 1704233521
+                                  id: 1704233521
+                                  name: jyang pg to crdb
+                                  started_at: 1704233519
+                                  status: IN_PROGRESS
         post:
             tags:
                 - moltservice
@@ -31,11 +72,11 @@ paths:
                             name: rluu pg to cockroach
                             num_batch_rows_export: 100000
                             num_concurrent_tables: 4
-                            num_flush_bytes: 2000
+                            num_flush_bytes: 2000000
                             num_flush_rows: 200000
                             pg_drop_slot: false
-                            pg_logical_plugin: my_plugin
-                            pg_logical_slot_name: my_slot
+                            pg_logical_plugin: ""
+                            pg_logical_slot_name: ""
                             source_conn: postgres://postgres:postgres@localhost:5432/molt?sslmode=disable
                             store: Local
                             target_conn: postgres://root@localhost:26257/defaultdb?sslmode=disable
@@ -47,9 +88,51 @@ paths:
                         application/json:
                             schema:
                                 type: integer
-                                example: 7069463171098769724
+                                example: 1613965225690350186
                                 format: int64
-                            example: 414233157926902712
+                            example: 4729609065539386798
+    /api/v1/fetch/{id}:
+        get:
+            tags:
+                - moltservice
+            summary: get_specific_fetch_task moltservice
+            operationId: moltservice#get_specific_fetch_task
+            parameters:
+                - name: id
+                  in: path
+                  description: id for the fetch task
+                  required: true
+                  schema:
+                    type: integer
+                    description: id for the fetch task
+                    example: 3120370108600835844
+                    format: int64
+                  example: 1903004209796933078
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/FetchRunDetailed'
+                            example:
+                                finished_at: 1704233521
+                                id: 1704233521
+                                logs:
+                                    - level: INFO
+                                      message: This is a log message
+                                      timestamp: 1704233519
+                                    - level: INFO
+                                      message: This is a log message
+                                      timestamp: 1704233519
+                                name: jyang pg to crdb
+                                started_at: 1704233519
+                                stats:
+                                    num_errors: 0
+                                    num_rows: 100000
+                                    num_tables: 5
+                                    percent_complete: jyang pg to crdb
+                                status: IN_PROGRESS
     /docs.html:
         get:
             tags:
@@ -133,7 +216,7 @@ components:
                 num_flush_bytes:
                     type: integer
                     description: number of bytes for the export before data is flushed to the disk
-                    example: 2000
+                    example: 2000000
                     format: int64
                 num_flush_rows:
                     type: integer
@@ -147,11 +230,11 @@ components:
                 pg_logical_plugin:
                     type: string
                     description: name for pg replication plugin
-                    example: my_plugin
+                    example: ""
                 pg_logical_slot_name:
                     type: string
                     description: name for pg replication slot
-                    example: my_slot
+                    example: ""
                 source_conn:
                     type: string
                     description: source database connection string
@@ -186,11 +269,11 @@ components:
                 name: rluu pg to cockroach
                 num_batch_rows_export: 100000
                 num_concurrent_tables: 4
-                num_flush_bytes: 2000
+                num_flush_bytes: 2000000
                 num_flush_rows: 200000
                 pg_drop_slot: false
-                pg_logical_plugin: my_plugin
-                pg_logical_slot_name: my_slot
+                pg_logical_plugin: ""
+                pg_logical_slot_name: ""
                 source_conn: postgres://postgres:postgres@localhost:5432/molt?sslmode=disable
                 store: Local
                 target_conn: postgres://root@localhost:26257/defaultdb?sslmode=disable
@@ -217,6 +300,165 @@ components:
                 - pg_logical_plugin
                 - pg_drop_slot
                 - name
+        FetchRun:
+            type: object
+            properties:
+                finished_at:
+                    type: integer
+                    description: finished at time
+                    example: 1704233521
+                    format: int64
+                id:
+                    type: integer
+                    description: ID of the run
+                    example: 1704233521
+                    format: int64
+                name:
+                    type: string
+                    description: name of the fetch run
+                    example: jyang pg to crdb
+                started_at:
+                    type: integer
+                    description: started at time
+                    example: 1704233519
+                    format: int64
+                status:
+                    type: string
+                    description: status of the fetch run
+                    example: IN_PROGRESS
+            example:
+                finished_at: 1704233521
+                id: 1704233521
+                name: jyang pg to crdb
+                started_at: 1704233519
+                status: IN_PROGRESS
+            required:
+                - id
+                - name
+                - status
+                - started_at
+                - finished_at
+        FetchRunDetailed:
+            type: object
+            properties:
+                finished_at:
+                    type: integer
+                    description: finished at time
+                    example: 1704233521
+                    format: int64
+                id:
+                    type: integer
+                    description: ID of the run
+                    example: 1704233521
+                    format: int64
+                logs:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Log'
+                    description: logs for fetch run
+                    example:
+                        - level: INFO
+                          message: This is a log message
+                          timestamp: 1704233519
+                        - level: INFO
+                          message: This is a log message
+                          timestamp: 1704233519
+                name:
+                    type: string
+                    description: name of the fetch run
+                    example: jyang pg to crdb
+                started_at:
+                    type: integer
+                    description: started at time
+                    example: 1704233519
+                    format: int64
+                stats:
+                    $ref: '#/components/schemas/FetchStatsDetailed'
+                status:
+                    type: string
+                    description: status of the fetch run
+                    example: IN_PROGRESS
+            example:
+                finished_at: 1704233521
+                id: 1704233521
+                logs:
+                    - level: INFO
+                      message: This is a log message
+                      timestamp: 1704233519
+                    - level: INFO
+                      message: This is a log message
+                      timestamp: 1704233519
+                name: jyang pg to crdb
+                started_at: 1704233519
+                stats:
+                    num_errors: 0
+                    num_rows: 100000
+                    num_tables: 5
+                    percent_complete: jyang pg to crdb
+                status: IN_PROGRESS
+            required:
+                - id
+                - name
+                - status
+                - started_at
+                - finished_at
+                - logs
+        FetchStatsDetailed:
+            type: object
+            properties:
+                num_errors:
+                    type: integer
+                    description: number of errors processed
+                    example: 0
+                    format: int64
+                num_rows:
+                    type: integer
+                    description: number of rows
+                    example: 100000
+                    format: int64
+                num_tables:
+                    type: integer
+                    description: number of tables processed
+                    example: 5
+                    format: int64
+                percent_complete:
+                    type: string
+                    description: percentage complete of fetch run
+                    example: jyang pg to crdb
+            example:
+                num_errors: 0
+                num_rows: 100000
+                num_tables: 5
+                percent_complete: jyang pg to crdb
+            required:
+                - percent_complete
+                - num_errors
+                - num_tables
+                - num_rows
+        Log:
+            type: object
+            properties:
+                level:
+                    type: string
+                    description: level for logging
+                    example: INFO
+                message:
+                    type: string
+                    description: message for the logging
+                    example: This is a log message
+                timestamp:
+                    type: integer
+                    description: timestamp of log
+                    example: 1704233519
+                    format: int64
+            example:
+                level: INFO
+                message: This is a log message
+                timestamp: 1704233519
+            required:
+                - timestamp
+                - level
+                - message
 tags:
     - name: moltservice
       description: MOLT service performs operations using MOLT tooling

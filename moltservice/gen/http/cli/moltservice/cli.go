@@ -22,7 +22,7 @@ import (
 //
 //	command (subcommand1|subcommand2|...)
 func UsageCommands() string {
-	return `moltservice create-fetch-task
+	return `moltservice (create-fetch-task|get-fetch-tasks|get-specific-fetch-task)
 `
 }
 
@@ -41,11 +41,11 @@ func UsageExamples() string {
       "name": "rluu pg to cockroach",
       "num_batch_rows_export": 100000,
       "num_concurrent_tables": 4,
-      "num_flush_bytes": 2000,
+      "num_flush_bytes": 2000000,
       "num_flush_rows": 200000,
       "pg_drop_slot": false,
-      "pg_logical_plugin": "my_plugin",
-      "pg_logical_slot_name": "my_slot",
+      "pg_logical_plugin": "",
+      "pg_logical_slot_name": "",
       "source_conn": "postgres://postgres:postgres@localhost:5432/molt?sslmode=disable",
       "store": "Local",
       "target_conn": "postgres://root@localhost:26257/defaultdb?sslmode=disable",
@@ -68,9 +68,16 @@ func ParseEndpoint(
 
 		moltserviceCreateFetchTaskFlags    = flag.NewFlagSet("create-fetch-task", flag.ExitOnError)
 		moltserviceCreateFetchTaskBodyFlag = moltserviceCreateFetchTaskFlags.String("body", "REQUIRED", "")
+
+		moltserviceGetFetchTasksFlags = flag.NewFlagSet("get-fetch-tasks", flag.ExitOnError)
+
+		moltserviceGetSpecificFetchTaskFlags  = flag.NewFlagSet("get-specific-fetch-task", flag.ExitOnError)
+		moltserviceGetSpecificFetchTaskIDFlag = moltserviceGetSpecificFetchTaskFlags.String("id", "REQUIRED", "id for the fetch task")
 	)
 	moltserviceFlags.Usage = moltserviceUsage
 	moltserviceCreateFetchTaskFlags.Usage = moltserviceCreateFetchTaskUsage
+	moltserviceGetFetchTasksFlags.Usage = moltserviceGetFetchTasksUsage
+	moltserviceGetSpecificFetchTaskFlags.Usage = moltserviceGetSpecificFetchTaskUsage
 
 	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
 		return nil, nil, err
@@ -109,6 +116,12 @@ func ParseEndpoint(
 			case "create-fetch-task":
 				epf = moltserviceCreateFetchTaskFlags
 
+			case "get-fetch-tasks":
+				epf = moltserviceGetFetchTasksFlags
+
+			case "get-specific-fetch-task":
+				epf = moltserviceGetSpecificFetchTaskFlags
+
 			}
 
 		}
@@ -137,6 +150,12 @@ func ParseEndpoint(
 			case "create-fetch-task":
 				endpoint = c.CreateFetchTask()
 				data, err = moltservicec.BuildCreateFetchTaskPayload(*moltserviceCreateFetchTaskBodyFlag)
+			case "get-fetch-tasks":
+				endpoint = c.GetFetchTasks()
+				data = nil
+			case "get-specific-fetch-task":
+				endpoint = c.GetSpecificFetchTask()
+				data, err = moltservicec.BuildGetSpecificFetchTaskPayload(*moltserviceGetSpecificFetchTaskIDFlag)
 			}
 		}
 	}
@@ -156,6 +175,8 @@ Usage:
 
 COMMAND:
     create-fetch-task: CreateFetchTask implements create_fetch_task.
+    get-fetch-tasks: GetFetchTasks implements get_fetch_tasks.
+    get-specific-fetch-task: GetSpecificFetchTask implements get_specific_fetch_task.
 
 Additional help:
     %[1]s moltservice COMMAND --help
@@ -181,15 +202,36 @@ Example:
       "name": "rluu pg to cockroach",
       "num_batch_rows_export": 100000,
       "num_concurrent_tables": 4,
-      "num_flush_bytes": 2000,
+      "num_flush_bytes": 2000000,
       "num_flush_rows": 200000,
       "pg_drop_slot": false,
-      "pg_logical_plugin": "my_plugin",
-      "pg_logical_slot_name": "my_slot",
+      "pg_logical_plugin": "",
+      "pg_logical_slot_name": "",
       "source_conn": "postgres://postgres:postgres@localhost:5432/molt?sslmode=disable",
       "store": "Local",
       "target_conn": "postgres://root@localhost:26257/defaultdb?sslmode=disable",
       "truncate": true
    }'
+`, os.Args[0])
+}
+
+func moltserviceGetFetchTasksUsage() {
+	fmt.Fprintf(os.Stderr, `%[1]s [flags] moltservice get-fetch-tasks
+
+GetFetchTasks implements get_fetch_tasks.
+
+Example:
+    %[1]s moltservice get-fetch-tasks
+`, os.Args[0])
+}
+
+func moltserviceGetSpecificFetchTaskUsage() {
+	fmt.Fprintf(os.Stderr, `%[1]s [flags] moltservice get-specific-fetch-task -id INT
+
+GetSpecificFetchTask implements get_specific_fetch_task.
+    -id INT: id for the fetch task
+
+Example:
+    %[1]s moltservice get-specific-fetch-task --id 2679778260812158021
 `, os.Args[0])
 }

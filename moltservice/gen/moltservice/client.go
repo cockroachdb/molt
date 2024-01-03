@@ -15,13 +15,17 @@ import (
 
 // Client is the "moltservice" service client.
 type Client struct {
-	CreateFetchTaskEndpoint goa.Endpoint
+	CreateFetchTaskEndpoint      goa.Endpoint
+	GetFetchTasksEndpoint        goa.Endpoint
+	GetSpecificFetchTaskEndpoint goa.Endpoint
 }
 
 // NewClient initializes a "moltservice" service client given the endpoints.
-func NewClient(createFetchTask goa.Endpoint) *Client {
+func NewClient(createFetchTask, getFetchTasks, getSpecificFetchTask goa.Endpoint) *Client {
 	return &Client{
-		CreateFetchTaskEndpoint: createFetchTask,
+		CreateFetchTaskEndpoint:      createFetchTask,
+		GetFetchTasksEndpoint:        getFetchTasks,
+		GetSpecificFetchTaskEndpoint: getSpecificFetchTask,
 	}
 }
 
@@ -34,4 +38,26 @@ func (c *Client) CreateFetchTask(ctx context.Context, p *CreateFetchPayload) (re
 		return
 	}
 	return ires.(FetchAttemptID), nil
+}
+
+// GetFetchTasks calls the "get_fetch_tasks" endpoint of the "moltservice"
+// service.
+func (c *Client) GetFetchTasks(ctx context.Context) (res []*FetchRun, err error) {
+	var ires any
+	ires, err = c.GetFetchTasksEndpoint(ctx, nil)
+	if err != nil {
+		return
+	}
+	return ires.([]*FetchRun), nil
+}
+
+// GetSpecificFetchTask calls the "get_specific_fetch_task" endpoint of the
+// "moltservice" service.
+func (c *Client) GetSpecificFetchTask(ctx context.Context, p *GetSpecificFetchTaskPayload) (res *FetchRunDetailed, err error) {
+	var ires any
+	ires, err = c.GetSpecificFetchTaskEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*FetchRunDetailed), nil
 }

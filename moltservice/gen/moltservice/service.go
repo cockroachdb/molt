@@ -15,6 +15,10 @@ import (
 type Service interface {
 	// CreateFetchTask implements create_fetch_task.
 	CreateFetchTask(context.Context, *CreateFetchPayload) (res FetchAttemptID, err error)
+	// GetFetchTasks implements get_fetch_tasks.
+	GetFetchTasks(context.Context) (res []*FetchRun, err error)
+	// GetSpecificFetchTask implements get_specific_fetch_task.
+	GetSpecificFetchTask(context.Context, *GetSpecificFetchTaskPayload) (res *FetchRunDetailed, err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -25,7 +29,7 @@ const ServiceName = "moltservice"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [1]string{"create_fetch_task"}
+var MethodNames = [3]string{"create_fetch_task", "get_fetch_tasks", "get_specific_fetch_task"}
 
 // CreateFetchPayload is the payload type of the moltservice service
 // create_fetch_task method.
@@ -80,3 +84,62 @@ type CreateFetchPayload struct {
 // FetchAttemptID is the result type of the moltservice service
 // create_fetch_task method.
 type FetchAttemptID int
+
+type FetchRun struct {
+	// ID of the run
+	ID int
+	// name of the fetch run
+	Name string
+	// status of the fetch run
+	Status string
+	// started at time
+	StartedAt int
+	// finished at time
+	FinishedAt int
+}
+
+// FetchRunDetailed is the result type of the moltservice service
+// get_specific_fetch_task method.
+type FetchRunDetailed struct {
+	// ID of the run
+	ID int
+	// name of the fetch run
+	Name string
+	// status of the fetch run
+	Status string
+	// started at time
+	StartedAt int
+	// finished at time
+	FinishedAt int
+	// fetch statistics
+	Stats *FetchStatsDetailed
+	// logs for fetch run
+	Logs []*Log
+}
+
+type FetchStatsDetailed struct {
+	// percentage complete of fetch run
+	PercentComplete string
+	// number of errors processed
+	NumErrors int
+	// number of tables processed
+	NumTables int
+	// number of rows
+	NumRows int
+}
+
+// GetSpecificFetchTaskPayload is the payload type of the moltservice service
+// get_specific_fetch_task method.
+type GetSpecificFetchTaskPayload struct {
+	// id for the fetch task
+	ID int
+}
+
+type Log struct {
+	// timestamp of log
+	Timestamp int
+	// level for logging
+	Level string
+	// message for the logging
+	Message string
+}

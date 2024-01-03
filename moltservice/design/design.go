@@ -63,6 +63,27 @@ var _ = Service("moltservice", func() {
 		Result(FetchAttemptID)
 	})
 
+	Method("get_fetch_tasks", func() {
+		HTTP(func() {
+			GET(FetchBaseAPIPath)
+		})
+
+		Result(ArrayOf(FetchRun))
+	})
+
+	Method("get_specific_fetch_task", func() {
+		Payload(func() {
+			Field(1, "id", Int, "id for the fetch task")
+			Required("id")
+		})
+
+		HTTP(func() {
+			GET(fmt.Sprintf("%s/{id}", FetchBaseAPIPath))
+		})
+
+		Result(FetchRunDetailed)
+	})
+
 	// OpenAPI spec.
 	Files("/openapi.json", "./gen/http/openapi.json")
 	// RapiDoc UI.

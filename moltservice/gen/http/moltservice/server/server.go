@@ -20,11 +20,13 @@ import (
 
 // Server lists the moltservice service endpoint HTTP handlers.
 type Server struct {
-	Mounts             []*MountPoint
-	CreateFetchTask    http.Handler
-	CORS               http.Handler
-	GenHTTPOpenapiJSON http.Handler
-	AssetsDocsHTML     http.Handler
+	Mounts               []*MountPoint
+	CreateFetchTask      http.Handler
+	GetFetchTasks        http.Handler
+	GetSpecificFetchTask http.Handler
+	CORS                 http.Handler
+	GenHTTPOpenapiJSON   http.Handler
+	AssetsDocsHTML       http.Handler
 }
 
 // MountPoint holds information about the mounted endpoints.
@@ -63,16 +65,21 @@ func New(
 	return &Server{
 		Mounts: []*MountPoint{
 			{"CreateFetchTask", "POST", "/api/v1/fetch"},
+			{"GetFetchTasks", "GET", "/api/v1/fetch"},
+			{"GetSpecificFetchTask", "GET", "/api/v1/fetch/{id}"},
 			{"CORS", "OPTIONS", "/api/v1/fetch"},
+			{"CORS", "OPTIONS", "/api/v1/fetch/{id}"},
 			{"CORS", "OPTIONS", "/openapi.json"},
 			{"CORS", "OPTIONS", "/docs.html"},
 			{"./gen/http/openapi.json", "GET", "/openapi.json"},
 			{"./assets/docs.html", "GET", "/docs.html"},
 		},
-		CreateFetchTask:    NewCreateFetchTaskHandler(e.CreateFetchTask, mux, decoder, encoder, errhandler, formatter),
-		CORS:               NewCORSHandler(),
-		GenHTTPOpenapiJSON: http.FileServer(fileSystemGenHTTPOpenapiJSON),
-		AssetsDocsHTML:     http.FileServer(fileSystemAssetsDocsHTML),
+		CreateFetchTask:      NewCreateFetchTaskHandler(e.CreateFetchTask, mux, decoder, encoder, errhandler, formatter),
+		GetFetchTasks:        NewGetFetchTasksHandler(e.GetFetchTasks, mux, decoder, encoder, errhandler, formatter),
+		GetSpecificFetchTask: NewGetSpecificFetchTaskHandler(e.GetSpecificFetchTask, mux, decoder, encoder, errhandler, formatter),
+		CORS:                 NewCORSHandler(),
+		GenHTTPOpenapiJSON:   http.FileServer(fileSystemGenHTTPOpenapiJSON),
+		AssetsDocsHTML:       http.FileServer(fileSystemAssetsDocsHTML),
 	}
 }
 
@@ -82,6 +89,8 @@ func (s *Server) Service() string { return "moltservice" }
 // Use wraps the server handlers with the given middleware.
 func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.CreateFetchTask = m(s.CreateFetchTask)
+	s.GetFetchTasks = m(s.GetFetchTasks)
+	s.GetSpecificFetchTask = m(s.GetSpecificFetchTask)
 	s.CORS = m(s.CORS)
 }
 
@@ -91,6 +100,8 @@ func (s *Server) MethodNames() []string { return moltservice.MethodNames[:] }
 // Mount configures the mux to serve the moltservice endpoints.
 func Mount(mux goahttp.Muxer, h *Server) {
 	MountCreateFetchTaskHandler(mux, h.CreateFetchTask)
+	MountGetFetchTasksHandler(mux, h.GetFetchTasks)
+	MountGetSpecificFetchTaskHandler(mux, h.GetSpecificFetchTask)
 	MountCORSHandler(mux, h.CORS)
 	MountGenHTTPOpenapiJSON(mux, goahttp.Replace("", "/./gen/http/openapi.json", h.GenHTTPOpenapiJSON))
 	MountAssetsDocsHTML(mux, goahttp.Replace("", "/./assets/docs.html", h.AssetsDocsHTML))
@@ -152,6 +163,102 @@ func NewCreateFetchTaskHandler(
 	})
 }
 
+// MountGetFetchTasksHandler configures the mux to serve the "moltservice"
+// service "get_fetch_tasks" endpoint.
+func MountGetFetchTasksHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := HandleMoltserviceOrigin(h).(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/api/v1/fetch", f)
+}
+
+// NewGetFetchTasksHandler creates a HTTP handler which loads the HTTP request
+// and calls the "moltservice" service "get_fetch_tasks" endpoint.
+func NewGetFetchTasksHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		encodeResponse = EncodeGetFetchTasksResponse(encoder)
+		encodeError    = goahttp.ErrorEncoder(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "get_fetch_tasks")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "moltservice")
+		var err error
+		res, err := endpoint(ctx, nil)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			errhandler(ctx, w, err)
+		}
+	})
+}
+
+// MountGetSpecificFetchTaskHandler configures the mux to serve the
+// "moltservice" service "get_specific_fetch_task" endpoint.
+func MountGetSpecificFetchTaskHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := HandleMoltserviceOrigin(h).(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/api/v1/fetch/{id}", f)
+}
+
+// NewGetSpecificFetchTaskHandler creates a HTTP handler which loads the HTTP
+// request and calls the "moltservice" service "get_specific_fetch_task"
+// endpoint.
+func NewGetSpecificFetchTaskHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeGetSpecificFetchTaskRequest(mux, decoder)
+		encodeResponse = EncodeGetSpecificFetchTaskResponse(encoder)
+		encodeError    = goahttp.ErrorEncoder(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "get_specific_fetch_task")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "moltservice")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			errhandler(ctx, w, err)
+		}
+	})
+}
+
 // MountGenHTTPOpenapiJSON configures the mux to serve GET request made to
 // "/openapi.json".
 func MountGenHTTPOpenapiJSON(mux goahttp.Muxer, h http.Handler) {
@@ -169,6 +276,7 @@ func MountAssetsDocsHTML(mux goahttp.Muxer, h http.Handler) {
 func MountCORSHandler(mux goahttp.Muxer, h http.Handler) {
 	h = HandleMoltserviceOrigin(h)
 	mux.Handle("OPTIONS", "/api/v1/fetch", h.ServeHTTP)
+	mux.Handle("OPTIONS", "/api/v1/fetch/{id}", h.ServeHTTP)
 	mux.Handle("OPTIONS", "/openapi.json", h.ServeHTTP)
 	mux.Handle("OPTIONS", "/docs.html", h.ServeHTTP)
 }

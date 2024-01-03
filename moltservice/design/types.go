@@ -107,7 +107,7 @@ var CreateFetchPayload = Type("create_fetch_payload", func() {
 
 	Field(15, "num_flush_bytes", Int, "number of bytes for the export before data is flushed to the disk",
 		func() {
-			Example(2000)
+			Example(2000000)
 		},
 	)
 
@@ -125,13 +125,13 @@ var CreateFetchPayload = Type("create_fetch_payload", func() {
 
 	Field(18, "pg_logical_slot_name", String, "name for pg replication slot",
 		func() {
-			Example("my_slot")
+			Example("")
 		},
 	)
 
 	Field(19, "pg_logical_plugin", String, "name for pg replication plugin",
 		func() {
-			Example("my_plugin")
+			Example("")
 		},
 	)
 
@@ -167,6 +167,130 @@ var CreateFetchPayload = Type("create_fetch_payload", func() {
 		"pg_logical_plugin",
 		"pg_drop_slot",
 		"name",
+	)
+})
+
+var FetchRun = Type("fetch_run", func() {
+	Field(1, "id", Int, "ID of the run",
+		func() {
+			Example(1704233521)
+		},
+	)
+
+	Field(2, "name", String, "name of the fetch run", func() {
+		Example("jyang pg to crdb")
+	})
+
+	Field(3, "status", String, "status of the fetch run", func() {
+		Example("IN_PROGRESS")
+	})
+
+	Field(4, "started_at", Int, "started at time",
+		func() {
+			Example(1704233519)
+		},
+	)
+
+	Field(5, "finished_at", Int, "finished at time",
+		func() {
+			Example(1704233521)
+		},
+	)
+
+	Required(
+		"id",
+		"name",
+		"status",
+		"started_at",
+		"finished_at",
+	)
+})
+
+var DetailedFetchStats = Type("fetch_stats_detailed", func() {
+	Field(1, "percent_complete", String, "percentage complete of fetch run", func() {
+		Example("jyang pg to crdb")
+	})
+	Field(2, "num_errors", Int, "number of errors processed",
+		func() {
+			Example(0)
+		},
+	)
+	Field(3, "num_tables", Int, "number of tables processed",
+		func() {
+			Example(5)
+		},
+	)
+	Field(4, "num_rows", Int, "number of rows",
+		func() {
+			Example(100000)
+		},
+	)
+
+	Required(
+		"percent_complete",
+		"num_errors",
+		"num_tables",
+		"num_rows",
+	)
+})
+
+var Log = Type("log", func() {
+	Field(1, "timestamp", Int, "timestamp of log",
+		func() {
+			Example(1704233519)
+		},
+	)
+	Field(2, "level", String, "level for logging", func() {
+		Example("INFO")
+	})
+	Field(3, "message", String, "message for the logging", func() {
+		Example("This is a log message")
+	})
+
+	Required(
+		"timestamp",
+		"level",
+		"message",
+	)
+})
+
+var FetchRunDetailed = Type("fetch_run_detailed", func() {
+	Field(1, "id", Int, "ID of the run",
+		func() {
+			Example(1704233521)
+		},
+	)
+	Field(2, "name", String, "name of the fetch run", func() {
+		Example("jyang pg to crdb")
+	})
+
+	Field(3, "status", String, "status of the fetch run", func() {
+		Example("IN_PROGRESS")
+	})
+
+	Field(4, "started_at", Int, "started at time",
+		func() {
+			Example(1704233519)
+		},
+	)
+
+	Field(5, "finished_at", Int, "finished at time",
+		func() {
+			Example(1704233521)
+		},
+	)
+
+	Field(6, "stats", DetailedFetchStats, "fetch statistics")
+
+	Field(7, "logs", ArrayOf(Log), "logs for fetch run")
+
+	Required(
+		"id",
+		"name",
+		"status",
+		"started_at",
+		"finished_at",
+		"logs",
 	)
 })
 

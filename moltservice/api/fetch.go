@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/moltservice/gen/moltservice"
 )
 
@@ -20,6 +22,25 @@ const (
 	FetchStatusSuccess    = "SUCCESS"
 	FetchStatusFailure    = "FAILURE"
 )
+
+type Log struct {
+	Time    string `json:"time"`
+	Level   string `json:"level"`
+	Message string `json:"message"`
+}
+
+func (l *Log) mapToResponse() (*moltservice.Log, error) {
+	parsedTime, err := time.Parse(time.RFC3339, l.Time)
+	if err != nil {
+		return nil, err
+	}
+
+	return &moltservice.Log{
+		Timestamp: int(parsedTime.Unix()),
+		Level:     l.Level,
+		Message:   l.Message,
+	}, nil
+}
 
 type FetchDetail struct {
 	RunName      string                     `json:"run_name"`
@@ -32,6 +53,30 @@ type FetchDetail struct {
 	FinishedAt   time.Time                  `json:"finished_at"`
 
 	// TODO: add tracking stats to fetch detail to report on.
+}
+
+func (fd *FetchDetail) mapToResponse() *moltservice.FetchRun {
+	return &moltservice.FetchRun{
+		ID:         int(fd.ID),
+		Name:       fd.RunName,
+		Status:     string(fd.Status),
+		StartedAt:  normalizeTimestamp(fd.StartedAt),
+		FinishedAt: normalizeTimestamp(fd.FinishedAt),
+	}
+}
+
+func (fd *FetchDetail) mapToDetailedResponse(
+	stats *moltservice.FetchStatsDetailed, logs []*moltservice.Log,
+) *moltservice.FetchRunDetailed {
+	return &moltservice.FetchRunDetailed{
+		ID:         int(fd.ID),
+		Name:       fd.RunName,
+		Status:     string(fd.Status),
+		StartedAt:  normalizeTimestamp(fd.StartedAt),
+		FinishedAt: normalizeTimestamp(fd.FinishedAt),
+		Stats:      stats,
+		Logs:       logs,
+	}
 }
 
 const staticTaskLog = "artifacts/task.log"
@@ -205,4 +250,97 @@ func writeFetchDetail(detail FetchDetail, logFile string) error {
 	}
 
 	return nil
+}
+
+func (m *moltService) GetFetchTasks(ctx context.Context) (res []*moltservice.FetchRun, err error) {
+	fetchRuns := []*moltservice.FetchRun{}
+
+	for i := len(m.fetchState.orderedIdList) - 1; i >= 0; i-- {
+		id := m.fetchState.orderedIdList[i]
+		run, ok := m.fetchState.idToRun[id]
+		if !ok {
+			return nil, errors.Newf("failed to get fetch run with id %s", id)
+		}
+
+		runResp := run.mapToResponse()
+		fetchRuns = append(fetchRuns, runResp)
+	}
+
+	return fetchRuns, nil
+}
+
+func (m *moltService) GetSpecificFetchTask(
+	ctx context.Context, payload *moltservice.GetSpecificFetchTaskPayload,
+) (res *moltservice.FetchRunDetailed, err error) {
+	run, ok := m.fetchState.idToRun[moltservice.FetchAttemptID(payload.ID)]
+	if !ok {
+		return nil, errors.Newf("failed to find fetch task with id %d", payload.ID)
+	}
+
+	lines, err := readNLines(run.LogFile, 50)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO (rluu): extract stats later
+
+	// Extract log lines.
+	logLines, err := m.extractLogLines(lines)
+	if err != nil {
+		return nil, err
+	}
+
+	runResp := run.mapToDetailedResponse(nil, logLines)
+	return runResp, nil
+}
+
+func (m *moltService) extractLogLines(lines []string) ([]*moltservice.Log, error) {
+	logLines := []*moltservice.Log{}
+	for i := len(lines) - 1; i >= 0; i-- {
+		line := lines[i]
+
+		// skip the moltservice specific status lines.
+		if strings.Contains(line, `"run_name"`) {
+			continue
+		}
+
+		var logLine Log
+		err := json.Unmarshal([]byte(line), &logLine)
+		if err != nil {
+			m.logger.Err(err).Send()
+			continue
+		}
+
+		logLine.Message = line
+		finalLine, err := logLine.mapToResponse()
+		if err != nil {
+			m.logger.Err(err).Send()
+			continue
+		}
+
+		logLines = append(logLines, finalLine)
+	}
+
+	return logLines, nil
+}
+
+func readNLines(filePath string, numLines int) ([]string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	lines := make([]string, 0, numLines)
+
+	for scanner.Scan() && len(lines) < numLines {
+		lines = append(lines, scanner.Text())
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return lines, nil
 }

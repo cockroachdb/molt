@@ -15,19 +15,25 @@ import (
 
 // Endpoints wraps the "moltservice" service endpoints.
 type Endpoints struct {
-	CreateFetchTask goa.Endpoint
+	CreateFetchTask      goa.Endpoint
+	GetFetchTasks        goa.Endpoint
+	GetSpecificFetchTask goa.Endpoint
 }
 
 // NewEndpoints wraps the methods of the "moltservice" service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
 	return &Endpoints{
-		CreateFetchTask: NewCreateFetchTaskEndpoint(s),
+		CreateFetchTask:      NewCreateFetchTaskEndpoint(s),
+		GetFetchTasks:        NewGetFetchTasksEndpoint(s),
+		GetSpecificFetchTask: NewGetSpecificFetchTaskEndpoint(s),
 	}
 }
 
 // Use applies the given middleware to all the "moltservice" service endpoints.
 func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.CreateFetchTask = m(e.CreateFetchTask)
+	e.GetFetchTasks = m(e.GetFetchTasks)
+	e.GetSpecificFetchTask = m(e.GetSpecificFetchTask)
 }
 
 // NewCreateFetchTaskEndpoint returns an endpoint function that calls the
@@ -36,5 +42,22 @@ func NewCreateFetchTaskEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*CreateFetchPayload)
 		return s.CreateFetchTask(ctx, p)
+	}
+}
+
+// NewGetFetchTasksEndpoint returns an endpoint function that calls the method
+// "get_fetch_tasks" of service "moltservice".
+func NewGetFetchTasksEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		return s.GetFetchTasks(ctx)
+	}
+}
+
+// NewGetSpecificFetchTaskEndpoint returns an endpoint function that calls the
+// method "get_specific_fetch_task" of service "moltservice".
+func NewGetSpecificFetchTaskEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*GetSpecificFetchTaskPayload)
+		return s.GetSpecificFetchTask(ctx, p)
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"strconv"
 
 	moltservice "github.com/cockroachdb/molt/moltservice/gen/moltservice"
 	goahttp "goa.design/goa/v3/http"
@@ -52,4 +53,98 @@ func DecodeCreateFetchTaskRequest(mux goahttp.Muxer, decoder func(*http.Request)
 
 		return payload, nil
 	}
+}
+
+// EncodeGetFetchTasksResponse returns an encoder for responses returned by the
+// moltservice get_fetch_tasks endpoint.
+func EncodeGetFetchTasksResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.([]*moltservice.FetchRun)
+		enc := encoder(ctx, w)
+		body := NewGetFetchTasksResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
+// EncodeGetSpecificFetchTaskResponse returns an encoder for responses returned
+// by the moltservice get_specific_fetch_task endpoint.
+func EncodeGetSpecificFetchTaskResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*moltservice.FetchRunDetailed)
+		enc := encoder(ctx, w)
+		body := NewGetSpecificFetchTaskResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
+// DecodeGetSpecificFetchTaskRequest returns a decoder for requests sent to the
+// moltservice get_specific_fetch_task endpoint.
+func DecodeGetSpecificFetchTaskRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
+	return func(r *http.Request) (any, error) {
+		var (
+			id  int
+			err error
+
+			params = mux.Vars(r)
+		)
+		{
+			idRaw := params["id"]
+			v, err2 := strconv.ParseInt(idRaw, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("id", idRaw, "integer"))
+			}
+			id = int(v)
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewGetSpecificFetchTaskPayload(id)
+
+		return payload, nil
+	}
+}
+
+// marshalMoltserviceFetchRunToFetchRunResponse builds a value of type
+// *FetchRunResponse from a value of type *moltservice.FetchRun.
+func marshalMoltserviceFetchRunToFetchRunResponse(v *moltservice.FetchRun) *FetchRunResponse {
+	res := &FetchRunResponse{
+		ID:         v.ID,
+		Name:       v.Name,
+		Status:     v.Status,
+		StartedAt:  v.StartedAt,
+		FinishedAt: v.FinishedAt,
+	}
+
+	return res
+}
+
+// marshalMoltserviceFetchStatsDetailedToFetchStatsDetailedResponseBody builds
+// a value of type *FetchStatsDetailedResponseBody from a value of type
+// *moltservice.FetchStatsDetailed.
+func marshalMoltserviceFetchStatsDetailedToFetchStatsDetailedResponseBody(v *moltservice.FetchStatsDetailed) *FetchStatsDetailedResponseBody {
+	if v == nil {
+		return nil
+	}
+	res := &FetchStatsDetailedResponseBody{
+		PercentComplete: v.PercentComplete,
+		NumErrors:       v.NumErrors,
+		NumTables:       v.NumTables,
+		NumRows:         v.NumRows,
+	}
+
+	return res
+}
+
+// marshalMoltserviceLogToLogResponseBody builds a value of type
+// *LogResponseBody from a value of type *moltservice.Log.
+func marshalMoltserviceLogToLogResponseBody(v *moltservice.Log) *LogResponseBody {
+	res := &LogResponseBody{
+		Timestamp: v.Timestamp,
+		Level:     v.Level,
+		Message:   v.Message,
+	}
+
+	return res
 }

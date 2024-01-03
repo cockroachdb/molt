@@ -9,6 +9,7 @@ package client
 
 import (
 	moltservice "github.com/cockroachdb/molt/moltservice/gen/moltservice"
+	goa "goa.design/goa/v3/pkg"
 )
 
 // CreateFetchTaskRequestBody is the type of the "moltservice" service
@@ -61,6 +62,66 @@ type CreateFetchTaskRequestBody struct {
 	Name string `form:"name" json:"name" xml:"name"`
 }
 
+// GetFetchTasksResponseBody is the type of the "moltservice" service
+// "get_fetch_tasks" endpoint HTTP response body.
+type GetFetchTasksResponseBody []*FetchRunResponse
+
+// GetSpecificFetchTaskResponseBody is the type of the "moltservice" service
+// "get_specific_fetch_task" endpoint HTTP response body.
+type GetSpecificFetchTaskResponseBody struct {
+	// ID of the run
+	ID *int `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// name of the fetch run
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// status of the fetch run
+	Status *string `form:"status,omitempty" json:"status,omitempty" xml:"status,omitempty"`
+	// started at time
+	StartedAt *int `form:"started_at,omitempty" json:"started_at,omitempty" xml:"started_at,omitempty"`
+	// finished at time
+	FinishedAt *int `form:"finished_at,omitempty" json:"finished_at,omitempty" xml:"finished_at,omitempty"`
+	// fetch statistics
+	Stats *FetchStatsDetailedResponseBody `form:"stats,omitempty" json:"stats,omitempty" xml:"stats,omitempty"`
+	// logs for fetch run
+	Logs []*LogResponseBody `form:"logs,omitempty" json:"logs,omitempty" xml:"logs,omitempty"`
+}
+
+// FetchRunResponse is used to define fields on response body types.
+type FetchRunResponse struct {
+	// ID of the run
+	ID *int `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// name of the fetch run
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// status of the fetch run
+	Status *string `form:"status,omitempty" json:"status,omitempty" xml:"status,omitempty"`
+	// started at time
+	StartedAt *int `form:"started_at,omitempty" json:"started_at,omitempty" xml:"started_at,omitempty"`
+	// finished at time
+	FinishedAt *int `form:"finished_at,omitempty" json:"finished_at,omitempty" xml:"finished_at,omitempty"`
+}
+
+// FetchStatsDetailedResponseBody is used to define fields on response body
+// types.
+type FetchStatsDetailedResponseBody struct {
+	// percentage complete of fetch run
+	PercentComplete *string `form:"percent_complete,omitempty" json:"percent_complete,omitempty" xml:"percent_complete,omitempty"`
+	// number of errors processed
+	NumErrors *int `form:"num_errors,omitempty" json:"num_errors,omitempty" xml:"num_errors,omitempty"`
+	// number of tables processed
+	NumTables *int `form:"num_tables,omitempty" json:"num_tables,omitempty" xml:"num_tables,omitempty"`
+	// number of rows
+	NumRows *int `form:"num_rows,omitempty" json:"num_rows,omitempty" xml:"num_rows,omitempty"`
+}
+
+// LogResponseBody is used to define fields on response body types.
+type LogResponseBody struct {
+	// timestamp of log
+	Timestamp *int `form:"timestamp,omitempty" json:"timestamp,omitempty" xml:"timestamp,omitempty"`
+	// level for logging
+	Level *string `form:"level,omitempty" json:"level,omitempty" xml:"level,omitempty"`
+	// message for the logging
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+}
+
 // NewCreateFetchTaskRequestBody builds the HTTP request body from the payload
 // of the "create_fetch_task" endpoint of the "moltservice" service.
 func NewCreateFetchTaskRequestBody(p *moltservice.CreateFetchPayload) *CreateFetchTaskRequestBody {
@@ -96,4 +157,124 @@ func NewCreateFetchTaskFetchAttemptIDOK(body int) moltservice.FetchAttemptID {
 	v := moltservice.FetchAttemptID(body)
 
 	return v
+}
+
+// NewGetFetchTasksFetchRunOK builds a "moltservice" service "get_fetch_tasks"
+// endpoint result from a HTTP "OK" response.
+func NewGetFetchTasksFetchRunOK(body []*FetchRunResponse) []*moltservice.FetchRun {
+	v := make([]*moltservice.FetchRun, len(body))
+	for i, val := range body {
+		v[i] = unmarshalFetchRunResponseToMoltserviceFetchRun(val)
+	}
+
+	return v
+}
+
+// NewGetSpecificFetchTaskFetchRunDetailedOK builds a "moltservice" service
+// "get_specific_fetch_task" endpoint result from a HTTP "OK" response.
+func NewGetSpecificFetchTaskFetchRunDetailedOK(body *GetSpecificFetchTaskResponseBody) *moltservice.FetchRunDetailed {
+	v := &moltservice.FetchRunDetailed{
+		ID:         *body.ID,
+		Name:       *body.Name,
+		Status:     *body.Status,
+		StartedAt:  *body.StartedAt,
+		FinishedAt: *body.FinishedAt,
+	}
+	if body.Stats != nil {
+		v.Stats = unmarshalFetchStatsDetailedResponseBodyToMoltserviceFetchStatsDetailed(body.Stats)
+	}
+	v.Logs = make([]*moltservice.Log, len(body.Logs))
+	for i, val := range body.Logs {
+		v.Logs[i] = unmarshalLogResponseBodyToMoltserviceLog(val)
+	}
+
+	return v
+}
+
+// ValidateGetSpecificFetchTaskResponseBody runs the validations defined on
+// get_specific_fetch_task_response_body
+func ValidateGetSpecificFetchTaskResponseBody(body *GetSpecificFetchTaskResponseBody) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Status == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("status", "body"))
+	}
+	if body.StartedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("started_at", "body"))
+	}
+	if body.FinishedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("finished_at", "body"))
+	}
+	if body.Logs == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("logs", "body"))
+	}
+	if body.Stats != nil {
+		if err2 := ValidateFetchStatsDetailedResponseBody(body.Stats); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	for _, e := range body.Logs {
+		if e != nil {
+			if err2 := ValidateLogResponseBody(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
+}
+
+// ValidateFetchRunResponse runs the validations defined on fetch_runResponse
+func ValidateFetchRunResponse(body *FetchRunResponse) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Status == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("status", "body"))
+	}
+	if body.StartedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("started_at", "body"))
+	}
+	if body.FinishedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("finished_at", "body"))
+	}
+	return
+}
+
+// ValidateFetchStatsDetailedResponseBody runs the validations defined on
+// fetch_stats_detailedResponseBody
+func ValidateFetchStatsDetailedResponseBody(body *FetchStatsDetailedResponseBody) (err error) {
+	if body.PercentComplete == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("percent_complete", "body"))
+	}
+	if body.NumErrors == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("num_errors", "body"))
+	}
+	if body.NumTables == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("num_tables", "body"))
+	}
+	if body.NumRows == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("num_rows", "body"))
+	}
+	return
+}
+
+// ValidateLogResponseBody runs the validations defined on logResponseBody
+func ValidateLogResponseBody(body *LogResponseBody) (err error) {
+	if body.Timestamp == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timestamp", "body"))
+	}
+	if body.Level == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("level", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	return
 }
