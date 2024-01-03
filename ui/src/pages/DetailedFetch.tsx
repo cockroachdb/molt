@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import {
     Typography,
@@ -14,30 +14,31 @@ import { neutral } from '../styles/colors';
 import { fontWeights } from '../styles/fonts';
 import { DEFAULT_SPACING } from '../styles/theme';
 import { InputGroup } from '../components';
+import { getSpecificFetchTask } from '../api';
 
 export type LogLevel = "info" | "warning" | "danger";
 
 
 export interface FetchStats {
-    percentComplete: {
+    percentComplete?: {
         description: string,
         data: number
     },
-    numTables: {
+    numTables?: {
         description: string,
         data: number
     },
-    numRows: {
+    numRows?: {
         description: string,
         data: number
     },
-    numErrors: {
+    numErrors?: {
         description: string,
         data: number
     },
 }
 
-export interface FetchLogs {
+export interface FetchLog {
     key: string;
     id: string;
     level: LogLevel;
@@ -45,26 +46,7 @@ export interface FetchLogs {
     message: string;
 }
 
-const mockStats: FetchStats = {
-    percentComplete: {
-        description: "% Complete",
-        data: 99
-    },
-    numTables: {
-        description: "Number of Tables",
-        data: 250
-    },
-    numRows: {
-        description: "Number of Rows",
-        data: 1000
-    },
-    numErrors: {
-        description: "Number of Errors",
-        data: 1
-    },
-}
-
-const mockColumns: TableColumnProps<FetchLogs>[] = [
+const mockColumns: TableColumnProps<FetchLog>[] = [
     {
         id: "createdAt",
         title: "Timestamp",
@@ -78,7 +60,12 @@ const mockColumns: TableColumnProps<FetchLogs>[] = [
         title: "Level",
         cellStyle: { width: "15%" },
         render: (record, _) => {
-            return <Chip size="small" label={record.level.toUpperCase()} variant={record.level} />
+            let levelLabel = record.level.toUpperCase();
+            if (levelLabel === "DANGER") {
+                levelLabel = "ERROR"
+            }
+
+            return <Chip size="small" label={levelLabel} variant={record.level} />
         }
     },
     {
@@ -90,7 +77,7 @@ const mockColumns: TableColumnProps<FetchLogs>[] = [
         }
     },
 ];
-const mockData: FetchLogs[] = [
+const mockData: FetchLog[] = [
     {
         key: 'log123',
         id: '1a2b3c',
@@ -128,22 +115,85 @@ const mockData: FetchLogs[] = [
     },
 ];
 
+const getLevelFromString = (input: string): LogLevel => {
+    switch (input) {
+        case "info":
+            return "info"
+        case "warning":
+            return "warning"
+        case "error":
+            return "danger"
+    }
+
+    return "info"
+}
+
 export default function DetailedFetch() {
     const { fetchId } = useParams();
     const [searchTerm, setSearchTerm] = useState("");
-    const [data, setData] = useState(mockData);
+    const [initialLogs, setInitialLogs] = useState<FetchLog[]>([]);
+    const [logs, setLogs] = useState<FetchLog[]>([]);
+    const [stats, setStats] = useState<FetchStats>({});
     const navigate = useNavigate();
+
+    // TODO: refactor this as a helper later on.
+    useEffect(() => {
+        const fetchData = async () => {
+            console.log("fetching")
+            try {
+                const fid = Number(fetchId);
+                const data = await getSpecificFetchTask(fid)
+
+                const resLogs: FetchLog[] = data.logs.map(item => {
+                    const createdAtTs = new Date(item.timestamp * 1000);
+
+                    return {
+                        key: data.id.toString(),
+                        id: data.id.toString(),
+                        level: getLevelFromString(item.level),
+                        createdAt: createdAtTs.toISOString(),
+                        message: item.message,
+                    }
+                })
+                setLogs(resLogs);
+                setInitialLogs(resLogs);
+
+                const resStats: FetchStats = {
+                    percentComplete: {
+                        description: "% Complete",
+                        data: Number(data.stats?.percent_complete)
+                    },
+                    numTables: {
+                        description: "Number of Tables",
+                        data: Number(data.stats?.num_tables)
+                    },
+                    numRows: {
+                        description: "Number of Rows",
+                        data: Number(data.stats?.num_rows)
+                    },
+                    numErrors: {
+                        description: "Number of Errors",
+                        data: Number(data.stats?.num_errors)
+                    },
+                }
+                setStats(resStats);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        fetchData()
+    }, [fetchId])
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
 
         if (searchTerm === "") {
-            setData(mockData);
+            setLogs(initialLogs);
             return;
         }
 
-        const filteredData = data.filter(item => item.message.includes(searchTerm));
-        setData(filteredData);
+        const filteredData = logs.filter(item => item.message.includes(searchTerm));
+        setLogs(filteredData);
     }
 
     return (
@@ -169,14 +219,14 @@ export default function DetailedFetch() {
                     justifyContent: "flex-start",
                     p: 2,
                 }}>
-                    {Object.keys(mockStats).map(key => {
-                        const desc = mockStats[key as keyof typeof mockStats];
+                    {Object.keys(stats).map(key => {
+                        const desc = stats[key as keyof typeof stats];
                         return <Box key={key} sx={{ borderRight: `1px solid ${neutral[400]}`, px: 2 }}>
                             <Typography color="primary" fontWeight={fontWeights["heaviest"]} variant='body1'>
-                                {desc.data}
+                                {desc?.data}
                             </Typography>
                             <Typography fontWeight={fontWeights["light"]} variant='body2'>
-                                {desc.description}
+                                {desc?.description}
                             </Typography>
                         </Box>
                     })}
@@ -208,7 +258,7 @@ export default function DetailedFetch() {
                             </Button>
                         </Box>
                     </Box>
-                    <SimpleTable containerStyle={{ width: "100%" }} columns={mockColumns} dataSource={data} elevated={false} />
+                    <SimpleTable containerStyle={{ width: "100%" }} columns={mockColumns} dataSource={logs} elevated={false} />
                 </Paper>
             </Box >
         </Box >
