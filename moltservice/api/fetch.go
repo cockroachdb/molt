@@ -23,6 +23,24 @@ const (
 	FetchStatusFailure    = "FAILURE"
 )
 
+const (
+	numLogLines = 100
+)
+
+type ExportSummaryLog struct {
+	NumRows        int    `json:"num_rows"`
+	ExportDuration string `json:"export_duration"`
+}
+
+type OverallSummaryLog struct {
+	NumTables int    `json:"num_tables"`
+	CDCCursor string `json:"cdc_cursor"`
+}
+
+type CompletionPercentLog struct {
+	Completion int `json:"completion"`
+}
+
 type Log struct {
 	Time    string `json:"time"`
 	Level   string `json:"level"`
@@ -277,12 +295,16 @@ func (m *moltService) GetSpecificFetchTask(
 		return nil, errors.Newf("failed to find fetch task with id %d", payload.ID)
 	}
 
-	lines, err := readNLines(run.LogFile, 50)
+	lines, err := readNLines(run.LogFile, numLogLines)
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO (rluu): extract stats later
+	stats, err := m.extractStats(lines)
+	if err != nil {
+		return nil, err
+	}
 
 	// Extract log lines.
 	logLines, err := m.extractLogLines(lines)
@@ -290,8 +312,77 @@ func (m *moltService) GetSpecificFetchTask(
 		return nil, err
 	}
 
-	runResp := run.mapToDetailedResponse(nil, logLines)
+	runResp := run.mapToDetailedResponse(stats, logLines)
 	return runResp, nil
+}
+
+func readNLines(filePath string, numLines int) ([]string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	lines := make([]string, 0, numLines)
+
+	for scanner.Scan() && len(lines) < numLines {
+		lines = append(lines, scanner.Text())
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return lines, nil
+}
+
+// TODO (rluu): add logic for percentage estimation.
+// This will require getting an idea of percentage estimate per table, which is non trivial.
+// TODO (rluu): add the following exposed fields:
+// - CDC cursor
+// - Import duration
+// - Export duration
+// - Net duration (if applicable)
+func (m *moltService) extractStats(lines []string) (*moltservice.FetchStatsDetailed, error) {
+	stats := &moltservice.FetchStatsDetailed{}
+	foundExportSummary := false
+	foundNumTables := false
+
+	for i := len(lines) - 1; i >= 0; i-- {
+		// Means we found all the stats we want.
+		if foundExportSummary && foundNumTables {
+			break
+		}
+
+		line := lines[i]
+
+		if strings.Contains(line, "fetch complete") && !foundNumTables {
+			var logLine OverallSummaryLog
+			err := json.Unmarshal([]byte(line), &logLine)
+			if err != nil {
+				m.logger.Err(err).Send()
+				continue
+			}
+			foundNumTables = true
+			stats.NumTables = logLine.NumTables
+			// Fetch complete means that this completed successfully.
+			stats.PercentComplete = "100"
+		}
+
+		if strings.Contains(line, "data extraction from source complete") && !foundExportSummary {
+			var logLine ExportSummaryLog
+			err := json.Unmarshal([]byte(line), &logLine)
+			if err != nil {
+				m.logger.Err(err).Send()
+				continue
+			}
+			foundExportSummary = true
+			stats.NumRows = logLine.NumRows
+		}
+	}
+
+	return stats, nil
 }
 
 func (m *moltService) extractLogLines(lines []string) ([]*moltservice.Log, error) {
@@ -322,25 +413,4 @@ func (m *moltService) extractLogLines(lines []string) ([]*moltservice.Log, error
 	}
 
 	return logLines, nil
-}
-
-func readNLines(filePath string, numLines int) ([]string, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	lines := make([]string, 0, numLines)
-
-	for scanner.Scan() && len(lines) < numLines {
-		lines = append(lines, scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return lines, nil
 }
