@@ -110,6 +110,14 @@ type FetchStatsDetailedResponseBody struct {
 	NumTables int `form:"num_tables" json:"num_tables" xml:"num_tables"`
 	// number of rows
 	NumRows int `form:"num_rows" json:"num_rows" xml:"num_rows"`
+	// net duration in milliseconds
+	NetDurationMs float64 `form:"net_duration_ms" json:"net_duration_ms" xml:"net_duration_ms"`
+	// import duration in milliseconds
+	ImportDurationMs float64 `form:"import_duration_ms" json:"import_duration_ms" xml:"import_duration_ms"`
+	// export duration in milliseconds
+	ExportDurationMs float64 `form:"export_duration_ms" json:"export_duration_ms" xml:"export_duration_ms"`
+	// CDC cursor
+	CdcCursor string `form:"cdc_cursor" json:"cdc_cursor" xml:"cdc_cursor"`
 }
 
 // LogResponseBody is used to define fields on response body types.

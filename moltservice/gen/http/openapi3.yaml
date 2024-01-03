@@ -128,6 +128,10 @@ paths:
                                 name: jyang pg to crdb
                                 started_at: 1704233519
                                 stats:
+                                    cdc_cursor: 0/3F3E0B8
+                                    export_duration_ms: 100000
+                                    import_duration_ms: 100000
+                                    net_duration_ms: 100000
                                     num_errors: 0
                                     num_rows: 100000
                                     num_tables: 5
@@ -391,6 +395,10 @@ components:
                 name: jyang pg to crdb
                 started_at: 1704233519
                 stats:
+                    cdc_cursor: 0/3F3E0B8
+                    export_duration_ms: 100000
+                    import_duration_ms: 100000
+                    net_duration_ms: 100000
                     num_errors: 0
                     num_rows: 100000
                     num_tables: 5
@@ -406,6 +414,25 @@ components:
         FetchStatsDetailed:
             type: object
             properties:
+                cdc_cursor:
+                    type: string
+                    description: CDC cursor
+                    example: 0/3F3E0B8
+                export_duration_ms:
+                    type: number
+                    description: export duration in milliseconds
+                    example: 100000
+                    format: double
+                import_duration_ms:
+                    type: number
+                    description: import duration in milliseconds
+                    example: 100000
+                    format: double
+                net_duration_ms:
+                    type: number
+                    description: net duration in milliseconds
+                    example: 100000
+                    format: double
                 num_errors:
                     type: integer
                     description: number of errors processed
@@ -426,6 +453,10 @@ components:
                     description: percentage complete of fetch run
                     example: jyang pg to crdb
             example:
+                cdc_cursor: 0/3F3E0B8
+                export_duration_ms: 100000
+                import_duration_ms: 100000
+                net_duration_ms: 100000
                 num_errors: 0
                 num_rows: 100000
                 num_tables: 5
@@ -435,6 +466,10 @@ components:
                 - num_errors
                 - num_tables
                 - num_rows
+                - net_duration_ms
+                - import_duration_ms
+                - export_duration_ms
+                - cdc_cursor
         Log:
             type: object
             properties:

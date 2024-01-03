@@ -126,6 +126,14 @@ type FetchStatsDetailed struct {
 	NumTables int
 	// number of rows
 	NumRows int
+	// net duration in milliseconds
+	NetDurationMs float64
+	// import duration in milliseconds
+	ImportDurationMs float64
+	// export duration in milliseconds
+	ExportDurationMs float64
+	// CDC cursor
+	CdcCursor string
 }
 
 // GetSpecificFetchTaskPayload is the payload type of the moltservice service

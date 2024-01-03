@@ -23,13 +23,28 @@ const (
 	FetchStatusFailure    = "FAILURE"
 )
 
+type FetchMode string
+
+const (
+	FetchModeImportInto = "IMPORT_INTO"
+	FetchModeCopyFrom   = "COPY_FROM"
+	FetchModeDirectCopy = "DIRECT_COPY"
+)
+
 const (
 	numLogLines = 100
 )
 
-type ExportSummaryLog struct {
-	NumRows        int    `json:"num_rows"`
-	ExportDuration string `json:"export_duration"`
+type NonDirectCopyExportSummaryLog struct {
+	NumRows        int     `json:"num_rows"`
+	ImportDuration float64 `json:"import_duration_ms"`
+	ExportDuration float64 `json:"export_duration_ms"`
+	NetDuration    float64 `json:"net_duration_ms"`
+}
+
+type DirectCopyExportSummaryLog struct {
+	NumRows        int     `json:"num_rows"`
+	ExportDuration float64 `json:"export_duration_ms"`
 }
 
 type OverallSummaryLog struct {
@@ -61,14 +76,15 @@ func (l *Log) mapToResponse() (*moltservice.Log, error) {
 }
 
 type FetchDetail struct {
-	RunName      string                     `json:"run_name"`
-	ID           moltservice.FetchAttemptID `json:"id"`
-	LogTimestamp time.Time                  `json:"time"`
-	Status       FetchStatus                `json:"status"`
-	Note         string                     `json:"note"`
-	LogFile      string                     `json:"-"`
-	StartedAt    time.Time                  `json:"started_at"`
-	FinishedAt   time.Time                  `json:"finished_at"`
+	RunName              string                         `json:"run_name"`
+	ID                   moltservice.FetchAttemptID     `json:"id"`
+	LogTimestamp         time.Time                      `json:"time"`
+	Status               FetchStatus                    `json:"status"`
+	Note                 string                         `json:"note"`
+	LogFile              string                         `json:"-"`
+	StartedAt            time.Time                      `json:"started_at"`
+	FinishedAt           time.Time                      `json:"finished_at"`
+	ConfigurationPayload moltservice.CreateFetchPayload `json:"-"`
 
 	// TODO: add tracking stats to fetch detail to report on.
 }
@@ -193,12 +209,13 @@ func (m *moltService) CreateFetchTask(
 
 	args := getFetchArgsFromPayload(payload)
 	fetchDetail := FetchDetail{
-		RunName:      payload.Name,
-		ID:           id,
-		LogTimestamp: time.Now(),
-		LogFile:      payload.LogFile,
-		Status:       FetchStatusInProgress,
-		StartedAt:    time.Now(),
+		RunName:              payload.Name,
+		ID:                   id,
+		LogTimestamp:         time.Now(),
+		LogFile:              payload.LogFile,
+		Status:               FetchStatusInProgress,
+		StartedAt:            time.Now(),
+		ConfigurationPayload: *payload,
 	}
 
 	m.fetchState.Lock()
@@ -301,7 +318,7 @@ func (m *moltService) GetSpecificFetchTask(
 	}
 
 	// TODO (rluu): extract stats later
-	stats, err := m.extractStats(lines)
+	stats, err := m.extractStats(lines, run.ConfigurationPayload.Mode)
 	if err != nil {
 		return nil, err
 	}
@@ -339,46 +356,64 @@ func readNLines(filePath string, numLines int) ([]string, error) {
 
 // TODO (rluu): add logic for percentage estimation.
 // This will require getting an idea of percentage estimate per table, which is non trivial.
-// TODO (rluu): add the following exposed fields:
-// - CDC cursor
-// - Import duration
-// - Export duration
-// - Net duration (if applicable)
-func (m *moltService) extractStats(lines []string) (*moltservice.FetchStatsDetailed, error) {
+func (m *moltService) extractStats(
+	lines []string, mode string,
+) (*moltservice.FetchStatsDetailed, error) {
 	stats := &moltservice.FetchStatsDetailed{}
-	foundExportSummary := false
-	foundNumTables := false
+	foundDataLoadSummary := false
+	foundOverallSummary := false
 
 	for i := len(lines) - 1; i >= 0; i-- {
 		// Means we found all the stats we want.
-		if foundExportSummary && foundNumTables {
+		if foundDataLoadSummary && foundOverallSummary {
 			break
 		}
 
 		line := lines[i]
 
-		if strings.Contains(line, "fetch complete") && !foundNumTables {
+		if strings.Contains(line, `"level":"error"`) {
+			stats.NumErrors++
+		}
+
+		if strings.Contains(line, "fetch complete") && !foundOverallSummary {
 			var logLine OverallSummaryLog
 			err := json.Unmarshal([]byte(line), &logLine)
 			if err != nil {
 				m.logger.Err(err).Send()
 				continue
 			}
-			foundNumTables = true
+			foundOverallSummary = true
 			stats.NumTables = logLine.NumTables
 			// Fetch complete means that this completed successfully.
 			stats.PercentComplete = "100"
+			stats.CdcCursor = logLine.CDCCursor
 		}
 
-		if strings.Contains(line, "data extraction from source complete") && !foundExportSummary {
-			var logLine ExportSummaryLog
+		if mode == FetchModeDirectCopy && strings.Contains(line, "data extraction from source complete") && !foundDataLoadSummary {
+			var logLine DirectCopyExportSummaryLog
 			err := json.Unmarshal([]byte(line), &logLine)
 			if err != nil {
 				m.logger.Err(err).Send()
 				continue
 			}
-			foundExportSummary = true
+			foundDataLoadSummary = true
 			stats.NumRows = logLine.NumRows
+			stats.NetDurationMs = logLine.ExportDuration
+			stats.ExportDurationMs = logLine.ExportDuration
+		}
+
+		if mode != FetchModeDirectCopy && strings.Contains(line, "data import on target for table complete") && !foundDataLoadSummary {
+			var logLine NonDirectCopyExportSummaryLog
+			err := json.Unmarshal([]byte(line), &logLine)
+			if err != nil {
+				m.logger.Err(err).Send()
+				continue
+			}
+			foundDataLoadSummary = true
+			stats.NumRows = logLine.NumRows
+			stats.NetDurationMs = logLine.NetDuration
+			stats.ImportDurationMs = logLine.ImportDuration
+			stats.ExportDurationMs = logLine.ExportDuration
 		}
 	}
 

@@ -110,6 +110,14 @@ type FetchStatsDetailedResponseBody struct {
 	NumTables *int `form:"num_tables,omitempty" json:"num_tables,omitempty" xml:"num_tables,omitempty"`
 	// number of rows
 	NumRows *int `form:"num_rows,omitempty" json:"num_rows,omitempty" xml:"num_rows,omitempty"`
+	// net duration in milliseconds
+	NetDurationMs *float64 `form:"net_duration_ms,omitempty" json:"net_duration_ms,omitempty" xml:"net_duration_ms,omitempty"`
+	// import duration in milliseconds
+	ImportDurationMs *float64 `form:"import_duration_ms,omitempty" json:"import_duration_ms,omitempty" xml:"import_duration_ms,omitempty"`
+	// export duration in milliseconds
+	ExportDurationMs *float64 `form:"export_duration_ms,omitempty" json:"export_duration_ms,omitempty" xml:"export_duration_ms,omitempty"`
+	// CDC cursor
+	CdcCursor *string `form:"cdc_cursor,omitempty" json:"cdc_cursor,omitempty" xml:"cdc_cursor,omitempty"`
 }
 
 // LogResponseBody is used to define fields on response body types.
@@ -261,6 +269,18 @@ func ValidateFetchStatsDetailedResponseBody(body *FetchStatsDetailedResponseBody
 	}
 	if body.NumRows == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("num_rows", "body"))
+	}
+	if body.NetDurationMs == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("net_duration_ms", "body"))
+	}
+	if body.ImportDurationMs == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("import_duration_ms", "body"))
+	}
+	if body.ExportDurationMs == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("export_duration_ms", "body"))
+	}
+	if body.CdcCursor == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("cdc_cursor", "body"))
 	}
 	return
 }

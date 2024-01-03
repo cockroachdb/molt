@@ -225,12 +225,36 @@ var DetailedFetchStats = Type("fetch_stats_detailed", func() {
 			Example(100000)
 		},
 	)
+	Field(5, "net_duration_ms", Float64, "net duration in milliseconds",
+		func() {
+			Example(100000.00)
+		},
+	)
+	Field(5, "import_duration_ms", Float64, "import duration in milliseconds",
+		func() {
+			Example(100000.00)
+		},
+	)
+	Field(6, "export_duration_ms", Float64, "export duration in milliseconds",
+		func() {
+			Example(100000.00)
+		},
+	)
+	Field(7, "cdc_cursor", String, "CDC cursor",
+		func() {
+			Example("0/3F3E0B8")
+		},
+	)
 
 	Required(
 		"percent_complete",
 		"num_errors",
 		"num_tables",
 		"num_rows",
+		"net_duration_ms",
+		"import_duration_ms",
+		"export_duration_ms",
+		"cdc_cursor",
 	)
 })
 

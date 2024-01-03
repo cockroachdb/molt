@@ -235,10 +235,14 @@ func unmarshalFetchStatsDetailedResponseBodyToMoltserviceFetchStatsDetailed(v *F
 		return nil
 	}
 	res := &moltservice.FetchStatsDetailed{
-		PercentComplete: *v.PercentComplete,
-		NumErrors:       *v.NumErrors,
-		NumTables:       *v.NumTables,
-		NumRows:         *v.NumRows,
+		PercentComplete:  *v.PercentComplete,
+		NumErrors:        *v.NumErrors,
+		NumTables:        *v.NumTables,
+		NumRows:          *v.NumRows,
+		NetDurationMs:    *v.NetDurationMs,
+		ImportDurationMs: *v.ImportDurationMs,
+		ExportDurationMs: *v.ExportDurationMs,
+		CdcCursor:        *v.CdcCursor,
 	}
 
 	return res
