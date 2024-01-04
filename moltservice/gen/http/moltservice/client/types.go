@@ -220,6 +220,11 @@ func ValidateGetSpecificFetchTaskResponseBody(body *GetSpecificFetchTaskResponse
 	if body.Logs == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("logs", "body"))
 	}
+	if body.Status != nil {
+		if !(*body.Status == "IN_PROGRESS" || *body.Status == "SUCCESS" || *body.Status == "FAILURE") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.status", *body.Status, []any{"IN_PROGRESS", "SUCCESS", "FAILURE"}))
+		}
+	}
 	if body.Stats != nil {
 		if err2 := ValidateFetchStatsDetailedResponseBody(body.Stats); err2 != nil {
 			err = goa.MergeErrors(err, err2)
@@ -251,6 +256,11 @@ func ValidateFetchRunResponse(body *FetchRunResponse) (err error) {
 	}
 	if body.FinishedAt == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("finished_at", "body"))
+	}
+	if body.Status != nil {
+		if !(*body.Status == "IN_PROGRESS" || *body.Status == "SUCCESS" || *body.Status == "FAILURE") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.status", *body.Status, []any{"IN_PROGRESS", "SUCCESS", "FAILURE"}))
+		}
 	}
 	return
 }

@@ -31,6 +31,20 @@ export type FetchRunDetailed = {
     /**
      * status of the fetch run
      */
-    status: string;
+    status: FetchRunDetailed.status;
 };
+
+export namespace FetchRunDetailed {
+
+    /**
+     * status of the fetch run
+     */
+    export enum status {
+        IN_PROGRESS = 'IN_PROGRESS',
+        SUCCESS = 'SUCCESS',
+        FAILURE = 'FAILURE',
+    }
+
+
+}
 

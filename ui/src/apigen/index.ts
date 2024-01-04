@@ -8,8 +8,8 @@ export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
 export { CreateFetchTaskRequestBody } from './models/CreateFetchTaskRequestBody';
-export type { FetchRun } from './models/FetchRun';
-export type { FetchRunDetailed } from './models/FetchRunDetailed';
+export { FetchRun } from './models/FetchRun';
+export { FetchRunDetailed } from './models/FetchRunDetailed';
 export type { FetchStatsDetailed } from './models/FetchStatsDetailed';
 export type { Log } from './models/Log';
 

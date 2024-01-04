@@ -182,6 +182,7 @@ var FetchRun = Type("fetch_run", func() {
 	})
 
 	Field(3, "status", String, "status of the fetch run", func() {
+		Enum("IN_PROGRESS", "SUCCESS", "FAILURE")
 		Example("IN_PROGRESS")
 	})
 
@@ -289,6 +290,7 @@ var FetchRunDetailed = Type("fetch_run_detailed", func() {
 	})
 
 	Field(3, "status", String, "status of the fetch run", func() {
+		Enum("IN_PROGRESS", "SUCCESS", "FAILURE")
 		Example("IN_PROGRESS")
 	})
 

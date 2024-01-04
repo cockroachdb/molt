@@ -16,6 +16,7 @@ import { fontWeights } from '../styles/fonts';
 import { DEFAULT_SPACING } from '../styles/theme';
 import { InputGroup, Switch } from '../components';
 import { getSpecificFetchTask } from '../api';
+import { FetchRunDetailed, MoltserviceService } from '../apigen';
 
 const POLL_INTERVAL_MS = 1000;
 export type LogLevel = "info" | "warning" | "danger";
@@ -207,7 +208,7 @@ export default function DetailedFetch() {
                     gap: 2,
                 }}>
                     <Typography sx={{ mb: 1 }} variant='h4'>Fetch Run {fetchId}</Typography>
-                    <Chip sx={{ width: 120 }} size="medium" variant={status === "IN_PROGRESS" ? "info" : status === "SUCCESS" ? "success" : "danger"} label={status} />
+                    <Chip sx={{ width: 120 }} size="medium" variant={status === FetchRunDetailed.status.SUCCESS ? "success" : status === FetchRunDetailed.status.FAILURE ? "danger" : "info"} label={status} />
                 </Box>
                 <Paper sx={{
                     display: "flex",

@@ -331,6 +331,10 @@ components:
                     type: string
                     description: status of the fetch run
                     example: IN_PROGRESS
+                    enum:
+                        - IN_PROGRESS
+                        - SUCCESS
+                        - FAILURE
             example:
                 finished_at: 1704233521
                 id: 1704233521
@@ -383,6 +387,10 @@ components:
                     type: string
                     description: status of the fetch run
                     example: IN_PROGRESS
+                    enum:
+                        - IN_PROGRESS
+                        - SUCCESS
+                        - FAILURE
             example:
                 finished_at: 1704233521
                 id: 1704233521
