@@ -98,6 +98,7 @@ export namespace CreateFetchTaskRequestBody {
     export enum compression {
         GZIP = 'gzip',
         NONE = 'none',
+        DEFAULT = 'default',
     }
 
     /**

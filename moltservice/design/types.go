@@ -93,7 +93,7 @@ var CreateFetchPayload = Type("create_fetch_payload", func() {
 
 	Field(13, "compression", String, "compression type",
 		func() {
-			Enum("gzip", "none")
+			Enum("gzip", "none", "default")
 			Example("gzip")
 			Example("none")
 		},

@@ -22,14 +22,15 @@ import { materialLightInit } from '@uiw/codemirror-theme-material';
 import { InputGroup, Markdown, SelectCard, SelectGroup, Switch, } from '../components';
 import { SelectCardProps } from '../components/cards/SelectCard';
 import { neutral } from '../styles/colors';
-import { HOME_PATH } from '.';
+import { FETCH_HOME_PATH } from '.';
 import { fontSizes } from '../styles/fonts';
+import { createFetchTask } from '../api';
 
 const compressionTypes = ["default", "none", "gzip"] as const;
-type CompressionType = typeof compressionTypes[number];
+export type CompressionType = typeof compressionTypes[number];
 
 const modeTypes = ["import", "directCopy", "liveCopyFromStore"] as const;
-type Mode = typeof modeTypes[number];
+export type Mode = typeof modeTypes[number];
 const modeCardDetails: SelectCardProps[] = [
     {
         id: "import",
@@ -52,7 +53,7 @@ const modeCardDetails: SelectCardProps[] = [
 ]
 
 const intermediateStores = ["local", "S3", "GCS"] as const;
-type IntermediateStore = typeof intermediateStores[number];
+export type IntermediateStore = typeof intermediateStores[number];
 const storesCardDetails: SelectCardProps[] = [
     {
         id: "local",
@@ -136,11 +137,12 @@ Replication settings allow the user to specify slot names, plugins, and relevant
 - **Drop logical replication slot**: if set and exists, drops the existing replication slot
 `
 
-const mockSource = "postgres://postgres@localhost:5432/postgres"
+const mockSource = "postgres://postgres:postgres@localhost:5432/molt?sslmode=disable"
 const mockTarget = "postgres://root@localhost:26257/defaultdb?sslmode=disable"
 const moltFetchCmd = "molt fetch"
 
-interface TaskFormState {
+export interface TaskFormState {
+    name: string,
     sourceURL: string,
     targetURL: string,
     mode: Mode,
@@ -164,6 +166,7 @@ interface TaskFormState {
 }
 
 const defaultFormState: TaskFormState = {
+    name: "",
     sourceURL: mockSource,
     targetURL: mockTarget,
     mode: "import",
@@ -291,7 +294,17 @@ export default function ConfigureTask() {
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
-        console.log(formState)
+
+        const createTask = async () => {
+            try {
+                const taskId = await createFetchTask(formState);
+                navigate(`${FETCH_HOME_PATH}/${taskId}`)
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        createTask();
     }
 
     return (
@@ -552,7 +565,7 @@ export default function ConfigureTask() {
                                     <Switch
                                         required
                                         label="Cleanup intermediary store?"
-                                        id="truncate"
+                                        id="cleanup"
                                         value={formState.cleanup}
                                         onChange={(event: SelectChangeEvent) => {
                                             setFormState({
@@ -578,6 +591,17 @@ export default function ConfigureTask() {
                                     flexDirection: "column",
                                     gap: 3
                                 }}>
+                                    <InputGroup
+                                        label="Run Name"
+                                        id="name"
+                                        value={formState.name}
+                                        validation={(value) => {
+                                            if (value.length === 0) return "Field cannot be empty."
+
+                                            return ""
+                                        }}
+                                        required
+                                        onChange={handleInputChange} />
                                     <InputGroup
                                         label="Log file"
                                         id="logFile"
@@ -745,7 +769,7 @@ export default function ConfigureTask() {
                                 <FileCopy style={{ color: neutral[700] }} />
                             </Button>
                         </Paper>
-                        <Button onClick={() => navigate(HOME_PATH)} type="submit" variant="contained">Run Task</Button>
+                        <Button type="submit" variant="contained">Run Task</Button>
                         <Snackbar anchorOrigin={{
                             vertical: "top",
                             horizontal: "center",

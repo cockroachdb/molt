@@ -6,6 +6,7 @@ import {
     Button,
     Paper,
     Chip,
+    SelectChangeEvent,
 } from '@mui/material';
 import { Search, ChevronLeft } from '@material-ui/icons';
 import { useNavigate } from "react-router-dom";
@@ -13,11 +14,11 @@ import SimpleTable, { TableColumnProps } from '../components/tables/Table';
 import { neutral } from '../styles/colors';
 import { fontWeights } from '../styles/fonts';
 import { DEFAULT_SPACING } from '../styles/theme';
-import { InputGroup } from '../components';
+import { InputGroup, Switch } from '../components';
 import { getSpecificFetchTask } from '../api';
 
+const POLL_INTERVAL_MS = 1000;
 export type LogLevel = "info" | "warning" | "danger";
-
 
 export interface FetchStats {
     percentComplete?: {
@@ -46,74 +47,45 @@ export interface FetchLog {
     message: string;
 }
 
-const mockColumns: TableColumnProps<FetchLog>[] = [
-    {
-        id: "createdAt",
-        title: "Timestamp",
-        cellStyle: { width: "15%" },
-        render: (record, _) => {
-            return record.createdAt
-        }
-    },
-    {
-        id: "level",
-        title: "Level",
-        cellStyle: { width: "15%" },
-        render: (record, _) => {
-            let levelLabel = record.level.toUpperCase();
-            if (levelLabel === "DANGER") {
-                levelLabel = "ERROR"
+const createColumns = (showPrettyPrint: boolean): TableColumnProps<FetchLog>[] => {
+    return [
+        {
+            id: "createdAt",
+            title: "Timestamp",
+            cellStyle: { width: "15%" },
+            render: (record, _) => {
+                return record.createdAt
             }
+        },
+        {
+            id: "level",
+            title: "Level",
+            cellStyle: { width: "15%" },
+            render: (record, _) => {
+                let levelLabel = record.level.toUpperCase();
+                if (levelLabel === "DANGER") {
+                    levelLabel = "ERROR"
+                }
 
-            return <Chip size="small" label={levelLabel} variant={record.level} />
-        }
-    },
-    {
-        id: "message",
-        title: "Message",
-        cellStyle: { width: "70%" },
-        render: (record, _) => {
-            return record.message
-        }
-    },
-];
-const mockData: FetchLog[] = [
-    {
-        key: 'log123',
-        id: '1a2b3c',
-        level: 'info',
-        createdAt: '2023-12-27T08:45:30',
-        message: 'User 123 logged in successfully.',
-    },
-    {
-        key: 'log456',
-        id: '4d5e6f',
-        level: 'danger',
-        createdAt: '2023-12-27T09:15:20',
-        message: 'Error: Invalid input received from client.',
-    },
-    {
-        key: 'log789',
-        id: '7g8h9i',
-        level: 'info',
-        createdAt: '2023-12-27T10:00:45',
-        message: 'Database connection established.',
-    },
-    {
-        key: 'logabc',
-        id: 'a1b2c3',
-        level: 'warning',
-        createdAt: '2023-12-27T11:30:10',
-        message: 'Warning: Disk space is running low.',
-    },
-    {
-        key: 'logdef',
-        id: 'd4e5f6',
-        level: 'info',
-        createdAt: '2023-12-27T12:45:55',
-        message: 'User 456 logged out.',
-    },
-];
+                return <Chip size="small" label={levelLabel} variant={record.level} />
+            }
+        },
+        {
+            id: "message",
+            title: "Message",
+            cellStyle: { width: "70%" },
+            render: (record, _) => {
+                if (showPrettyPrint) {
+                    const prettyJSON = <pre>{JSON.stringify(JSON.parse(record.message), null, 2)}</pre>;
+                    return prettyJSON;
+                }
+                // TODO put toggle for pretty JSON.
+
+                return <Typography variant='body2'>{record.message}</Typography>;
+            }
+        },
+    ];
+}
 
 const getLevelFromString = (input: string): LogLevel => {
     switch (input) {
@@ -131,6 +103,7 @@ const getLevelFromString = (input: string): LogLevel => {
 export default function DetailedFetch() {
     const { fetchId } = useParams();
     const [searchTerm, setSearchTerm] = useState("");
+    const [showPrettyPrint, setShowPrettyPrint] = useState(false);
     const [initialLogs, setInitialLogs] = useState<FetchLog[]>([]);
     const [logs, setLogs] = useState<FetchLog[]>([]);
     const [stats, setStats] = useState<FetchStats>({});
@@ -139,22 +112,21 @@ export default function DetailedFetch() {
     // TODO: refactor this as a helper later on.
     useEffect(() => {
         const fetchData = async () => {
-            console.log("fetching")
             try {
                 const fid = Number(fetchId);
-                const data = await getSpecificFetchTask(fid)
+                const data = await getSpecificFetchTask(fid);
 
                 const resLogs: FetchLog[] = data.logs.map(item => {
                     const createdAtTs = new Date(item.timestamp * 1000);
 
                     return {
-                        key: data.id.toString(),
+                        key: `${item.timestamp}-${crypto.randomUUID()}`,
                         id: data.id.toString(),
                         level: getLevelFromString(item.level),
                         createdAt: createdAtTs.toISOString(),
                         message: item.message,
                     }
-                })
+                });
                 setLogs(resLogs);
                 setInitialLogs(resLogs);
 
@@ -182,7 +154,20 @@ export default function DetailedFetch() {
             }
         }
         fetchData()
-    }, [fetchId])
+
+        const interval = setInterval(() => {
+            // Once the load finishes, stop polling.
+            if (stats.percentComplete?.data === 100) {
+                clearInterval(interval);
+                return;
+            }
+
+            fetchData()
+        }, POLL_INTERVAL_MS)
+        return () => {
+            clearInterval(interval);
+        }
+    }, [fetchId, stats.percentComplete?.data])
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
@@ -258,7 +243,19 @@ export default function DetailedFetch() {
                             </Button>
                         </Box>
                     </Box>
-                    <SimpleTable containerStyle={{ width: "100%" }} columns={mockColumns} dataSource={logs} elevated={false} />
+                    <Switch
+                        sx={{
+                            my: 2
+                        }}
+                        required
+                        label="Pretty print logs?"
+                        id="prettyPrint"
+                        value={showPrettyPrint}
+                        onChange={(_: SelectChangeEvent) => {
+                            setShowPrettyPrint(!showPrettyPrint);
+                        }}
+                    />
+                    <SimpleTable containerStyle={{ width: "100%" }} columns={createColumns(showPrettyPrint)} dataSource={logs} elevated={false} />
                 </Paper>
             </Box >
         </Box >

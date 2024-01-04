@@ -145,6 +145,7 @@ definitions:
                 enum:
                     - gzip
                     - none
+                    - default
             local_path:
                 type: string
                 description: the absolute or relative path to write export files

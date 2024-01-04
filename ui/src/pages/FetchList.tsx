@@ -107,7 +107,7 @@ export default function FetchList() {
                     const finishedAtTs = new Date(item.finished_at * 1000);
 
                     return {
-                        key: item.id.toString(),
+                        key: `${item.id.toString()}-${crypto.randomUUID()}`,
                         id: item.id.toString(),
                         name: item.name,
                         status: getFetchStatusFromString(item.status),

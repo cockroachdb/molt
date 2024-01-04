@@ -32,8 +32,8 @@ func BuildCreateFetchTaskPayload(moltserviceCreateFetchTaskBody string) (*moltse
 		if !(body.Store == "None" || body.Store == "AWS" || body.Store == "GCP" || body.Store == "Local") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.store", body.Store, []any{"None", "AWS", "GCP", "Local"}))
 		}
-		if !(body.Compression == "gzip" || body.Compression == "none") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.compression", body.Compression, []any{"gzip", "none"}))
+		if !(body.Compression == "gzip" || body.Compression == "none" || body.Compression == "default") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.compression", body.Compression, []any{"gzip", "none", "default"}))
 		}
 		if err != nil {
 			return nil, err

@@ -10,6 +10,7 @@ export interface RouteEntry {
 }
 
 export const HOME_PATH = "/";
+export const FETCH_HOME_PATH = "/fetch";
 export const DETAILED_FETCH_PATH = "/fetch/:fetchId";
 export const CONFIGURE_TASK_PATH = "/configure-task";
 export const SETUP_CONNECTION_PATH = "/setup-connection";
