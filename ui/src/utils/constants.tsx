@@ -1,1 +1,1 @@
-export const APP_NAME = "MOLT FETCH"
+export const APP_NAME = "MOLT FETCH";

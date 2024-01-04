@@ -16,7 +16,8 @@ import { fontWeights } from '../styles/fonts';
 import { DEFAULT_SPACING } from '../styles/theme';
 import { InputGroup, Switch } from '../components';
 import { getSpecificFetchTask } from '../api';
-import { FetchRunDetailed, MoltserviceService } from '../apigen';
+import { FetchRun, FetchRunDetailed } from '../apigen';
+import { formatNetDurationSeconds } from '../utils/dates';
 
 const POLL_INTERVAL_MS = 1000;
 export type LogLevel = "info" | "warning" | "danger";
@@ -37,6 +38,10 @@ export interface FetchStats {
     numErrors?: {
         description: string,
         data: number
+    },
+    duration?: {
+        description: string,
+        data: string,
     },
 }
 
@@ -152,6 +157,16 @@ export default function DetailedFetch() {
                         data: Number(data.stats?.num_errors)
                     },
                 }
+
+                // Only put duration if it's relevant.
+                const netDurStr = formatNetDurationSeconds(data.started_at, data.finished_at, data.stats?.net_duration_ms, data.stats?.export_duration_ms);
+                if (netDurStr.trim() !== "") {
+                    resStats.duration = {
+                        description: "Net Duration",
+                        data: netDurStr
+                    }
+                }
+
                 setStats(resStats);
             } catch (e) {
                 console.error(e);
@@ -161,7 +176,7 @@ export default function DetailedFetch() {
 
         const interval = setInterval(() => {
             // Once the load finishes, stop polling.
-            if (status !== "IN_PROGRESS") {
+            if (status !== FetchRun.status.IN_PROGRESS) {
                 clearInterval(interval);
                 return;
             }

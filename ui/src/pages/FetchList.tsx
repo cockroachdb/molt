@@ -11,6 +11,7 @@ import SimpleTable, { TableColumnProps } from '../components/tables/Table';
 import { info } from '../styles/colors';
 import { SETUP_CONNECTION_PATH } from '.';
 import { getFetchTasks } from '../api';
+import { formatSecondsToHHMMSS } from '../utils/dates';
 
 
 type FetchStatus = "In Progress" | "Ready for Review" | "Succeeded" | "Failed" | "Unknown"
@@ -20,6 +21,7 @@ export interface FetchRun {
     id: string;
     name: string;
     status: FetchStatus;
+    duration: string;
     startedAt: string;
     finishedAt: string;
     errors: number;
@@ -38,7 +40,7 @@ const getChipFromStatus = (status: FetchStatus) => {
     return <Chip size="small" label={status} variant="info" />
 }
 
-const mockColumns: TableColumnProps<FetchRun>[] = [
+const columns: TableColumnProps<FetchRun>[] = [
     {
         id: "name",
         title: "Name",
@@ -54,6 +56,13 @@ const mockColumns: TableColumnProps<FetchRun>[] = [
         title: "Status",
         render: (record, _) => {
             return getChipFromStatus(record.status);
+        }
+    },
+    {
+        id: "duration",
+        title: "Duration",
+        render: (record, _) => {
+            return record.duration
         }
     },
     {
@@ -111,6 +120,7 @@ export default function FetchList() {
                         id: item.id.toString(),
                         name: item.name,
                         status: getFetchStatusFromString(item.status),
+                        duration: formatSecondsToHHMMSS(item.finished_at - item.started_at),
                         startedAt: startedAtTs.toISOString(),
                         finishedAt: finishedAtTs.toISOString(),
                         errors: 0,
@@ -139,7 +149,7 @@ export default function FetchList() {
                 onClick={() => {
                     navigate(SETUP_CONNECTION_PATH);
                 }}>Create New</Button>
-            <SimpleTable columns={mockColumns} dataSource={runs} />
+            <SimpleTable columns={columns} dataSource={runs} />
         </Box>
     )
 }
