@@ -104,6 +104,7 @@ export default function DetailedFetch() {
     const { fetchId } = useParams();
     const [searchTerm, setSearchTerm] = useState("");
     const [showPrettyPrint, setShowPrettyPrint] = useState(false);
+    const [status, setStatus] = useState("");
     const [initialLogs, setInitialLogs] = useState<FetchLog[]>([]);
     const [logs, setLogs] = useState<FetchLog[]>([]);
     const [stats, setStats] = useState<FetchStats>({});
@@ -115,6 +116,8 @@ export default function DetailedFetch() {
             try {
                 const fid = Number(fetchId);
                 const data = await getSpecificFetchTask(fid);
+
+                setStatus(data.status);
 
                 const resLogs: FetchLog[] = data.logs.map(item => {
                     const createdAtTs = new Date(item.timestamp * 1000);
@@ -157,7 +160,7 @@ export default function DetailedFetch() {
 
         const interval = setInterval(() => {
             // Once the load finishes, stop polling.
-            if (stats.percentComplete?.data === 100) {
+            if (status !== "IN_PROGRESS") {
                 clearInterval(interval);
                 return;
             }
@@ -167,7 +170,7 @@ export default function DetailedFetch() {
         return () => {
             clearInterval(interval);
         }
-    }, [fetchId, stats.percentComplete?.data])
+    }, [fetchId, status, stats.percentComplete?.data])
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
@@ -197,7 +200,15 @@ export default function DetailedFetch() {
                 <Button onClick={() => navigate(-1)} sx={{ width: DEFAULT_SPACING }} variant="icon" >
                     <ChevronLeft />
                 </Button>
-                <Typography sx={{ mb: 1 }} variant='h4'>Fetch Run #{fetchId}</Typography>
+                <Box sx={{
+                    display: "flex",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 2,
+                }}>
+                    <Typography sx={{ mb: 1 }} variant='h4'>Fetch Run {fetchId}</Typography>
+                    <Chip sx={{ width: 120 }} size="medium" variant={status === "IN_PROGRESS" ? "info" : status === "SUCCESS" ? "success" : "danger"} label={status} />
+                </Box>
                 <Paper sx={{
                     display: "flex",
                     flexDirection: "row",
