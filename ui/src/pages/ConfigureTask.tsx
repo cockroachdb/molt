@@ -12,8 +12,10 @@ import {
     AccordionDetails,
     Snackbar,
     Alert,
+    InputAdornment,
+    IconButton,
 } from '@mui/material';
-import { ExpandMore, FileCopy } from '@material-ui/icons';
+import { ExpandMore, FileCopy, Visibility, VisibilityOff } from '@material-ui/icons';
 import CodeMirror from "@uiw/react-codemirror";
 import { materialLightInit } from '@uiw/codemirror-theme-material';
 
@@ -77,6 +79,12 @@ const isCloudStore = (is: IntermediateStore) => {
 }
 
 const configureTaskMD = `
+##### Connection Details
+The connection details are the final connection string for both the source and target databases. This is either derived from the previous
+connection step(s) or manually inputted in this step.
+
+<br/>
+
 ##### Mode of Operation
 The mode of operation dictates at a high level how the data export/import will run and which mechanisms it will use. These will balance 
 tradeoffs of performance vs. disk/RAM usage vs. if target tables are taken offline or not.
@@ -128,7 +136,13 @@ Replication settings allow the user to specify slot names, plugins, and relevant
 - **Drop logical replication slot**: if set and exists, drops the existing replication slot
 `
 
+const mockSource = "postgres://postgres@localhost:5432/postgres"
+const mockTarget = "postgres://root@localhost:26257/defaultdb?sslmode=disable"
+const moltFetchCmd = "molt fetch"
+
 interface TaskFormState {
+    sourceURL: string,
+    targetURL: string,
     mode: Mode,
     store: IntermediateStore,
     bucketName: string,
@@ -150,6 +164,8 @@ interface TaskFormState {
 }
 
 const defaultFormState: TaskFormState = {
+    sourceURL: mockSource,
+    targetURL: mockTarget,
     mode: "import",
     store: "local",
     bucketName: "",
@@ -170,9 +186,6 @@ const defaultFormState: TaskFormState = {
     dropPgLogicalSlot: false,
 };
 
-const mockSource = "postgres://postgres@localhost:5432/postgres"
-const mockTarget = "postgres://root@localhost:26257/defaultdb?sslmode=disable"
-const moltFetchCmd = "molt fetch"
 const getFetchCmdFromTaskFormState = (tf: TaskFormState, source: string, target: string) => {
     let cmd = moltFetchCmd;
 
@@ -256,7 +269,8 @@ const cardMediaQuery = '@media screen and (min-width: 1200px)';
 export default function ConfigureTask() {
     const navigate = useNavigate();
     const [copyAlertOpen, setCopyAlertOpen] = useState(false);
-
+    const [showSource, setShowSource] = useState(false);
+    const [showTarget, setShowTarget] = useState(false);
     const [formState, setFormState] = useState<TaskFormState>(defaultFormState);
     const [outputCmd, setOutputCmd] = useState<string>(getFetchCmdFromTaskFormState(defaultFormState, mockSource, mockTarget));
 
@@ -302,6 +316,74 @@ export default function ConfigureTask() {
                         display: "flex",
                         flexDirection: "column",
                     }}>
+                        <Accordion defaultExpanded>
+                            <AccordionSummary
+                                expandIcon={<ExpandMore />}
+                                aria-controls="performance-panel"
+                                id="performance-panel"
+                            >
+                                <Typography>Connection Details</Typography>
+                            </AccordionSummary>
+                            <AccordionDetails>
+                                <Box sx={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 3
+                                }}>
+                                    <InputGroup
+                                        label="Source Database URL"
+                                        id="sourceURL"
+                                        type={showSource ? "text" : "password"}
+                                        value={formState.sourceURL}
+                                        validation={(value) => {
+                                            if (value.length === 0) return "Field cannot be empty."
+
+                                            return ""
+                                        }}
+                                        onChange={handleInputChange}
+                                        InputProps={{
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <IconButton
+                                                        size="small"
+                                                        aria-label="toggle password visibility"
+                                                        onClick={() => { setShowSource(!showSource) }}
+                                                        onMouseDown={() => { }}
+                                                    >
+                                                        {showSource ? <Visibility /> : <VisibilityOff />}
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            )
+                                        }}
+                                    />
+                                    <InputGroup
+                                        label="Target Database URL"
+                                        id="targetURL"
+                                        type={showTarget ? "text" : "password"}
+                                        value={formState.targetURL}
+                                        validation={(value) => {
+                                            if (value.length === 0) return "Field cannot be empty."
+
+                                            return ""
+                                        }}
+                                        onChange={handleInputChange}
+                                        InputProps={{
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <IconButton
+                                                        size="small"
+                                                        aria-label="toggle password visibility"
+                                                        onClick={() => { setShowTarget(!showTarget) }}
+                                                        onMouseDown={() => { }}
+                                                    >
+                                                        {showTarget ? <Visibility /> : <VisibilityOff />}
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            )
+                                        }} />
+                                </Box>
+                            </AccordionDetails>
+                        </Accordion>
                         <Accordion defaultExpanded>
                             <AccordionSummary
                                 expandIcon={<ExpandMore />}
