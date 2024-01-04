@@ -7,6 +7,7 @@ import {
     Paper,
     Chip,
     SelectChangeEvent,
+    LinearProgress
 } from '@mui/material';
 import { Search, ChevronLeft } from '@material-ui/icons';
 import { useNavigate } from "react-router-dom";
@@ -109,6 +110,7 @@ const getLevelFromString = (input: string): LogLevel => {
 export default function DetailedFetch() {
     const { fetchId } = useParams();
     const [searchTerm, setSearchTerm] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
     const [showPrettyPrint, setShowPrettyPrint] = useState(false);
     const [status, setStatus] = useState("");
     const [initialLogs, setInitialLogs] = useState<FetchLog[]>([]);
@@ -116,12 +118,17 @@ export default function DetailedFetch() {
     const [stats, setStats] = useState<FetchStats>({});
     const navigate = useNavigate();
 
+    // TODO: play around with interval timings for polling logs.
     // TODO: refactor this as a helper later on.
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const fid = Number(fetchId);
                 const data = await getSpecificFetchTask(fid);
+
+                if (data.status !== FetchRunDetailed.status.IN_PROGRESS) {
+                    setIsLoading(false);
+                }
 
                 setStatus(data.status);
 
@@ -172,6 +179,7 @@ export default function DetailedFetch() {
                 console.error(e);
             }
         }
+        setIsLoading(true);
         fetchData()
 
         const interval = setInterval(() => {
@@ -225,7 +233,8 @@ export default function DetailedFetch() {
                     <Typography sx={{ mb: 1 }} variant='h4'>Fetch Run {fetchId}</Typography>
                     <Chip sx={{ width: 120 }} size="medium" variant={status === FetchRunDetailed.status.SUCCESS ? "success" : status === FetchRunDetailed.status.FAILURE ? "danger" : "info"} label={status} />
                 </Box>
-                <Paper sx={{
+                {isLoading && <LinearProgress />}
+                {!isLoading && <Paper sx={{
                     display: "flex",
                     flexDirection: "row",
                     justifyContent: "flex-start",
@@ -242,7 +251,7 @@ export default function DetailedFetch() {
                             </Typography>
                         </Box>
                     })}
-                </Paper>
+                </Paper>}
                 <Paper sx={{
                     p: 2
                 }}>
