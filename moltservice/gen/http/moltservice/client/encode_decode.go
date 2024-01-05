@@ -213,6 +213,69 @@ func DecodeGetSpecificFetchTaskResponse(decoder func(*http.Response) goahttp.Dec
 	}
 }
 
+// BuildCreateVerifyTaskFromFetchRequest instantiates a HTTP request object
+// with method and path set to call the "moltservice" service
+// "create_verify_task_from_fetch" endpoint
+func (c *Client) BuildCreateVerifyTaskFromFetchRequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		id int
+	)
+	{
+		p, ok := v.(*moltservice.CreateVerifyTaskFromFetchPayload)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("moltservice", "create_verify_task_from_fetch", "*moltservice.CreateVerifyTaskFromFetchPayload", v)
+		}
+		id = p.ID
+	}
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: CreateVerifyTaskFromFetchMoltservicePath(id)}
+	req, err := http.NewRequest("POST", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("moltservice", "create_verify_task_from_fetch", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// DecodeCreateVerifyTaskFromFetchResponse returns a decoder for responses
+// returned by the moltservice create_verify_task_from_fetch endpoint.
+// restoreBody controls whether the response body should be restored after
+// having been read.
+func DecodeCreateVerifyTaskFromFetchResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
+		if restoreBody {
+			b, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body int
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("moltservice", "create_verify_task_from_fetch", err)
+			}
+			res := NewCreateVerifyTaskFromFetchVerifyAttemptIDOK(body)
+			return res, nil
+		default:
+			body, _ := io.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("moltservice", "create_verify_task_from_fetch", resp.StatusCode, string(body))
+		}
+	}
+}
+
 // unmarshalFetchRunResponseToMoltserviceFetchRun builds a value of type
 // *moltservice.FetchRun from a value of type *FetchRunResponse.
 func unmarshalFetchRunResponseToMoltserviceFetchRun(v *FetchRunResponse) *moltservice.FetchRun {

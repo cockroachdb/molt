@@ -84,6 +84,19 @@ var _ = Service("moltservice", func() {
 		Result(FetchRunDetailed)
 	})
 
+	Method("create_verify_task_from_fetch", func() {
+		Payload(func() {
+			Field(1, "id", Int, "id for the fetch task")
+			Required("id")
+		})
+
+		HTTP(func() {
+			POST(fmt.Sprintf("%s/{id}/verify", FetchBaseAPIPath))
+		})
+
+		Result(VerifyAttemptID)
+	})
+
 	// OpenAPI spec.
 	Files("/openapi.json", "./gen/http/openapi.json")
 	// RapiDoc UI.

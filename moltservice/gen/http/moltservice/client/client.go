@@ -29,6 +29,10 @@ type Client struct {
 	// get_specific_fetch_task endpoint.
 	GetSpecificFetchTaskDoer goahttp.Doer
 
+	// CreateVerifyTaskFromFetch Doer is the HTTP client used to make requests to
+	// the create_verify_task_from_fetch endpoint.
+	CreateVerifyTaskFromFetchDoer goahttp.Doer
+
 	// CORS Doer is the HTTP client used to make requests to the  endpoint.
 	CORSDoer goahttp.Doer
 
@@ -52,15 +56,16 @@ func NewClient(
 	restoreBody bool,
 ) *Client {
 	return &Client{
-		CreateFetchTaskDoer:      doer,
-		GetFetchTasksDoer:        doer,
-		GetSpecificFetchTaskDoer: doer,
-		CORSDoer:                 doer,
-		RestoreResponseBody:      restoreBody,
-		scheme:                   scheme,
-		host:                     host,
-		decoder:                  dec,
-		encoder:                  enc,
+		CreateFetchTaskDoer:           doer,
+		GetFetchTasksDoer:             doer,
+		GetSpecificFetchTaskDoer:      doer,
+		CreateVerifyTaskFromFetchDoer: doer,
+		CORSDoer:                      doer,
+		RestoreResponseBody:           restoreBody,
+		scheme:                        scheme,
+		host:                          host,
+		decoder:                       dec,
+		encoder:                       enc,
 	}
 }
 
@@ -121,6 +126,25 @@ func (c *Client) GetSpecificFetchTask() goa.Endpoint {
 		resp, err := c.GetSpecificFetchTaskDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("moltservice", "get_specific_fetch_task", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// CreateVerifyTaskFromFetch returns an endpoint that makes HTTP requests to
+// the moltservice service create_verify_task_from_fetch server.
+func (c *Client) CreateVerifyTaskFromFetch() goa.Endpoint {
+	var (
+		decodeResponse = DecodeCreateVerifyTaskFromFetchResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildCreateVerifyTaskFromFetchRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.CreateVerifyTaskFromFetchDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("moltservice", "create_verify_task_from_fetch", err)
 		}
 		return decodeResponse(resp)
 	}

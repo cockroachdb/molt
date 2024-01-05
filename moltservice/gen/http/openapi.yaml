@@ -95,6 +95,26 @@ paths:
                             - logs
             schemes:
                 - http
+    /api/v1/fetch/{id}/verify:
+        post:
+            tags:
+                - moltservice
+            summary: create_verify_task_from_fetch moltservice
+            operationId: moltservice#create_verify_task_from_fetch
+            parameters:
+                - name: id
+                  in: path
+                  description: id for the fetch task
+                  required: true
+                  type: integer
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        type: integer
+                        format: int64
+            schemes:
+                - http
     /docs.html:
         get:
             tags:
@@ -323,9 +343,6 @@ definitions:
             finished_at: 1704233521
             id: 1704233521
             logs:
-                - level: INFO
-                  message: This is a log message
-                  timestamp: 1704233519
                 - level: INFO
                   message: This is a log message
                   timestamp: 1704233519

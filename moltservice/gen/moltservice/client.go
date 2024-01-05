@@ -15,17 +15,19 @@ import (
 
 // Client is the "moltservice" service client.
 type Client struct {
-	CreateFetchTaskEndpoint      goa.Endpoint
-	GetFetchTasksEndpoint        goa.Endpoint
-	GetSpecificFetchTaskEndpoint goa.Endpoint
+	CreateFetchTaskEndpoint           goa.Endpoint
+	GetFetchTasksEndpoint             goa.Endpoint
+	GetSpecificFetchTaskEndpoint      goa.Endpoint
+	CreateVerifyTaskFromFetchEndpoint goa.Endpoint
 }
 
 // NewClient initializes a "moltservice" service client given the endpoints.
-func NewClient(createFetchTask, getFetchTasks, getSpecificFetchTask goa.Endpoint) *Client {
+func NewClient(createFetchTask, getFetchTasks, getSpecificFetchTask, createVerifyTaskFromFetch goa.Endpoint) *Client {
 	return &Client{
-		CreateFetchTaskEndpoint:      createFetchTask,
-		GetFetchTasksEndpoint:        getFetchTasks,
-		GetSpecificFetchTaskEndpoint: getSpecificFetchTask,
+		CreateFetchTaskEndpoint:           createFetchTask,
+		GetFetchTasksEndpoint:             getFetchTasks,
+		GetSpecificFetchTaskEndpoint:      getSpecificFetchTask,
+		CreateVerifyTaskFromFetchEndpoint: createVerifyTaskFromFetch,
 	}
 }
 
@@ -60,4 +62,15 @@ func (c *Client) GetSpecificFetchTask(ctx context.Context, p *GetSpecificFetchTa
 		return
 	}
 	return ires.(*FetchRunDetailed), nil
+}
+
+// CreateVerifyTaskFromFetch calls the "create_verify_task_from_fetch" endpoint
+// of the "moltservice" service.
+func (c *Client) CreateVerifyTaskFromFetch(ctx context.Context, p *CreateVerifyTaskFromFetchPayload) (res VerifyAttemptID, err error) {
+	var ires any
+	ires, err = c.CreateVerifyTaskFromFetchEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(VerifyAttemptID), nil
 }

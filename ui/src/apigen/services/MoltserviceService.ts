@@ -60,6 +60,24 @@ export class MoltserviceService {
     }
 
     /**
+     * create_verify_task_from_fetch moltservice
+     * @param id id for the fetch task
+     * @returns number OK response.
+     * @throws ApiError
+     */
+    public static moltserviceCreateVerifyTaskFromFetch(
+        id: number,
+    ): CancelablePromise<number> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/fetch/{id}/verify',
+            path: {
+                'id': id,
+            },
+        });
+    }
+
+    /**
      * Download ./assets/docs.html
      * @returns any File downloaded
      * @throws ApiError

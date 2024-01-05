@@ -199,6 +199,14 @@ func NewGetSpecificFetchTaskFetchRunDetailedOK(body *GetSpecificFetchTaskRespons
 	return v
 }
 
+// NewCreateVerifyTaskFromFetchVerifyAttemptIDOK builds a "moltservice" service
+// "create_verify_task_from_fetch" endpoint result from a HTTP "OK" response.
+func NewCreateVerifyTaskFromFetchVerifyAttemptIDOK(body int) moltservice.VerifyAttemptID {
+	v := moltservice.VerifyAttemptID(body)
+
+	return v
+}
+
 // ValidateGetSpecificFetchTaskResponseBody runs the validations defined on
 // get_specific_fetch_task_response_body
 func ValidateGetSpecificFetchTaskResponseBody(body *GetSpecificFetchTaskResponseBody) (err error) {

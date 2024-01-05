@@ -18,9 +18,9 @@ import (
 type FetchStatus string
 
 const (
-	FetchStatusInProgress = "IN_PROGRESS"
-	FetchStatusSuccess    = "SUCCESS"
-	FetchStatusFailure    = "FAILURE"
+	FetchStatusInProgress = FetchStatus("IN_PROGRESS")
+	FetchStatusSuccess    = FetchStatus("SUCCESS")
+	FetchStatusFailure    = FetchStatus("FAILURE")
 )
 
 type FetchMode string
@@ -85,8 +85,7 @@ type FetchDetail struct {
 	StartedAt            time.Time                      `json:"started_at"`
 	FinishedAt           time.Time                      `json:"finished_at"`
 	ConfigurationPayload moltservice.CreateFetchPayload `json:"-"`
-
-	// TODO: add tracking stats to fetch detail to report on.
+	VerifyIDs            []moltservice.VerifyAttemptID  `json:"verify_ids"`
 }
 
 func (fd *FetchDetail) mapToResponse() *moltservice.FetchRun {
@@ -216,6 +215,7 @@ func (m *moltService) CreateFetchTask(
 		Status:               FetchStatusInProgress,
 		StartedAt:            time.Now(),
 		ConfigurationPayload: *payload,
+		VerifyIDs:            make([]moltservice.VerifyAttemptID, 0),
 	}
 
 	m.fetchState.Lock()
@@ -229,13 +229,13 @@ func (m *moltService) CreateFetchTask(
 		}
 
 		// Write the beginning status to the file.
-		if err := writeFetchDetail(fetchDetail, payload.LogFile); err != nil {
+		if err := writeDetail(fetchDetail, payload.LogFile); err != nil {
 			m.logger.Err(err).Send()
 		}
 
 		out, err := exec.Command(MOLTCommand, args...).Output()
 
-		// Update fetch detail with the latest details.
+		// Update with the latest details.
 		fetchDetail.LogTimestamp = time.Now()
 		fetchDetail.Status = FetchStatusSuccess
 		fetchDetail.FinishedAt = time.Now()
@@ -249,7 +249,7 @@ func (m *moltService) CreateFetchTask(
 		}
 
 		// Write the ending status to the file.
-		if err := writeFetchDetail(fetchDetail, payload.LogFile); err != nil {
+		if err := writeDetail(fetchDetail, payload.LogFile); err != nil {
 			m.logger.Err(err).Send()
 		}
 
@@ -266,7 +266,7 @@ func (m *moltService) CreateFetchTask(
 	return moltservice.FetchAttemptID(id), err
 }
 
-func writeFetchDetail(detail FetchDetail, logFile string) error {
+func writeDetail(detail interface{}, logFile string) error {
 	jsonData, err := json.Marshal(detail)
 	if err != nil {
 		return err

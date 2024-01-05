@@ -20,13 +20,14 @@ import (
 
 // Server lists the moltservice service endpoint HTTP handlers.
 type Server struct {
-	Mounts               []*MountPoint
-	CreateFetchTask      http.Handler
-	GetFetchTasks        http.Handler
-	GetSpecificFetchTask http.Handler
-	CORS                 http.Handler
-	GenHTTPOpenapiJSON   http.Handler
-	AssetsDocsHTML       http.Handler
+	Mounts                    []*MountPoint
+	CreateFetchTask           http.Handler
+	GetFetchTasks             http.Handler
+	GetSpecificFetchTask      http.Handler
+	CreateVerifyTaskFromFetch http.Handler
+	CORS                      http.Handler
+	GenHTTPOpenapiJSON        http.Handler
+	AssetsDocsHTML            http.Handler
 }
 
 // MountPoint holds information about the mounted endpoints.
@@ -67,19 +68,22 @@ func New(
 			{"CreateFetchTask", "POST", "/api/v1/fetch"},
 			{"GetFetchTasks", "GET", "/api/v1/fetch"},
 			{"GetSpecificFetchTask", "GET", "/api/v1/fetch/{id}"},
+			{"CreateVerifyTaskFromFetch", "POST", "/api/v1/fetch/{id}/verify"},
 			{"CORS", "OPTIONS", "/api/v1/fetch"},
 			{"CORS", "OPTIONS", "/api/v1/fetch/{id}"},
+			{"CORS", "OPTIONS", "/api/v1/fetch/{id}/verify"},
 			{"CORS", "OPTIONS", "/openapi.json"},
 			{"CORS", "OPTIONS", "/docs.html"},
 			{"./gen/http/openapi.json", "GET", "/openapi.json"},
 			{"./assets/docs.html", "GET", "/docs.html"},
 		},
-		CreateFetchTask:      NewCreateFetchTaskHandler(e.CreateFetchTask, mux, decoder, encoder, errhandler, formatter),
-		GetFetchTasks:        NewGetFetchTasksHandler(e.GetFetchTasks, mux, decoder, encoder, errhandler, formatter),
-		GetSpecificFetchTask: NewGetSpecificFetchTaskHandler(e.GetSpecificFetchTask, mux, decoder, encoder, errhandler, formatter),
-		CORS:                 NewCORSHandler(),
-		GenHTTPOpenapiJSON:   http.FileServer(fileSystemGenHTTPOpenapiJSON),
-		AssetsDocsHTML:       http.FileServer(fileSystemAssetsDocsHTML),
+		CreateFetchTask:           NewCreateFetchTaskHandler(e.CreateFetchTask, mux, decoder, encoder, errhandler, formatter),
+		GetFetchTasks:             NewGetFetchTasksHandler(e.GetFetchTasks, mux, decoder, encoder, errhandler, formatter),
+		GetSpecificFetchTask:      NewGetSpecificFetchTaskHandler(e.GetSpecificFetchTask, mux, decoder, encoder, errhandler, formatter),
+		CreateVerifyTaskFromFetch: NewCreateVerifyTaskFromFetchHandler(e.CreateVerifyTaskFromFetch, mux, decoder, encoder, errhandler, formatter),
+		CORS:                      NewCORSHandler(),
+		GenHTTPOpenapiJSON:        http.FileServer(fileSystemGenHTTPOpenapiJSON),
+		AssetsDocsHTML:            http.FileServer(fileSystemAssetsDocsHTML),
 	}
 }
 
@@ -91,6 +95,7 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.CreateFetchTask = m(s.CreateFetchTask)
 	s.GetFetchTasks = m(s.GetFetchTasks)
 	s.GetSpecificFetchTask = m(s.GetSpecificFetchTask)
+	s.CreateVerifyTaskFromFetch = m(s.CreateVerifyTaskFromFetch)
 	s.CORS = m(s.CORS)
 }
 
@@ -102,6 +107,7 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountCreateFetchTaskHandler(mux, h.CreateFetchTask)
 	MountGetFetchTasksHandler(mux, h.GetFetchTasks)
 	MountGetSpecificFetchTaskHandler(mux, h.GetSpecificFetchTask)
+	MountCreateVerifyTaskFromFetchHandler(mux, h.CreateVerifyTaskFromFetch)
 	MountCORSHandler(mux, h.CORS)
 	MountGenHTTPOpenapiJSON(mux, goahttp.Replace("", "/./gen/http/openapi.json", h.GenHTTPOpenapiJSON))
 	MountAssetsDocsHTML(mux, goahttp.Replace("", "/./assets/docs.html", h.AssetsDocsHTML))
@@ -259,6 +265,58 @@ func NewGetSpecificFetchTaskHandler(
 	})
 }
 
+// MountCreateVerifyTaskFromFetchHandler configures the mux to serve the
+// "moltservice" service "create_verify_task_from_fetch" endpoint.
+func MountCreateVerifyTaskFromFetchHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := HandleMoltserviceOrigin(h).(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("POST", "/api/v1/fetch/{id}/verify", f)
+}
+
+// NewCreateVerifyTaskFromFetchHandler creates a HTTP handler which loads the
+// HTTP request and calls the "moltservice" service
+// "create_verify_task_from_fetch" endpoint.
+func NewCreateVerifyTaskFromFetchHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeCreateVerifyTaskFromFetchRequest(mux, decoder)
+		encodeResponse = EncodeCreateVerifyTaskFromFetchResponse(encoder)
+		encodeError    = goahttp.ErrorEncoder(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "create_verify_task_from_fetch")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "moltservice")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			errhandler(ctx, w, err)
+		}
+	})
+}
+
 // MountGenHTTPOpenapiJSON configures the mux to serve GET request made to
 // "/openapi.json".
 func MountGenHTTPOpenapiJSON(mux goahttp.Muxer, h http.Handler) {
@@ -277,6 +335,7 @@ func MountCORSHandler(mux goahttp.Muxer, h http.Handler) {
 	h = HandleMoltserviceOrigin(h)
 	mux.Handle("OPTIONS", "/api/v1/fetch", h.ServeHTTP)
 	mux.Handle("OPTIONS", "/api/v1/fetch/{id}", h.ServeHTTP)
+	mux.Handle("OPTIONS", "/api/v1/fetch/{id}/verify", h.ServeHTTP)
 	mux.Handle("OPTIONS", "/openapi.json", h.ServeHTTP)
 	mux.Handle("OPTIONS", "/docs.html", h.ServeHTTP)
 }

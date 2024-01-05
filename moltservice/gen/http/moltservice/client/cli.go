@@ -84,3 +84,22 @@ func BuildGetSpecificFetchTaskPayload(moltserviceGetSpecificFetchTaskID string) 
 
 	return v, nil
 }
+
+// BuildCreateVerifyTaskFromFetchPayload builds the payload for the moltservice
+// create_verify_task_from_fetch endpoint from CLI flags.
+func BuildCreateVerifyTaskFromFetchPayload(moltserviceCreateVerifyTaskFromFetchID string) (*moltservice.CreateVerifyTaskFromFetchPayload, error) {
+	var err error
+	var id int
+	{
+		var v int64
+		v, err = strconv.ParseInt(moltserviceCreateVerifyTaskFromFetchID, 10, strconv.IntSize)
+		id = int(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for id, must be INT")
+		}
+	}
+	v := &moltservice.CreateVerifyTaskFromFetchPayload{}
+	v.ID = id
+
+	return v, nil
+}

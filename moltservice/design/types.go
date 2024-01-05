@@ -323,3 +323,7 @@ var FetchRunDetailed = Type("fetch_run_detailed", func() {
 var FetchAttemptID = Type("fetch_attempt_id", Int, func() {
 	Description("the id of a fetch attempt")
 })
+
+var VerifyAttemptID = Type("verify_attempt_id", Int, func() {
+	Description("the id of a verify attempt")
+})

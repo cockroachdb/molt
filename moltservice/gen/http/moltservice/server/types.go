@@ -204,6 +204,15 @@ func NewGetSpecificFetchTaskPayload(id int) *moltservice.GetSpecificFetchTaskPay
 	return v
 }
 
+// NewCreateVerifyTaskFromFetchPayload builds a moltservice service
+// create_verify_task_from_fetch endpoint payload.
+func NewCreateVerifyTaskFromFetchPayload(id int) *moltservice.CreateVerifyTaskFromFetchPayload {
+	v := &moltservice.CreateVerifyTaskFromFetchPayload{}
+	v.ID = id
+
+	return v
+}
+
 // ValidateCreateFetchTaskRequestBody runs the validations defined on
 // create_fetch_task_request_body
 func ValidateCreateFetchTaskRequestBody(body *CreateFetchTaskRequestBody) (err error) {

@@ -25,3 +25,8 @@ func GetFetchTasksMoltservicePath() string {
 func GetSpecificFetchTaskMoltservicePath(id int) string {
 	return fmt.Sprintf("/api/v1/fetch/%v", id)
 }
+
+// CreateVerifyTaskFromFetchMoltservicePath returns the URL path to the moltservice service create_verify_task_from_fetch HTTP endpoint.
+func CreateVerifyTaskFromFetchMoltservicePath(id int) string {
+	return fmt.Sprintf("/api/v1/fetch/%v/verify", id)
+}

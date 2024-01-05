@@ -15,17 +15,19 @@ import (
 
 // Endpoints wraps the "moltservice" service endpoints.
 type Endpoints struct {
-	CreateFetchTask      goa.Endpoint
-	GetFetchTasks        goa.Endpoint
-	GetSpecificFetchTask goa.Endpoint
+	CreateFetchTask           goa.Endpoint
+	GetFetchTasks             goa.Endpoint
+	GetSpecificFetchTask      goa.Endpoint
+	CreateVerifyTaskFromFetch goa.Endpoint
 }
 
 // NewEndpoints wraps the methods of the "moltservice" service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
 	return &Endpoints{
-		CreateFetchTask:      NewCreateFetchTaskEndpoint(s),
-		GetFetchTasks:        NewGetFetchTasksEndpoint(s),
-		GetSpecificFetchTask: NewGetSpecificFetchTaskEndpoint(s),
+		CreateFetchTask:           NewCreateFetchTaskEndpoint(s),
+		GetFetchTasks:             NewGetFetchTasksEndpoint(s),
+		GetSpecificFetchTask:      NewGetSpecificFetchTaskEndpoint(s),
+		CreateVerifyTaskFromFetch: NewCreateVerifyTaskFromFetchEndpoint(s),
 	}
 }
 
@@ -34,6 +36,7 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.CreateFetchTask = m(e.CreateFetchTask)
 	e.GetFetchTasks = m(e.GetFetchTasks)
 	e.GetSpecificFetchTask = m(e.GetSpecificFetchTask)
+	e.CreateVerifyTaskFromFetch = m(e.CreateVerifyTaskFromFetch)
 }
 
 // NewCreateFetchTaskEndpoint returns an endpoint function that calls the
@@ -59,5 +62,14 @@ func NewGetSpecificFetchTaskEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*GetSpecificFetchTaskPayload)
 		return s.GetSpecificFetchTask(ctx, p)
+	}
+}
+
+// NewCreateVerifyTaskFromFetchEndpoint returns an endpoint function that calls
+// the method "create_verify_task_from_fetch" of service "moltservice".
+func NewCreateVerifyTaskFromFetchEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*CreateVerifyTaskFromFetchPayload)
+		return s.CreateVerifyTaskFromFetch(ctx, p)
 	}
 }
