@@ -93,6 +93,7 @@ paths:
                             - started_at
                             - finished_at
                             - logs
+                            - verify_runs
             schemes:
                 - http
     /api/v1/fetch/{id}/verify:
@@ -113,6 +114,21 @@ paths:
                     schema:
                         type: integer
                         format: int64
+            schemes:
+                - http
+    /api/v1/verify:
+        get:
+            tags:
+                - moltservice
+            summary: get_verify_tasks moltservice
+            operationId: moltservice#get_verify_tasks
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        type: array
+                        items:
+                            $ref: '#/definitions/verify_runResponse'
             schemes:
                 - http
     /docs.html:
@@ -339,6 +355,30 @@ definitions:
                     - IN_PROGRESS
                     - SUCCESS
                     - FAILURE
+            verify_runs:
+                type: array
+                items:
+                    $ref: '#/definitions/verify_runResponseBody'
+                description: verify runs linked to fetch runs
+                example:
+                    - fetch_id: 1704233521
+                      finished_at: 1704233521
+                      id: 1704233521
+                      name: jyang pg to crdb
+                      started_at: 1704233519
+                      status: IN_PROGRESS
+                    - fetch_id: 1704233521
+                      finished_at: 1704233521
+                      id: 1704233521
+                      name: jyang pg to crdb
+                      started_at: 1704233519
+                      status: IN_PROGRESS
+                    - fetch_id: 1704233521
+                      finished_at: 1704233521
+                      id: 1704233521
+                      name: jyang pg to crdb
+                      started_at: 1704233519
+                      status: IN_PROGRESS
         example:
             finished_at: 1704233521
             id: 1704233521
@@ -361,6 +401,19 @@ definitions:
                 num_tables: 5
                 percent_complete: jyang pg to crdb
             status: IN_PROGRESS
+            verify_runs:
+                - fetch_id: 1704233521
+                  finished_at: 1704233521
+                  id: 1704233521
+                  name: jyang pg to crdb
+                  started_at: 1704233519
+                  status: IN_PROGRESS
+                - fetch_id: 1704233521
+                  finished_at: 1704233521
+                  id: 1704233521
+                  name: jyang pg to crdb
+                  started_at: 1704233519
+                  status: IN_PROGRESS
         required:
             - id
             - name
@@ -368,6 +421,7 @@ definitions:
             - started_at
             - finished_at
             - logs
+            - verify_runs
     fetch_runResponse:
         title: fetch_runResponse
         type: object
@@ -496,3 +550,103 @@ definitions:
             - timestamp
             - level
             - message
+    verify_runResponse:
+        title: verify_runResponse
+        type: object
+        properties:
+            fetch_id:
+                type: integer
+                description: ID of the associated fetch run
+                example: 1704233521
+                format: int64
+            finished_at:
+                type: integer
+                description: finished at time
+                example: 1704233521
+                format: int64
+            id:
+                type: integer
+                description: ID of the run
+                example: 1704233521
+                format: int64
+            name:
+                type: string
+                description: name of the run
+                example: jyang pg to crdb
+            started_at:
+                type: integer
+                description: started at time
+                example: 1704233519
+                format: int64
+            status:
+                type: string
+                description: status of the run
+                example: IN_PROGRESS
+                enum:
+                    - IN_PROGRESS
+                    - SUCCESS
+                    - FAILURE
+        example:
+            fetch_id: 1704233521
+            finished_at: 1704233521
+            id: 1704233521
+            name: jyang pg to crdb
+            started_at: 1704233519
+            status: IN_PROGRESS
+        required:
+            - id
+            - name
+            - status
+            - started_at
+            - finished_at
+            - fetch_id
+    verify_runResponseBody:
+        title: verify_runResponseBody
+        type: object
+        properties:
+            fetch_id:
+                type: integer
+                description: ID of the associated fetch run
+                example: 1704233521
+                format: int64
+            finished_at:
+                type: integer
+                description: finished at time
+                example: 1704233521
+                format: int64
+            id:
+                type: integer
+                description: ID of the run
+                example: 1704233521
+                format: int64
+            name:
+                type: string
+                description: name of the run
+                example: jyang pg to crdb
+            started_at:
+                type: integer
+                description: started at time
+                example: 1704233519
+                format: int64
+            status:
+                type: string
+                description: status of the run
+                example: IN_PROGRESS
+                enum:
+                    - IN_PROGRESS
+                    - SUCCESS
+                    - FAILURE
+        example:
+            fetch_id: 1704233521
+            finished_at: 1704233521
+            id: 1704233521
+            name: jyang pg to crdb
+            started_at: 1704233519
+            status: IN_PROGRESS
+        required:
+            - id
+            - name
+            - status
+            - started_at
+            - finished_at
+            - fetch_id

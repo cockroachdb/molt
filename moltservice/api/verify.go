@@ -32,6 +32,17 @@ type VerifyDetail struct {
 	// TODO: add tracking stats to fetch detail to report on.
 }
 
+func (vd *VerifyDetail) mapToResponse() *moltservice.VerifyRun {
+	return &moltservice.VerifyRun{
+		ID:         int(vd.ID),
+		Name:       vd.RunName,
+		Status:     string(vd.Status),
+		StartedAt:  normalizeTimestamp(vd.StartedAt),
+		FinishedAt: normalizeTimestamp(vd.FinishedAt),
+		FetchID:    int(vd.FetchID),
+	}
+}
+
 const staticVerifyLog = "artifacts/verify.log"
 
 func constructVerifyArgs(source, target, logFile string) []string {
@@ -118,3 +129,30 @@ func (m *moltService) CreateVerifyTaskFromFetch(
 
 	return verifyId, nil
 }
+
+func (m *moltService) getVerifyTasks() (res []*moltservice.VerifyRun, err error) {
+	m.verifyState.Lock()
+	defer m.verifyState.Unlock()
+	verifyRuns := []*moltservice.VerifyRun{}
+
+	for i := len(m.verifyState.orderedIdList) - 1; i >= 0; i-- {
+		id := m.verifyState.orderedIdList[i]
+		run, ok := m.verifyState.idToRun[id]
+		if !ok {
+			return nil, errors.Newf("failed to get fetch run with id %s", id)
+		}
+
+		runResp := run.mapToResponse()
+		verifyRuns = append(verifyRuns, runResp)
+	}
+
+	return verifyRuns, nil
+}
+
+func (m *moltService) GetVerifyTasks(
+	ctx context.Context,
+) (res []*moltservice.VerifyRun, err error) {
+	return m.getVerifyTasks()
+}
+
+// TODO: get detailed verify along with all errors, mismatches, etc.

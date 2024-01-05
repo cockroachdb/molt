@@ -22,7 +22,7 @@ import (
 //
 //	command (subcommand1|subcommand2|...)
 func UsageCommands() string {
-	return `moltservice (create-fetch-task|get-fetch-tasks|get-specific-fetch-task|create-verify-task-from-fetch)
+	return `moltservice (create-fetch-task|get-fetch-tasks|get-specific-fetch-task|create-verify-task-from-fetch|get-verify-tasks)
 `
 }
 
@@ -76,12 +76,15 @@ func ParseEndpoint(
 
 		moltserviceCreateVerifyTaskFromFetchFlags  = flag.NewFlagSet("create-verify-task-from-fetch", flag.ExitOnError)
 		moltserviceCreateVerifyTaskFromFetchIDFlag = moltserviceCreateVerifyTaskFromFetchFlags.String("id", "REQUIRED", "id for the fetch task")
+
+		moltserviceGetVerifyTasksFlags = flag.NewFlagSet("get-verify-tasks", flag.ExitOnError)
 	)
 	moltserviceFlags.Usage = moltserviceUsage
 	moltserviceCreateFetchTaskFlags.Usage = moltserviceCreateFetchTaskUsage
 	moltserviceGetFetchTasksFlags.Usage = moltserviceGetFetchTasksUsage
 	moltserviceGetSpecificFetchTaskFlags.Usage = moltserviceGetSpecificFetchTaskUsage
 	moltserviceCreateVerifyTaskFromFetchFlags.Usage = moltserviceCreateVerifyTaskFromFetchUsage
+	moltserviceGetVerifyTasksFlags.Usage = moltserviceGetVerifyTasksUsage
 
 	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
 		return nil, nil, err
@@ -129,6 +132,9 @@ func ParseEndpoint(
 			case "create-verify-task-from-fetch":
 				epf = moltserviceCreateVerifyTaskFromFetchFlags
 
+			case "get-verify-tasks":
+				epf = moltserviceGetVerifyTasksFlags
+
 			}
 
 		}
@@ -166,6 +172,9 @@ func ParseEndpoint(
 			case "create-verify-task-from-fetch":
 				endpoint = c.CreateVerifyTaskFromFetch()
 				data, err = moltservicec.BuildCreateVerifyTaskFromFetchPayload(*moltserviceCreateVerifyTaskFromFetchIDFlag)
+			case "get-verify-tasks":
+				endpoint = c.GetVerifyTasks()
+				data = nil
 			}
 		}
 	}
@@ -188,6 +197,7 @@ COMMAND:
     get-fetch-tasks: GetFetchTasks implements get_fetch_tasks.
     get-specific-fetch-task: GetSpecificFetchTask implements get_specific_fetch_task.
     create-verify-task-from-fetch: CreateVerifyTaskFromFetch implements create_verify_task_from_fetch.
+    get-verify-tasks: GetVerifyTasks implements get_verify_tasks.
 
 Additional help:
     %[1]s moltservice COMMAND --help
@@ -243,7 +253,7 @@ GetSpecificFetchTask implements get_specific_fetch_task.
     -id INT: id for the fetch task
 
 Example:
-    %[1]s moltservice get-specific-fetch-task --id 2691498423996239200
+    %[1]s moltservice get-specific-fetch-task --id 1613965225690350186
 `, os.Args[0])
 }
 
@@ -254,6 +264,16 @@ CreateVerifyTaskFromFetch implements create_verify_task_from_fetch.
     -id INT: id for the fetch task
 
 Example:
-    %[1]s moltservice create-verify-task-from-fetch --id 1567527568703438920
+    %[1]s moltservice create-verify-task-from-fetch --id 4729609065539386798
+`, os.Args[0])
+}
+
+func moltserviceGetVerifyTasksUsage() {
+	fmt.Fprintf(os.Stderr, `%[1]s [flags] moltservice get-verify-tasks
+
+GetVerifyTasks implements get_verify_tasks.
+
+Example:
+    %[1]s moltservice get-verify-tasks
 `, os.Args[0])
 }

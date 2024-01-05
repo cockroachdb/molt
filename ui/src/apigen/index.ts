@@ -12,5 +12,6 @@ export { FetchRun } from './models/FetchRun';
 export { FetchRunDetailed } from './models/FetchRunDetailed';
 export type { FetchStatsDetailed } from './models/FetchStatsDetailed';
 export type { Log } from './models/Log';
+export { VerifyRun } from './models/VerifyRun';
 
 export { MoltserviceService } from './services/MoltserviceService';

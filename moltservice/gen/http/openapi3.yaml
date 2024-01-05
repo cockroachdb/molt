@@ -32,16 +32,6 @@ paths:
                                       name: jyang pg to crdb
                                       started_at: 1704233519
                                       status: IN_PROGRESS
-                                    - finished_at: 1704233521
-                                      id: 1704233521
-                                      name: jyang pg to crdb
-                                      started_at: 1704233519
-                                      status: IN_PROGRESS
-                                    - finished_at: 1704233521
-                                      id: 1704233521
-                                      name: jyang pg to crdb
-                                      started_at: 1704233519
-                                      status: IN_PROGRESS
                             example:
                                 - finished_at: 1704233521
                                   id: 1704233521
@@ -93,9 +83,9 @@ paths:
                         application/json:
                             schema:
                                 type: integer
-                                example: 3120370108600835844
+                                example: 5809114746007290805
                                 format: int64
-                            example: 1788448450945662325
+                            example: 7253377208757095973
     /api/v1/fetch/{id}:
         get:
             tags:
@@ -110,9 +100,9 @@ paths:
                   schema:
                     type: integer
                     description: id for the fetch task
-                    example: 4061375660015501511
+                    example: 7883948076744883087
                     format: int64
-                  example: 5809114746007290805
+                  example: 6541387614302834302
             responses:
                 "200":
                     description: OK response.
@@ -145,6 +135,19 @@ paths:
                                     num_tables: 5
                                     percent_complete: jyang pg to crdb
                                 status: IN_PROGRESS
+                                verify_runs:
+                                    - fetch_id: 1704233521
+                                      finished_at: 1704233521
+                                      id: 1704233521
+                                      name: jyang pg to crdb
+                                      started_at: 1704233519
+                                      status: IN_PROGRESS
+                                    - fetch_id: 1704233521
+                                      finished_at: 1704233521
+                                      id: 1704233521
+                                      name: jyang pg to crdb
+                                      started_at: 1704233519
+                                      status: IN_PROGRESS
     /api/v1/fetch/{id}/verify:
         post:
             tags:
@@ -159,9 +162,9 @@ paths:
                   schema:
                     type: integer
                     description: id for the fetch task
-                    example: 8529004787339204778
+                    example: 8908982799152761463
                     format: int64
-                  example: 434544346317199182
+                  example: 5724426082548929869
             responses:
                 "200":
                     description: OK response.
@@ -169,9 +172,50 @@ paths:
                         application/json:
                             schema:
                                 type: integer
-                                example: 2667229789776596173
+                                example: 4818726975252904576
                                 format: int64
-                            example: 7153356925827642199
+                            example: 5164176280402395310
+    /api/v1/verify:
+        get:
+            tags:
+                - moltservice
+            summary: get_verify_tasks moltservice
+            operationId: moltservice#get_verify_tasks
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/VerifyRun'
+                                example:
+                                    - fetch_id: 1704233521
+                                      finished_at: 1704233521
+                                      id: 1704233521
+                                      name: jyang pg to crdb
+                                      started_at: 1704233519
+                                      status: IN_PROGRESS
+                                    - fetch_id: 1704233521
+                                      finished_at: 1704233521
+                                      id: 1704233521
+                                      name: jyang pg to crdb
+                                      started_at: 1704233519
+                                      status: IN_PROGRESS
+                            example:
+                                - fetch_id: 1704233521
+                                  finished_at: 1704233521
+                                  id: 1704233521
+                                  name: jyang pg to crdb
+                                  started_at: 1704233519
+                                  status: IN_PROGRESS
+                                - fetch_id: 1704233521
+                                  finished_at: 1704233521
+                                  id: 1704233521
+                                  name: jyang pg to crdb
+                                  started_at: 1704233519
+                                  status: IN_PROGRESS
     /docs.html:
         get:
             tags:
@@ -426,10 +470,37 @@ components:
                         - IN_PROGRESS
                         - SUCCESS
                         - FAILURE
+                verify_runs:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VerifyRun'
+                    description: verify runs linked to fetch runs
+                    example:
+                        - fetch_id: 1704233521
+                          finished_at: 1704233521
+                          id: 1704233521
+                          name: jyang pg to crdb
+                          started_at: 1704233519
+                          status: IN_PROGRESS
+                        - fetch_id: 1704233521
+                          finished_at: 1704233521
+                          id: 1704233521
+                          name: jyang pg to crdb
+                          started_at: 1704233519
+                          status: IN_PROGRESS
+                        - fetch_id: 1704233521
+                          finished_at: 1704233521
+                          id: 1704233521
+                          name: jyang pg to crdb
+                          started_at: 1704233519
+                          status: IN_PROGRESS
             example:
                 finished_at: 1704233521
                 id: 1704233521
                 logs:
+                    - level: INFO
+                      message: This is a log message
+                      timestamp: 1704233519
                     - level: INFO
                       message: This is a log message
                       timestamp: 1704233519
@@ -448,6 +519,31 @@ components:
                     num_tables: 5
                     percent_complete: jyang pg to crdb
                 status: IN_PROGRESS
+                verify_runs:
+                    - fetch_id: 1704233521
+                      finished_at: 1704233521
+                      id: 1704233521
+                      name: jyang pg to crdb
+                      started_at: 1704233519
+                      status: IN_PROGRESS
+                    - fetch_id: 1704233521
+                      finished_at: 1704233521
+                      id: 1704233521
+                      name: jyang pg to crdb
+                      started_at: 1704233519
+                      status: IN_PROGRESS
+                    - fetch_id: 1704233521
+                      finished_at: 1704233521
+                      id: 1704233521
+                      name: jyang pg to crdb
+                      started_at: 1704233519
+                      status: IN_PROGRESS
+                    - fetch_id: 1704233521
+                      finished_at: 1704233521
+                      id: 1704233521
+                      name: jyang pg to crdb
+                      started_at: 1704233519
+                      status: IN_PROGRESS
             required:
                 - id
                 - name
@@ -455,6 +551,7 @@ components:
                 - started_at
                 - finished_at
                 - logs
+                - verify_runs
         FetchStatsDetailed:
             type: object
             properties:
@@ -538,6 +635,55 @@ components:
                 - timestamp
                 - level
                 - message
+        VerifyRun:
+            type: object
+            properties:
+                fetch_id:
+                    type: integer
+                    description: ID of the associated fetch run
+                    example: 1704233521
+                    format: int64
+                finished_at:
+                    type: integer
+                    description: finished at time
+                    example: 1704233521
+                    format: int64
+                id:
+                    type: integer
+                    description: ID of the run
+                    example: 1704233521
+                    format: int64
+                name:
+                    type: string
+                    description: name of the run
+                    example: jyang pg to crdb
+                started_at:
+                    type: integer
+                    description: started at time
+                    example: 1704233519
+                    format: int64
+                status:
+                    type: string
+                    description: status of the run
+                    example: IN_PROGRESS
+                    enum:
+                        - IN_PROGRESS
+                        - SUCCESS
+                        - FAILURE
+            example:
+                fetch_id: 1704233521
+                finished_at: 1704233521
+                id: 1704233521
+                name: jyang pg to crdb
+                started_at: 1704233519
+                status: IN_PROGRESS
+            required:
+                - id
+                - name
+                - status
+                - started_at
+                - finished_at
+                - fetch_id
 tags:
     - name: moltservice
       description: MOLT service performs operations using MOLT tooling

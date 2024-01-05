@@ -21,6 +21,8 @@ type Service interface {
 	GetSpecificFetchTask(context.Context, *GetSpecificFetchTaskPayload) (res *FetchRunDetailed, err error)
 	// CreateVerifyTaskFromFetch implements create_verify_task_from_fetch.
 	CreateVerifyTaskFromFetch(context.Context, *CreateVerifyTaskFromFetchPayload) (res VerifyAttemptID, err error)
+	// GetVerifyTasks implements get_verify_tasks.
+	GetVerifyTasks(context.Context) (res []*VerifyRun, err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -31,7 +33,7 @@ const ServiceName = "moltservice"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [4]string{"create_fetch_task", "get_fetch_tasks", "get_specific_fetch_task", "create_verify_task_from_fetch"}
+var MethodNames = [5]string{"create_fetch_task", "get_fetch_tasks", "get_specific_fetch_task", "create_verify_task_from_fetch", "get_verify_tasks"}
 
 // CreateFetchPayload is the payload type of the moltservice service
 // create_fetch_task method.
@@ -124,6 +126,8 @@ type FetchRunDetailed struct {
 	Stats *FetchStatsDetailed
 	// logs for fetch run
 	Logs []*Log
+	// verify runs linked to fetch runs
+	VerifyRuns []*VerifyRun
 }
 
 type FetchStatsDetailed struct {
@@ -164,3 +168,18 @@ type Log struct {
 // VerifyAttemptID is the result type of the moltservice service
 // create_verify_task_from_fetch method.
 type VerifyAttemptID int
+
+type VerifyRun struct {
+	// ID of the run
+	ID int
+	// name of the run
+	Name string
+	// status of the run
+	Status string
+	// started at time
+	StartedAt int
+	// finished at time
+	FinishedAt int
+	// ID of the associated fetch run
+	FetchID int
+}

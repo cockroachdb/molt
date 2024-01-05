@@ -83,7 +83,13 @@ type GetSpecificFetchTaskResponseBody struct {
 	Stats *FetchStatsDetailedResponseBody `form:"stats,omitempty" json:"stats,omitempty" xml:"stats,omitempty"`
 	// logs for fetch run
 	Logs []*LogResponseBody `form:"logs" json:"logs" xml:"logs"`
+	// verify runs linked to fetch runs
+	VerifyRuns []*VerifyRunResponseBody `form:"verify_runs" json:"verify_runs" xml:"verify_runs"`
 }
+
+// GetVerifyTasksResponseBody is the type of the "moltservice" service
+// "get_verify_tasks" endpoint HTTP response body.
+type GetVerifyTasksResponseBody []*VerifyRunResponse
 
 // FetchRunResponse is used to define fields on response body types.
 type FetchRunResponse struct {
@@ -130,6 +136,38 @@ type LogResponseBody struct {
 	Message string `form:"message" json:"message" xml:"message"`
 }
 
+// VerifyRunResponseBody is used to define fields on response body types.
+type VerifyRunResponseBody struct {
+	// ID of the run
+	ID int `form:"id" json:"id" xml:"id"`
+	// name of the run
+	Name string `form:"name" json:"name" xml:"name"`
+	// status of the run
+	Status string `form:"status" json:"status" xml:"status"`
+	// started at time
+	StartedAt int `form:"started_at" json:"started_at" xml:"started_at"`
+	// finished at time
+	FinishedAt int `form:"finished_at" json:"finished_at" xml:"finished_at"`
+	// ID of the associated fetch run
+	FetchID int `form:"fetch_id" json:"fetch_id" xml:"fetch_id"`
+}
+
+// VerifyRunResponse is used to define fields on response body types.
+type VerifyRunResponse struct {
+	// ID of the run
+	ID int `form:"id" json:"id" xml:"id"`
+	// name of the run
+	Name string `form:"name" json:"name" xml:"name"`
+	// status of the run
+	Status string `form:"status" json:"status" xml:"status"`
+	// started at time
+	StartedAt int `form:"started_at" json:"started_at" xml:"started_at"`
+	// finished at time
+	FinishedAt int `form:"finished_at" json:"finished_at" xml:"finished_at"`
+	// ID of the associated fetch run
+	FetchID int `form:"fetch_id" json:"fetch_id" xml:"fetch_id"`
+}
+
 // NewGetFetchTasksResponseBody builds the HTTP response body from the result
 // of the "get_fetch_tasks" endpoint of the "moltservice" service.
 func NewGetFetchTasksResponseBody(res []*moltservice.FetchRun) GetFetchTasksResponseBody {
@@ -161,6 +199,24 @@ func NewGetSpecificFetchTaskResponseBody(res *moltservice.FetchRunDetailed) *Get
 		}
 	} else {
 		body.Logs = []*LogResponseBody{}
+	}
+	if res.VerifyRuns != nil {
+		body.VerifyRuns = make([]*VerifyRunResponseBody, len(res.VerifyRuns))
+		for i, val := range res.VerifyRuns {
+			body.VerifyRuns[i] = marshalMoltserviceVerifyRunToVerifyRunResponseBody(val)
+		}
+	} else {
+		body.VerifyRuns = []*VerifyRunResponseBody{}
+	}
+	return body
+}
+
+// NewGetVerifyTasksResponseBody builds the HTTP response body from the result
+// of the "get_verify_tasks" endpoint of the "moltservice" service.
+func NewGetVerifyTasksResponseBody(res []*moltservice.VerifyRun) GetVerifyTasksResponseBody {
+	body := make([]*VerifyRunResponse, len(res))
+	for i, val := range res {
+		body[i] = marshalMoltserviceVerifyRunToVerifyRunResponse(val)
 	}
 	return body
 }

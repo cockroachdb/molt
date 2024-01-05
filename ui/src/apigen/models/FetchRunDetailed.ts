@@ -5,6 +5,7 @@
 
 import type { FetchStatsDetailed } from './FetchStatsDetailed';
 import type { Log } from './Log';
+import type { VerifyRun } from './VerifyRun';
 
 export type FetchRunDetailed = {
     /**
@@ -32,6 +33,10 @@ export type FetchRunDetailed = {
      * status of the fetch run
      */
     status: FetchRunDetailed.status;
+    /**
+     * verify runs linked to fetch runs
+     */
+    verify_runs: Array<VerifyRun>;
 };
 
 export namespace FetchRunDetailed {

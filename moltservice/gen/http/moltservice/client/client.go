@@ -33,6 +33,10 @@ type Client struct {
 	// the create_verify_task_from_fetch endpoint.
 	CreateVerifyTaskFromFetchDoer goahttp.Doer
 
+	// GetVerifyTasks Doer is the HTTP client used to make requests to the
+	// get_verify_tasks endpoint.
+	GetVerifyTasksDoer goahttp.Doer
+
 	// CORS Doer is the HTTP client used to make requests to the  endpoint.
 	CORSDoer goahttp.Doer
 
@@ -60,6 +64,7 @@ func NewClient(
 		GetFetchTasksDoer:             doer,
 		GetSpecificFetchTaskDoer:      doer,
 		CreateVerifyTaskFromFetchDoer: doer,
+		GetVerifyTasksDoer:            doer,
 		CORSDoer:                      doer,
 		RestoreResponseBody:           restoreBody,
 		scheme:                        scheme,
@@ -145,6 +150,25 @@ func (c *Client) CreateVerifyTaskFromFetch() goa.Endpoint {
 		resp, err := c.CreateVerifyTaskFromFetchDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("moltservice", "create_verify_task_from_fetch", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// GetVerifyTasks returns an endpoint that makes HTTP requests to the
+// moltservice service get_verify_tasks server.
+func (c *Client) GetVerifyTasks() goa.Endpoint {
+	var (
+		decodeResponse = DecodeGetVerifyTasksResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildGetVerifyTasksRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.GetVerifyTasksDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("moltservice", "get_verify_tasks", err)
 		}
 		return decodeResponse(resp)
 	}

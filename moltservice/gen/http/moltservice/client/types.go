@@ -83,7 +83,13 @@ type GetSpecificFetchTaskResponseBody struct {
 	Stats *FetchStatsDetailedResponseBody `form:"stats,omitempty" json:"stats,omitempty" xml:"stats,omitempty"`
 	// logs for fetch run
 	Logs []*LogResponseBody `form:"logs,omitempty" json:"logs,omitempty" xml:"logs,omitempty"`
+	// verify runs linked to fetch runs
+	VerifyRuns []*VerifyRunResponseBody `form:"verify_runs,omitempty" json:"verify_runs,omitempty" xml:"verify_runs,omitempty"`
 }
+
+// GetVerifyTasksResponseBody is the type of the "moltservice" service
+// "get_verify_tasks" endpoint HTTP response body.
+type GetVerifyTasksResponseBody []*VerifyRunResponse
 
 // FetchRunResponse is used to define fields on response body types.
 type FetchRunResponse struct {
@@ -128,6 +134,38 @@ type LogResponseBody struct {
 	Level *string `form:"level,omitempty" json:"level,omitempty" xml:"level,omitempty"`
 	// message for the logging
 	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+}
+
+// VerifyRunResponseBody is used to define fields on response body types.
+type VerifyRunResponseBody struct {
+	// ID of the run
+	ID *int `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// name of the run
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// status of the run
+	Status *string `form:"status,omitempty" json:"status,omitempty" xml:"status,omitempty"`
+	// started at time
+	StartedAt *int `form:"started_at,omitempty" json:"started_at,omitempty" xml:"started_at,omitempty"`
+	// finished at time
+	FinishedAt *int `form:"finished_at,omitempty" json:"finished_at,omitempty" xml:"finished_at,omitempty"`
+	// ID of the associated fetch run
+	FetchID *int `form:"fetch_id,omitempty" json:"fetch_id,omitempty" xml:"fetch_id,omitempty"`
+}
+
+// VerifyRunResponse is used to define fields on response body types.
+type VerifyRunResponse struct {
+	// ID of the run
+	ID *int `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// name of the run
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// status of the run
+	Status *string `form:"status,omitempty" json:"status,omitempty" xml:"status,omitempty"`
+	// started at time
+	StartedAt *int `form:"started_at,omitempty" json:"started_at,omitempty" xml:"started_at,omitempty"`
+	// finished at time
+	FinishedAt *int `form:"finished_at,omitempty" json:"finished_at,omitempty" xml:"finished_at,omitempty"`
+	// ID of the associated fetch run
+	FetchID *int `form:"fetch_id,omitempty" json:"fetch_id,omitempty" xml:"fetch_id,omitempty"`
 }
 
 // NewCreateFetchTaskRequestBody builds the HTTP request body from the payload
@@ -195,6 +233,10 @@ func NewGetSpecificFetchTaskFetchRunDetailedOK(body *GetSpecificFetchTaskRespons
 	for i, val := range body.Logs {
 		v.Logs[i] = unmarshalLogResponseBodyToMoltserviceLog(val)
 	}
+	v.VerifyRuns = make([]*moltservice.VerifyRun, len(body.VerifyRuns))
+	for i, val := range body.VerifyRuns {
+		v.VerifyRuns[i] = unmarshalVerifyRunResponseBodyToMoltserviceVerifyRun(val)
+	}
 
 	return v
 }
@@ -203,6 +245,17 @@ func NewGetSpecificFetchTaskFetchRunDetailedOK(body *GetSpecificFetchTaskRespons
 // "create_verify_task_from_fetch" endpoint result from a HTTP "OK" response.
 func NewCreateVerifyTaskFromFetchVerifyAttemptIDOK(body int) moltservice.VerifyAttemptID {
 	v := moltservice.VerifyAttemptID(body)
+
+	return v
+}
+
+// NewGetVerifyTasksVerifyRunOK builds a "moltservice" service
+// "get_verify_tasks" endpoint result from a HTTP "OK" response.
+func NewGetVerifyTasksVerifyRunOK(body []*VerifyRunResponse) []*moltservice.VerifyRun {
+	v := make([]*moltservice.VerifyRun, len(body))
+	for i, val := range body {
+		v[i] = unmarshalVerifyRunResponseToMoltserviceVerifyRun(val)
+	}
 
 	return v
 }
@@ -228,6 +281,9 @@ func ValidateGetSpecificFetchTaskResponseBody(body *GetSpecificFetchTaskResponse
 	if body.Logs == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("logs", "body"))
 	}
+	if body.VerifyRuns == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("verify_runs", "body"))
+	}
 	if body.Status != nil {
 		if !(*body.Status == "IN_PROGRESS" || *body.Status == "SUCCESS" || *body.Status == "FAILURE") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.status", *body.Status, []any{"IN_PROGRESS", "SUCCESS", "FAILURE"}))
@@ -241,6 +297,13 @@ func ValidateGetSpecificFetchTaskResponseBody(body *GetSpecificFetchTaskResponse
 	for _, e := range body.Logs {
 		if e != nil {
 			if err2 := ValidateLogResponseBody(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	for _, e := range body.VerifyRuns {
+		if e != nil {
+			if err2 := ValidateVerifyRunResponseBody(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
@@ -313,6 +376,63 @@ func ValidateLogResponseBody(body *LogResponseBody) (err error) {
 	}
 	if body.Message == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	return
+}
+
+// ValidateVerifyRunResponseBody runs the validations defined on
+// verify_runResponseBody
+func ValidateVerifyRunResponseBody(body *VerifyRunResponseBody) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Status == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("status", "body"))
+	}
+	if body.StartedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("started_at", "body"))
+	}
+	if body.FinishedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("finished_at", "body"))
+	}
+	if body.FetchID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fetch_id", "body"))
+	}
+	if body.Status != nil {
+		if !(*body.Status == "IN_PROGRESS" || *body.Status == "SUCCESS" || *body.Status == "FAILURE") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.status", *body.Status, []any{"IN_PROGRESS", "SUCCESS", "FAILURE"}))
+		}
+	}
+	return
+}
+
+// ValidateVerifyRunResponse runs the validations defined on verify_runResponse
+func ValidateVerifyRunResponse(body *VerifyRunResponse) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Status == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("status", "body"))
+	}
+	if body.StartedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("started_at", "body"))
+	}
+	if body.FinishedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("finished_at", "body"))
+	}
+	if body.FetchID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fetch_id", "body"))
+	}
+	if body.Status != nil {
+		if !(*body.Status == "IN_PROGRESS" || *body.Status == "SUCCESS" || *body.Status == "FAILURE") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.status", *body.Status, []any{"IN_PROGRESS", "SUCCESS", "FAILURE"}))
+		}
 	}
 	return
 }

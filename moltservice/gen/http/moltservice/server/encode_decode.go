@@ -145,6 +145,18 @@ func DecodeCreateVerifyTaskFromFetchRequest(mux goahttp.Muxer, decoder func(*htt
 	}
 }
 
+// EncodeGetVerifyTasksResponse returns an encoder for responses returned by
+// the moltservice get_verify_tasks endpoint.
+func EncodeGetVerifyTasksResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.([]*moltservice.VerifyRun)
+		enc := encoder(ctx, w)
+		body := NewGetVerifyTasksResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
 // marshalMoltserviceFetchRunToFetchRunResponse builds a value of type
 // *FetchRunResponse from a value of type *moltservice.FetchRun.
 func marshalMoltserviceFetchRunToFetchRunResponse(v *moltservice.FetchRun) *FetchRunResponse {
@@ -187,6 +199,36 @@ func marshalMoltserviceLogToLogResponseBody(v *moltservice.Log) *LogResponseBody
 		Timestamp: v.Timestamp,
 		Level:     v.Level,
 		Message:   v.Message,
+	}
+
+	return res
+}
+
+// marshalMoltserviceVerifyRunToVerifyRunResponseBody builds a value of type
+// *VerifyRunResponseBody from a value of type *moltservice.VerifyRun.
+func marshalMoltserviceVerifyRunToVerifyRunResponseBody(v *moltservice.VerifyRun) *VerifyRunResponseBody {
+	res := &VerifyRunResponseBody{
+		ID:         v.ID,
+		Name:       v.Name,
+		Status:     v.Status,
+		StartedAt:  v.StartedAt,
+		FinishedAt: v.FinishedAt,
+		FetchID:    v.FetchID,
+	}
+
+	return res
+}
+
+// marshalMoltserviceVerifyRunToVerifyRunResponse builds a value of type
+// *VerifyRunResponse from a value of type *moltservice.VerifyRun.
+func marshalMoltserviceVerifyRunToVerifyRunResponse(v *moltservice.VerifyRun) *VerifyRunResponse {
+	res := &VerifyRunResponse{
+		ID:         v.ID,
+		Name:       v.Name,
+		Status:     v.Status,
+		StartedAt:  v.StartedAt,
+		FinishedAt: v.FinishedAt,
+		FetchID:    v.FetchID,
 	}
 
 	return res

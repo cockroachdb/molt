@@ -329,7 +329,14 @@ func (m *moltService) GetSpecificFetchTask(
 		return nil, err
 	}
 
+	verifyRuns, err := m.getVerifyTasks()
+	if err != nil {
+		return nil, err
+	}
+
 	runResp := run.mapToDetailedResponse(stats, logLines)
+	runResp.VerifyRuns = verifyRuns
+
 	return runResp, nil
 }
 

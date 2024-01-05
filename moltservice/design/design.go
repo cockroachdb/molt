@@ -97,6 +97,14 @@ var _ = Service("moltservice", func() {
 		Result(VerifyAttemptID)
 	})
 
+	Method("get_verify_tasks", func() {
+		HTTP(func() {
+			GET(VerifyBaseAPIPath)
+		})
+
+		Result(ArrayOf(VerifyRun))
+	})
+
 	// OpenAPI spec.
 	Files("/openapi.json", "./gen/http/openapi.json")
 	// RapiDoc UI.

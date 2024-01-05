@@ -279,6 +279,50 @@ var Log = Type("log", func() {
 	)
 })
 
+var VerifyRun = Type("verify_run", func() {
+	Field(1, "id", Int, "ID of the run",
+		func() {
+			Example(1704233521)
+		},
+	)
+
+	Field(2, "name", String, "name of the run", func() {
+		Example("jyang pg to crdb")
+	})
+
+	Field(3, "status", String, "status of the run", func() {
+		Enum("IN_PROGRESS", "SUCCESS", "FAILURE")
+		Example("IN_PROGRESS")
+	})
+
+	Field(4, "started_at", Int, "started at time",
+		func() {
+			Example(1704233519)
+		},
+	)
+
+	Field(5, "finished_at", Int, "finished at time",
+		func() {
+			Example(1704233521)
+		},
+	)
+
+	Field(6, "fetch_id", Int, "ID of the associated fetch run",
+		func() {
+			Example(1704233521)
+		},
+	)
+
+	Required(
+		"id",
+		"name",
+		"status",
+		"started_at",
+		"finished_at",
+		"fetch_id",
+	)
+})
+
 var FetchRunDetailed = Type("fetch_run_detailed", func() {
 	Field(1, "id", Int, "ID of the run",
 		func() {
@@ -310,6 +354,8 @@ var FetchRunDetailed = Type("fetch_run_detailed", func() {
 
 	Field(7, "logs", ArrayOf(Log), "logs for fetch run")
 
+	Field(8, "verify_runs", ArrayOf(VerifyRun), "verify runs linked to fetch runs")
+
 	Required(
 		"id",
 		"name",
@@ -317,6 +363,7 @@ var FetchRunDetailed = Type("fetch_run_detailed", func() {
 		"started_at",
 		"finished_at",
 		"logs",
+		"verify_runs",
 	)
 })
 
