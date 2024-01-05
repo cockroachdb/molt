@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+#
+# -u: we want the variables to be properly assigned.
+# -o pipefail: we want to test the result of pipes.
+# No -e because we have failing commands and that's OK.
+set -euo pipefail
+
+if [[ "${2-}" = "message" ]]; then
+  # This git command is non-interactive so it will not filter out any comments
+  # we add. There is nothing more for us to do.
+  exit 0
+fi
+
+give_up() {
+  echo "prepare-commit-msg: $@" >&2
+  exit 0  # exit with successful status to allow the commit to proceed
+}
+
+if ! test -e "$1" -o -z "$1"; then
+	give_up "$1: commit message file does not exist or is empty"
+fi
+
+# Git can be configured to use any character as the comment indicator. See the
+# core.commentChar Git option. We can deduce what comment character is in effect
+# by looking for text that we know will be preceded by the comment character.
+if ! cchar=$(grep "^. Please enter the commit message for your changes." "$1" | head -c1); then
+  give_up "unable to determine comment char"
+fi
+
+
+sed_script=''
+
+if ! tempfile=$(mktemp); then
+  give_up "failed to create temporary file"
+fi
+trap "rm -f $tempfile" EXIT
+
+# Add an explicit "Release note: None" if no release note was specified.
+if ! grep -q '^Release note' "$1"; then
+	sed_script+="/$cchar Please enter the commit message for your changes./i\\
+${cchar}Release note: None\\
+${cchar}              ^-- no user-visible change\\
+${cchar}Release note (bug fix): \\
+
+;
+"
+fi
+
+
+if ! sed "$sed_script" "$1" > "$tempfile"; then
+  give_up "unable to inject commit message recommendations"
+fi
+
+if ! mv "$tempfile" "$1"; then
+  give_up "failed overwriting commit message file"
+fi
