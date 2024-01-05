@@ -233,7 +233,7 @@ func (m *moltService) CreateFetchTask(
 			m.logger.Err(err).Send()
 		}
 
-		out, err := exec.Command(MOLTCommand, args...).Output()
+		out, err := exec.Command(MOLTCommand, args...).CombinedOutput()
 
 		// Update with the latest details.
 		fetchDetail.LogTimestamp = time.Now()
@@ -243,9 +243,13 @@ func (m *moltService) CreateFetchTask(
 		if err != nil {
 			fetchDetail.Status = FetchStatusFailure
 			m.logger.Err(err).Send()
-		}
-		if m.debugEnabled {
-			fmt.Println(string(out))
+			errMessage := string(out)
+			log := Log{
+				Time:    time.Now().Format(time.RFC3339),
+				Level:   "error",
+				Message: errMessage,
+			}
+			writeDetail(log, payload.LogFile)
 		}
 
 		// Write the ending status to the file.

@@ -95,7 +95,7 @@ func (m *moltService) CreateVerifyTaskFromFetch(
 			m.logger.Err(err).Send()
 		}
 
-		out, err := exec.Command(MOLTCommand, args...).Output()
+		out, err := exec.Command(MOLTCommand, args...).CombinedOutput()
 
 		// Update with the latest details.
 		verifyDetail.LogTimestamp = time.Now()
@@ -105,10 +105,13 @@ func (m *moltService) CreateVerifyTaskFromFetch(
 		if err != nil {
 			verifyDetail.Status = VerifyStatusFailure
 			m.logger.Err(err).Send()
-		}
-
-		if m.debugEnabled {
-			fmt.Println(string(out))
+			errMessage := string(out)
+			log := Log{
+				Time:    time.Now().Format(time.RFC3339),
+				Level:   "error",
+				Message: errMessage,
+			}
+			writeDetail(log, verifyLogFile)
 		}
 
 		// Write the ending status to the file.
