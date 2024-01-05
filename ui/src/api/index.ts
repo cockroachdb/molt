@@ -46,6 +46,10 @@ const getStoreFromType = (store: IntermediateStore): CreateFetchTaskRequestBody.
     return CreateFetchTaskRequestBody.store.NONE
 }
 
+export const createVerifyFromFetchTask = (fetchId: number) => {
+    return MoltserviceService.moltserviceCreateVerifyTaskFromFetch(fetchId);
+}
+
 export const createFetchTask = (task: TaskFormState) => {
     const reqBody: CreateFetchTaskRequestBody = {
         bucket_name: task.bucketName,

@@ -130,13 +130,21 @@ func (m *moltService) CreateVerifyTaskFromFetch(
 	return verifyId, nil
 }
 
-func (m *moltService) getVerifyTasks() (res []*moltservice.VerifyRun, err error) {
+func (m *moltService) getVerifyTasks(
+	idList []moltservice.VerifyAttemptID, canBeEmpty bool,
+) (res []*moltservice.VerifyRun, err error) {
+	orderedIdList := idList
+
+	if len(idList) == 0 && !canBeEmpty {
+		orderedIdList = m.verifyState.orderedIdList
+	}
+
 	m.verifyState.Lock()
 	defer m.verifyState.Unlock()
 	verifyRuns := []*moltservice.VerifyRun{}
 
-	for i := len(m.verifyState.orderedIdList) - 1; i >= 0; i-- {
-		id := m.verifyState.orderedIdList[i]
+	for i := len(orderedIdList) - 1; i >= 0; i-- {
+		id := orderedIdList[i]
 		run, ok := m.verifyState.idToRun[id]
 		if !ok {
 			return nil, errors.Newf("failed to get fetch run with id %s", id)
@@ -152,7 +160,7 @@ func (m *moltService) getVerifyTasks() (res []*moltservice.VerifyRun, err error)
 func (m *moltService) GetVerifyTasks(
 	ctx context.Context,
 ) (res []*moltservice.VerifyRun, err error) {
-	return m.getVerifyTasks()
+	return m.getVerifyTasks([]moltservice.VerifyAttemptID{}, false /*canBeEmpty*/)
 }
 
 // TODO: get detailed verify along with all errors, mismatches, etc.

@@ -14,20 +14,20 @@ import { getFetchTasks } from '../api';
 import { formatSecondsToHHMMSS } from '../utils/dates';
 
 
-type FetchStatus = "In Progress" | "Ready for Review" | "Succeeded" | "Failed" | "Unknown"
+export type Status = "In Progress" | "Ready for Review" | "Succeeded" | "Failed" | "Unknown"
 
 export interface FetchRun {
     key: string;
     id: string;
     name: string;
-    status: FetchStatus;
+    status: Status;
     duration: string;
     startedAt: string;
     finishedAt: string;
     errors: number;
 }
 
-const getChipFromStatus = (status: FetchStatus) => {
+export const getChipFromStatus = (status: Status) => {
     switch (status) {
         case "Succeeded":
             return <Chip size="small" label={status} variant="success" />
@@ -88,7 +88,7 @@ const columns: TableColumnProps<FetchRun>[] = [
     },
 ];
 
-const getFetchStatusFromString = (input: string): FetchStatus => {
+export const getStatusFromString = (input: string): Status => {
     switch (input) {
         case "IN_PROGRESS":
             return "In Progress"
@@ -119,7 +119,7 @@ export default function FetchList() {
                         key: `${item.id.toString()}-${crypto.randomUUID()}`,
                         id: item.id.toString(),
                         name: item.name,
-                        status: getFetchStatusFromString(item.status),
+                        status: getStatusFromString(item.status),
                         duration: formatSecondsToHHMMSS(item.finished_at - item.started_at),
                         startedAt: startedAtTs.toISOString(),
                         finishedAt: finishedAtTs.toISOString(),

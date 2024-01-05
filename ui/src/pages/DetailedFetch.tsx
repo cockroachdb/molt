@@ -4,21 +4,23 @@ import {
     Typography,
     Box,
     Button,
+    Link,
     Paper,
     Chip,
     SelectChangeEvent,
     LinearProgress
 } from '@mui/material';
 import { Search, ChevronLeft } from '@material-ui/icons';
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link as RouterLink } from "react-router-dom";
 import SimpleTable, { TableColumnProps } from '../components/tables/Table';
-import { neutral } from '../styles/colors';
+import { neutral, info } from '../styles/colors';
 import { fontWeights } from '../styles/fonts';
 import { DEFAULT_SPACING } from '../styles/theme';
 import { InputGroup, Switch } from '../components';
-import { getSpecificFetchTask } from '../api';
+import { createVerifyFromFetchTask, getSpecificFetchTask } from '../api';
 import { FetchRun, FetchRunDetailed } from '../apigen';
-import { formatNetDurationSeconds } from '../utils/dates';
+import { formatNetDurationSeconds, formatSecondsToHHMMSS } from '../utils/dates';
+import { Status, getChipFromStatus, getStatusFromString } from './FetchList';
 
 const POLL_INTERVAL_MS = 1000;
 export type LogLevel = "info" | "warning" | "danger";
@@ -46,6 +48,17 @@ export interface FetchStats {
     },
 }
 
+export interface VerifyRun {
+    key: string;
+    id: string;
+    name: string;
+    status: Status;
+    duration: string;
+    startedAt: string;
+    finishedAt: string;
+    errors: number;
+}
+
 export interface FetchLog {
     key: string;
     id: string;
@@ -53,6 +66,33 @@ export interface FetchLog {
     createdAt: string;
     message: string;
 }
+
+const verifyColumns: TableColumnProps<VerifyRun>[] = [
+    {
+        id: "name",
+        title: "Name",
+        cellStyle: { width: "40%" },
+        render: (record, _) => {
+            return <Link sx={{
+                color: info[3]
+            }} underline='none' component={RouterLink} to={`/verify/${record.id}`}>{record.name}</Link>
+        }
+    },
+    {
+        id: "status",
+        title: "Status",
+        render: (record, _) => {
+            return getChipFromStatus(record.status);
+        }
+    },
+    {
+        id: "startedAt",
+        title: "Started At",
+        render: (record, _) => {
+            return record.startedAt;
+        }
+    },
+];
 
 const createColumns = (showPrettyPrint: boolean): TableColumnProps<FetchLog>[] => {
     return [
@@ -114,6 +154,8 @@ export default function DetailedFetch() {
     const [showPrettyPrint, setShowPrettyPrint] = useState(false);
     const [status, setStatus] = useState("");
     const [initialLogs, setInitialLogs] = useState<FetchLog[]>([]);
+    const [verifyRuns, setVerifyRuns] = useState<VerifyRun[]>([]);
+    const [fetchName, setFetchName] = useState(fetchId);
     const [logs, setLogs] = useState<FetchLog[]>([]);
     const [stats, setStats] = useState<FetchStats>({});
     const navigate = useNavigate();
@@ -130,6 +172,7 @@ export default function DetailedFetch() {
                     setIsLoading(false);
                 }
 
+                setFetchName(data.name);
                 setStatus(data.status);
 
                 const resLogs: FetchLog[] = data.logs.map(item => {
@@ -175,6 +218,24 @@ export default function DetailedFetch() {
                 }
 
                 setStats(resStats);
+
+                // Set verify runs
+                const mappedVerifyRuns: VerifyRun[] = data.verify_runs.map(item => {
+                    const startedAtTs = new Date(item.started_at * 1000);
+                    const finishedAtTs = new Date(item.finished_at * 1000);
+
+                    return {
+                        key: `${item.id.toString()}-${crypto.randomUUID()}`,
+                        id: item.id.toString(),
+                        name: item.name,
+                        status: getStatusFromString(item.status),
+                        duration: formatSecondsToHHMMSS(item.finished_at - item.started_at),
+                        startedAt: startedAtTs.toISOString(),
+                        finishedAt: finishedAtTs.toISOString(),
+                        errors: 0,
+                    }
+                });
+                setVerifyRuns(mappedVerifyRuns);
             } catch (e) {
                 console.error(e);
             }
@@ -230,31 +291,54 @@ export default function DetailedFetch() {
                     alignItems: "center",
                     gap: 2,
                 }}>
-                    <Typography sx={{ mb: 1 }} variant='h4'>Fetch Run {fetchId}</Typography>
+                    <Typography sx={{ mb: 1 }} variant='h4'>{fetchName}</Typography>
                     <Chip sx={{ width: 120 }} size="medium" variant={status === FetchRunDetailed.status.SUCCESS ? "success" : status === FetchRunDetailed.status.FAILURE ? "danger" : "info"} label={status} />
                 </Box>
                 {isLoading && <LinearProgress />}
-                {!isLoading && <Paper sx={{
-                    display: "flex",
-                    flexDirection: "row",
-                    justifyContent: "flex-start",
-                    p: 2,
-                }}>
-                    {Object.keys(stats).map(key => {
-                        const desc = stats[key as keyof typeof stats];
-                        return <Box key={key} sx={{ borderRight: `1px solid ${neutral[400]}`, px: 2 }}>
-                            <Typography color="primary" fontWeight={fontWeights["heaviest"]} variant='body1'>
-                                {desc?.data}
-                            </Typography>
-                            <Typography fontWeight={fontWeights["light"]} variant='body2'>
-                                {desc?.description}
-                            </Typography>
-                        </Box>
-                    })}
+                {!isLoading && <Paper sx={{ p: 2, }}>
+                    <Typography sx={{ mb: 1 }} variant='h6'>Stats</Typography>
+                    <Box sx={{
+                        display: "flex",
+                        flexDirection: "row",
+                        justifyContent: "flex-start",
+                    }}>
+                        {Object.keys(stats).map(key => {
+                            const desc = stats[key as keyof typeof stats];
+                            return <Box key={key} sx={{ borderLeft: `1px solid ${neutral[400]}`, px: 2 }}>
+                                <Typography color="primary" fontWeight={fontWeights["heaviest"]} variant='body1'>
+                                    {desc?.data}
+                                </Typography>
+                                <Typography fontWeight={fontWeights["light"]} variant='body2'>
+                                    {desc?.description}
+                                </Typography>
+                            </Box>
+                        })}
+                    </Box>
                 </Paper>}
                 <Paper sx={{
                     p: 2
                 }}>
+                    <Box sx={{
+                        display: "flex",
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                    }}>
+                        <Typography sx={{ mb: 1 }} variant='h6'>Verify Runs</Typography>
+                        {status === FetchRunDetailed.status.SUCCESS && <Button variant="contained" onClick={async () => {
+                            try {
+                                const val = await createVerifyFromFetchTask(Number(fetchId))
+                            } catch (e) {
+                                console.error(e);
+                            }
+                        }}>Run Verify</Button>}
+                    </Box>
+                    <SimpleTable containerStyle={{ width: "100%" }} columns={verifyColumns} dataSource={verifyRuns} elevated={false} />
+                </Paper>
+                <Paper sx={{
+                    p: 2
+                }}>
+                    <Typography sx={{ mb: 1 }} variant='h6'>Logs</Typography>
                     <Box sx={{
                         display: "flex",
                         flexDirection: "row",

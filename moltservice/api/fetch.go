@@ -329,7 +329,7 @@ func (m *moltService) GetSpecificFetchTask(
 		return nil, err
 	}
 
-	verifyRuns, err := m.getVerifyTasks()
+	verifyRuns, err := m.getVerifyTasks(run.VerifyIDs, true /*canBeEmpty*/)
 	if err != nil {
 		return nil, err
 	}
