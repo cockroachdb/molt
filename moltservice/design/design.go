@@ -105,6 +105,19 @@ var _ = Service("moltservice", func() {
 		Result(ArrayOf(VerifyRun))
 	})
 
+	Method("get_specific_verify_task", func() {
+		Payload(func() {
+			Field(1, "id", Int, "id for the verify task")
+			Required("id")
+		})
+
+		HTTP(func() {
+			GET(fmt.Sprintf("%s/{id}", VerifyBaseAPIPath))
+		})
+
+		Result(VerifyRunDetailed)
+	})
+
 	// OpenAPI spec.
 	Files("/openapi.json", "./gen/http/openapi.json")
 	// RapiDoc UI.

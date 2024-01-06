@@ -91,6 +91,27 @@ type GetSpecificFetchTaskResponseBody struct {
 // "get_verify_tasks" endpoint HTTP response body.
 type GetVerifyTasksResponseBody []*VerifyRunResponse
 
+// GetSpecificVerifyTaskResponseBody is the type of the "moltservice" service
+// "get_specific_verify_task" endpoint HTTP response body.
+type GetSpecificVerifyTaskResponseBody struct {
+	// ID of the run
+	ID int `form:"id" json:"id" xml:"id"`
+	// name of the run
+	Name string `form:"name" json:"name" xml:"name"`
+	// status of the run
+	Status string `form:"status" json:"status" xml:"status"`
+	// started at time
+	StartedAt int `form:"started_at" json:"started_at" xml:"started_at"`
+	// finished at time
+	FinishedAt int `form:"finished_at" json:"finished_at" xml:"finished_at"`
+	// ID of the associated fetch run
+	FetchID int `form:"fetch_id" json:"fetch_id" xml:"fetch_id"`
+	// verify statistics
+	Stats *VerifyStatsDetailedResponseBody `form:"stats" json:"stats" xml:"stats"`
+	// verify mismatches (i.e. data mismatches, missing rows)
+	Mismatches []*VerifyMismatchResponseBody `form:"mismatches" json:"mismatches" xml:"mismatches"`
+}
+
 // FetchRunResponse is used to define fields on response body types.
 type FetchRunResponse struct {
 	// ID of the run
@@ -168,6 +189,47 @@ type VerifyRunResponse struct {
 	FetchID int `form:"fetch_id" json:"fetch_id" xml:"fetch_id"`
 }
 
+// VerifyStatsDetailedResponseBody is used to define fields on response body
+// types.
+type VerifyStatsDetailedResponseBody struct {
+	// number of tables processed
+	NumTables int `form:"num_tables" json:"num_tables" xml:"num_tables"`
+	// number of rows processed
+	NumTruthRows int `form:"num_truth_rows" json:"num_truth_rows" xml:"num_truth_rows"`
+	// number of successful rows processed
+	NumSuccess int `form:"num_success" json:"num_success" xml:"num_success"`
+	// number of rows that had conditional success
+	NumConditionalSuccess int `form:"num_conditional_success" json:"num_conditional_success" xml:"num_conditional_success"`
+	// number of missing rows
+	NumMissing int `form:"num_missing" json:"num_missing" xml:"num_missing"`
+	// number of mismatching rows
+	NumMismatch int `form:"num_mismatch" json:"num_mismatch" xml:"num_mismatch"`
+	// number of extraneous rows
+	NumExtraneous int `form:"num_extraneous" json:"num_extraneous" xml:"num_extraneous"`
+	// number of live retries
+	NumLiveRetry int `form:"num_live_retry" json:"num_live_retry" xml:"num_live_retry"`
+	// number column mismatches
+	NumColumnMismatch int `form:"num_column_mismatch" json:"num_column_mismatch" xml:"num_column_mismatch"`
+	// net duration in milliseconds
+	NetDurationMs float64 `form:"net_duration_ms" json:"net_duration_ms" xml:"net_duration_ms"`
+}
+
+// VerifyMismatchResponseBody is used to define fields on response body types.
+type VerifyMismatchResponseBody struct {
+	// timestamp of log
+	Timestamp int `form:"timestamp" json:"timestamp" xml:"timestamp"`
+	// level for logging
+	Level string `form:"level" json:"level" xml:"level"`
+	// message for the logging
+	Message string `form:"message" json:"message" xml:"message"`
+	// schema for the db
+	Schema string `form:"schema" json:"schema" xml:"schema"`
+	// name of the table
+	Table string `form:"table" json:"table" xml:"table"`
+	// type of mismatch
+	Type string `form:"type" json:"type" xml:"type"`
+}
+
 // NewGetFetchTasksResponseBody builds the HTTP response body from the result
 // of the "get_fetch_tasks" endpoint of the "moltservice" service.
 func NewGetFetchTasksResponseBody(res []*moltservice.FetchRun) GetFetchTasksResponseBody {
@@ -221,6 +283,32 @@ func NewGetVerifyTasksResponseBody(res []*moltservice.VerifyRun) GetVerifyTasksR
 	return body
 }
 
+// NewGetSpecificVerifyTaskResponseBody builds the HTTP response body from the
+// result of the "get_specific_verify_task" endpoint of the "moltservice"
+// service.
+func NewGetSpecificVerifyTaskResponseBody(res *moltservice.VerifyRunDetailed) *GetSpecificVerifyTaskResponseBody {
+	body := &GetSpecificVerifyTaskResponseBody{
+		ID:         res.ID,
+		Name:       res.Name,
+		Status:     res.Status,
+		StartedAt:  res.StartedAt,
+		FinishedAt: res.FinishedAt,
+		FetchID:    res.FetchID,
+	}
+	if res.Stats != nil {
+		body.Stats = marshalMoltserviceVerifyStatsDetailedToVerifyStatsDetailedResponseBody(res.Stats)
+	}
+	if res.Mismatches != nil {
+		body.Mismatches = make([]*VerifyMismatchResponseBody, len(res.Mismatches))
+		for i, val := range res.Mismatches {
+			body.Mismatches[i] = marshalMoltserviceVerifyMismatchToVerifyMismatchResponseBody(val)
+		}
+	} else {
+		body.Mismatches = []*VerifyMismatchResponseBody{}
+	}
+	return body
+}
+
 // NewCreateFetchTaskCreateFetchPayload builds a moltservice service
 // create_fetch_task endpoint payload.
 func NewCreateFetchTaskCreateFetchPayload(body *CreateFetchTaskRequestBody) *moltservice.CreateFetchPayload {
@@ -264,6 +352,15 @@ func NewGetSpecificFetchTaskPayload(id int) *moltservice.GetSpecificFetchTaskPay
 // create_verify_task_from_fetch endpoint payload.
 func NewCreateVerifyTaskFromFetchPayload(id int) *moltservice.CreateVerifyTaskFromFetchPayload {
 	v := &moltservice.CreateVerifyTaskFromFetchPayload{}
+	v.ID = id
+
+	return v
+}
+
+// NewGetSpecificVerifyTaskPayload builds a moltservice service
+// get_specific_verify_task endpoint payload.
+func NewGetSpecificVerifyTaskPayload(id int) *moltservice.GetSpecificVerifyTaskPayload {
+	v := &moltservice.GetSpecificVerifyTaskPayload{}
 	v.ID = id
 
 	return v

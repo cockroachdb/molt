@@ -2,8 +2,10 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -18,6 +20,8 @@ const (
 	VerifyStatusFailure    = VerifyStatus("FAILURE")
 )
 
+const numVerifyLogLines = 1000
+
 type VerifyDetail struct {
 	RunName      string                      `json:"run_name"`
 	ID           moltservice.VerifyAttemptID `json:"id"`
@@ -28,8 +32,6 @@ type VerifyDetail struct {
 	StartedAt    time.Time                   `json:"started_at"`
 	FinishedAt   time.Time                   `json:"finished_at"`
 	FetchID      moltservice.FetchAttemptID  `json:"fetch_id"`
-
-	// TODO: add tracking stats to fetch detail to report on.
 }
 
 func (vd *VerifyDetail) mapToResponse() *moltservice.VerifyRun {
@@ -41,6 +43,65 @@ func (vd *VerifyDetail) mapToResponse() *moltservice.VerifyRun {
 		FinishedAt: normalizeTimestamp(vd.FinishedAt),
 		FetchID:    int(vd.FetchID),
 	}
+}
+
+func (v *VerifyDetail) mapToDetailedResponse(
+	stats *moltservice.VerifyStatsDetailed, mismatchLogs []*moltservice.VerifyMismatch,
+) *moltservice.VerifyRunDetailed {
+	return &moltservice.VerifyRunDetailed{
+		ID:         int(v.ID),
+		Name:       v.RunName,
+		Status:     string(v.Status),
+		StartedAt:  normalizeTimestamp(v.StartedAt),
+		FinishedAt: normalizeTimestamp(v.FinishedAt),
+		Stats:      stats,
+		Mismatches: mismatchLogs,
+		FetchID:    int(v.FetchID),
+	}
+}
+
+type VerifySummaryLog struct {
+	NumTables             int    `json:"-"`
+	Schema                string `json:"table_schema"`
+	TableName             string `json:"table_name"`
+	NumRows               int    `json:"num_truth_rows"`
+	NumSuccess            int    `json:"num_success"`
+	NumConditionalSuccess int    `json:"num_conditional_success"`
+	NumMissing            int    `json:"num_missing"`
+	NumMismatch           int    `json:"num_mismatch"`
+	NumExtraneous         int    `json:"num_extraneous"`
+	NumLiveRetry          int    `json:"num_live_retry"`
+	NumColumnMismatch     int    `json:"num_column_mismatch"`
+}
+
+type VerificationCompleteLog struct {
+	NetDurationMS float64 `json:"net_duration_ms"`
+	NetDuration   string  `json:"net_duration"`
+}
+
+type VerifyMismatchLog struct {
+	Time      string `json:"time"`
+	Level     string `json:"level"`
+	Message   string `json:"-"`
+	Schema    string `json:"table_schema"`
+	TableName string `json:"table_name"`
+	Type      string `json:"message"`
+}
+
+func (v *VerifyMismatchLog) mapToResponse() (*moltservice.VerifyMismatch, error) {
+	parsedTime, err := time.Parse(time.RFC3339, v.Time)
+	if err != nil {
+		return nil, err
+	}
+
+	return &moltservice.VerifyMismatch{
+		Timestamp: int(parsedTime.Unix()),
+		Level:     v.Level,
+		Message:   v.Message,
+		Schema:    v.Schema,
+		Table:     v.TableName,
+		Type:      v.Type,
+	}, nil
 }
 
 const staticVerifyLog = "artifacts/verify.log"
@@ -64,7 +125,7 @@ func (m *moltService) CreateVerifyTaskFromFetch(
 	args := constructVerifyArgs(run.ConfigurationPayload.SourceConn, run.ConfigurationPayload.TargetConn, verifyLogFile)
 
 	verifyDetail := VerifyDetail{
-		RunName:      run.RunName,
+		RunName:      fmt.Sprintf("%s-%d", run.RunName, len(run.VerifyIDs)+1),
 		ID:           verifyId,
 		LogTimestamp: time.Now(),
 		LogFile:      verifyLogFile,
@@ -166,4 +227,99 @@ func (m *moltService) GetVerifyTasks(
 	return m.getVerifyTasks([]moltservice.VerifyAttemptID{}, false /*canBeEmpty*/)
 }
 
-// TODO: get detailed verify along with all errors, mismatches, etc.
+func (m *moltService) GetSpecificVerifyTask(
+	ctx context.Context, payload *moltservice.GetSpecificVerifyTaskPayload,
+) (res *moltservice.VerifyRunDetailed, err error) {
+	run, ok := m.verifyState.idToRun[moltservice.VerifyAttemptID(payload.ID)]
+	if !ok {
+		return nil, errors.Newf("failed to find fetch task with id %d", payload.ID)
+	}
+
+	lines, err := readNLines(run.LogFile, numVerifyLogLines)
+	if err != nil {
+		return nil, err
+	}
+
+	stats, err := m.extractVerifyStats(lines)
+	if err != nil {
+		return nil, err
+	}
+
+	mismatches, err := m.extractVerifyMismatches(lines)
+	if err != nil {
+		return nil, err
+	}
+
+	return run.mapToDetailedResponse(stats, mismatches), nil
+}
+
+func (m *moltService) extractVerifyStats(lines []string) (*moltservice.VerifyStatsDetailed, error) {
+	stats := &moltservice.VerifyStatsDetailed{}
+
+	for i := len(lines) - 1; i >= 0; i-- {
+		line := lines[i]
+
+		if strings.Contains(line, "verification complete") {
+			var logLine VerificationCompleteLog
+			err := json.Unmarshal([]byte(line), &logLine)
+			if err != nil {
+				m.logger.Err(err).Send()
+				continue
+			}
+			stats.NetDurationMs = logLine.NetDurationMS
+		}
+
+		// TODO (rluu): in the future don't assume that tables can't be duplicated
+		// Check a map first to see if the table + schema is present. For now
+		// can just assume people are running the most base verify mode.
+		if strings.Contains(line, "finished row verification") {
+			var logLine VerifySummaryLog
+			err := json.Unmarshal([]byte(line), &logLine)
+			if err != nil {
+				m.logger.Err(err).Send()
+				continue
+			}
+			stats.NumTables++
+			stats.NumTruthRows += logLine.NumTables
+			stats.NumSuccess += logLine.NumSuccess
+			stats.NumConditionalSuccess += logLine.NumConditionalSuccess
+			stats.NumMismatch += logLine.NumMismatch
+			stats.NumMissing += logLine.NumMissing
+			stats.NumExtraneous += logLine.NumExtraneous
+			stats.NumLiveRetry += logLine.NumLiveRetry
+			stats.NumColumnMismatch += logLine.NumColumnMismatch
+		}
+	}
+
+	return stats, nil
+}
+
+func (m *moltService) extractVerifyMismatches(
+	lines []string,
+) ([]*moltservice.VerifyMismatch, error) {
+	mismatches := make([]*moltservice.VerifyMismatch, 0)
+
+	for i := len(lines) - 1; i >= 0; i-- {
+		line := lines[i]
+
+		if strings.Contains(line, `"type":"data"`) {
+			var logLine VerifyMismatchLog
+			err := json.Unmarshal([]byte(line), &logLine)
+			if err != nil {
+				m.logger.Err(err).Send()
+				continue
+			}
+
+			mismatch, err := logLine.mapToResponse()
+			if err != nil {
+				return nil, err
+			}
+
+			mismatch.Message = line
+			mismatches = append(mismatches, mismatch)
+		}
+
+	}
+
+	return mismatches, nil
+}

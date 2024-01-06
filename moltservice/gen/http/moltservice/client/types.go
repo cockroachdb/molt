@@ -91,6 +91,27 @@ type GetSpecificFetchTaskResponseBody struct {
 // "get_verify_tasks" endpoint HTTP response body.
 type GetVerifyTasksResponseBody []*VerifyRunResponse
 
+// GetSpecificVerifyTaskResponseBody is the type of the "moltservice" service
+// "get_specific_verify_task" endpoint HTTP response body.
+type GetSpecificVerifyTaskResponseBody struct {
+	// ID of the run
+	ID *int `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// name of the run
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// status of the run
+	Status *string `form:"status,omitempty" json:"status,omitempty" xml:"status,omitempty"`
+	// started at time
+	StartedAt *int `form:"started_at,omitempty" json:"started_at,omitempty" xml:"started_at,omitempty"`
+	// finished at time
+	FinishedAt *int `form:"finished_at,omitempty" json:"finished_at,omitempty" xml:"finished_at,omitempty"`
+	// ID of the associated fetch run
+	FetchID *int `form:"fetch_id,omitempty" json:"fetch_id,omitempty" xml:"fetch_id,omitempty"`
+	// verify statistics
+	Stats *VerifyStatsDetailedResponseBody `form:"stats,omitempty" json:"stats,omitempty" xml:"stats,omitempty"`
+	// verify mismatches (i.e. data mismatches, missing rows)
+	Mismatches []*VerifyMismatchResponseBody `form:"mismatches,omitempty" json:"mismatches,omitempty" xml:"mismatches,omitempty"`
+}
+
 // FetchRunResponse is used to define fields on response body types.
 type FetchRunResponse struct {
 	// ID of the run
@@ -166,6 +187,47 @@ type VerifyRunResponse struct {
 	FinishedAt *int `form:"finished_at,omitempty" json:"finished_at,omitempty" xml:"finished_at,omitempty"`
 	// ID of the associated fetch run
 	FetchID *int `form:"fetch_id,omitempty" json:"fetch_id,omitempty" xml:"fetch_id,omitempty"`
+}
+
+// VerifyStatsDetailedResponseBody is used to define fields on response body
+// types.
+type VerifyStatsDetailedResponseBody struct {
+	// number of tables processed
+	NumTables *int `form:"num_tables,omitempty" json:"num_tables,omitempty" xml:"num_tables,omitempty"`
+	// number of rows processed
+	NumTruthRows *int `form:"num_truth_rows,omitempty" json:"num_truth_rows,omitempty" xml:"num_truth_rows,omitempty"`
+	// number of successful rows processed
+	NumSuccess *int `form:"num_success,omitempty" json:"num_success,omitempty" xml:"num_success,omitempty"`
+	// number of rows that had conditional success
+	NumConditionalSuccess *int `form:"num_conditional_success,omitempty" json:"num_conditional_success,omitempty" xml:"num_conditional_success,omitempty"`
+	// number of missing rows
+	NumMissing *int `form:"num_missing,omitempty" json:"num_missing,omitempty" xml:"num_missing,omitempty"`
+	// number of mismatching rows
+	NumMismatch *int `form:"num_mismatch,omitempty" json:"num_mismatch,omitempty" xml:"num_mismatch,omitempty"`
+	// number of extraneous rows
+	NumExtraneous *int `form:"num_extraneous,omitempty" json:"num_extraneous,omitempty" xml:"num_extraneous,omitempty"`
+	// number of live retries
+	NumLiveRetry *int `form:"num_live_retry,omitempty" json:"num_live_retry,omitempty" xml:"num_live_retry,omitempty"`
+	// number column mismatches
+	NumColumnMismatch *int `form:"num_column_mismatch,omitempty" json:"num_column_mismatch,omitempty" xml:"num_column_mismatch,omitempty"`
+	// net duration in milliseconds
+	NetDurationMs *float64 `form:"net_duration_ms,omitempty" json:"net_duration_ms,omitempty" xml:"net_duration_ms,omitempty"`
+}
+
+// VerifyMismatchResponseBody is used to define fields on response body types.
+type VerifyMismatchResponseBody struct {
+	// timestamp of log
+	Timestamp *int `form:"timestamp,omitempty" json:"timestamp,omitempty" xml:"timestamp,omitempty"`
+	// level for logging
+	Level *string `form:"level,omitempty" json:"level,omitempty" xml:"level,omitempty"`
+	// message for the logging
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// schema for the db
+	Schema *string `form:"schema,omitempty" json:"schema,omitempty" xml:"schema,omitempty"`
+	// name of the table
+	Table *string `form:"table,omitempty" json:"table,omitempty" xml:"table,omitempty"`
+	// type of mismatch
+	Type *string `form:"type,omitempty" json:"type,omitempty" xml:"type,omitempty"`
 }
 
 // NewCreateFetchTaskRequestBody builds the HTTP request body from the payload
@@ -260,6 +322,26 @@ func NewGetVerifyTasksVerifyRunOK(body []*VerifyRunResponse) []*moltservice.Veri
 	return v
 }
 
+// NewGetSpecificVerifyTaskVerifyRunDetailedOK builds a "moltservice" service
+// "get_specific_verify_task" endpoint result from a HTTP "OK" response.
+func NewGetSpecificVerifyTaskVerifyRunDetailedOK(body *GetSpecificVerifyTaskResponseBody) *moltservice.VerifyRunDetailed {
+	v := &moltservice.VerifyRunDetailed{
+		ID:         *body.ID,
+		Name:       *body.Name,
+		Status:     *body.Status,
+		StartedAt:  *body.StartedAt,
+		FinishedAt: *body.FinishedAt,
+		FetchID:    *body.FetchID,
+	}
+	v.Stats = unmarshalVerifyStatsDetailedResponseBodyToMoltserviceVerifyStatsDetailed(body.Stats)
+	v.Mismatches = make([]*moltservice.VerifyMismatch, len(body.Mismatches))
+	for i, val := range body.Mismatches {
+		v.Mismatches[i] = unmarshalVerifyMismatchResponseBodyToMoltserviceVerifyMismatch(val)
+	}
+
+	return v
+}
+
 // ValidateGetSpecificFetchTaskResponseBody runs the validations defined on
 // get_specific_fetch_task_response_body
 func ValidateGetSpecificFetchTaskResponseBody(body *GetSpecificFetchTaskResponseBody) (err error) {
@@ -304,6 +386,53 @@ func ValidateGetSpecificFetchTaskResponseBody(body *GetSpecificFetchTaskResponse
 	for _, e := range body.VerifyRuns {
 		if e != nil {
 			if err2 := ValidateVerifyRunResponseBody(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
+}
+
+// ValidateGetSpecificVerifyTaskResponseBody runs the validations defined on
+// get_specific_verify_task_response_body
+func ValidateGetSpecificVerifyTaskResponseBody(body *GetSpecificVerifyTaskResponseBody) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Status == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("status", "body"))
+	}
+	if body.StartedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("started_at", "body"))
+	}
+	if body.FinishedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("finished_at", "body"))
+	}
+	if body.FetchID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fetch_id", "body"))
+	}
+	if body.Stats == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("stats", "body"))
+	}
+	if body.Mismatches == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("mismatches", "body"))
+	}
+	if body.Status != nil {
+		if !(*body.Status == "IN_PROGRESS" || *body.Status == "SUCCESS" || *body.Status == "FAILURE") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.status", *body.Status, []any{"IN_PROGRESS", "SUCCESS", "FAILURE"}))
+		}
+	}
+	if body.Stats != nil {
+		if err2 := ValidateVerifyStatsDetailedResponseBody(body.Stats); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	for _, e := range body.Mismatches {
+		if e != nil {
+			if err2 := ValidateVerifyMismatchResponseBody(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
@@ -433,6 +562,66 @@ func ValidateVerifyRunResponse(body *VerifyRunResponse) (err error) {
 		if !(*body.Status == "IN_PROGRESS" || *body.Status == "SUCCESS" || *body.Status == "FAILURE") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.status", *body.Status, []any{"IN_PROGRESS", "SUCCESS", "FAILURE"}))
 		}
+	}
+	return
+}
+
+// ValidateVerifyStatsDetailedResponseBody runs the validations defined on
+// verify_stats_detailedResponseBody
+func ValidateVerifyStatsDetailedResponseBody(body *VerifyStatsDetailedResponseBody) (err error) {
+	if body.NumTables == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("num_tables", "body"))
+	}
+	if body.NumTruthRows == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("num_truth_rows", "body"))
+	}
+	if body.NumSuccess == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("num_success", "body"))
+	}
+	if body.NumConditionalSuccess == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("num_conditional_success", "body"))
+	}
+	if body.NumMissing == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("num_missing", "body"))
+	}
+	if body.NumMismatch == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("num_mismatch", "body"))
+	}
+	if body.NumExtraneous == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("num_extraneous", "body"))
+	}
+	if body.NumLiveRetry == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("num_live_retry", "body"))
+	}
+	if body.NumColumnMismatch == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("num_column_mismatch", "body"))
+	}
+	if body.NetDurationMs == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("net_duration_ms", "body"))
+	}
+	return
+}
+
+// ValidateVerifyMismatchResponseBody runs the validations defined on
+// verify_mismatchResponseBody
+func ValidateVerifyMismatchResponseBody(body *VerifyMismatchResponseBody) (err error) {
+	if body.Timestamp == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timestamp", "body"))
+	}
+	if body.Level == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("level", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Schema == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("schema", "body"))
+	}
+	if body.Table == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("table", "body"))
+	}
+	if body.Type == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("type", "body"))
 	}
 	return
 }

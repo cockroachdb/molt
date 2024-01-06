@@ -26,6 +26,7 @@ type Server struct {
 	GetSpecificFetchTask      http.Handler
 	CreateVerifyTaskFromFetch http.Handler
 	GetVerifyTasks            http.Handler
+	GetSpecificVerifyTask     http.Handler
 	CORS                      http.Handler
 	GenHTTPOpenapiJSON        http.Handler
 	AssetsDocsHTML            http.Handler
@@ -71,10 +72,12 @@ func New(
 			{"GetSpecificFetchTask", "GET", "/api/v1/fetch/{id}"},
 			{"CreateVerifyTaskFromFetch", "POST", "/api/v1/fetch/{id}/verify"},
 			{"GetVerifyTasks", "GET", "/api/v1/verify"},
+			{"GetSpecificVerifyTask", "GET", "/api/v1/verify/{id}"},
 			{"CORS", "OPTIONS", "/api/v1/fetch"},
 			{"CORS", "OPTIONS", "/api/v1/fetch/{id}"},
 			{"CORS", "OPTIONS", "/api/v1/fetch/{id}/verify"},
 			{"CORS", "OPTIONS", "/api/v1/verify"},
+			{"CORS", "OPTIONS", "/api/v1/verify/{id}"},
 			{"CORS", "OPTIONS", "/openapi.json"},
 			{"CORS", "OPTIONS", "/docs.html"},
 			{"./gen/http/openapi.json", "GET", "/openapi.json"},
@@ -85,6 +88,7 @@ func New(
 		GetSpecificFetchTask:      NewGetSpecificFetchTaskHandler(e.GetSpecificFetchTask, mux, decoder, encoder, errhandler, formatter),
 		CreateVerifyTaskFromFetch: NewCreateVerifyTaskFromFetchHandler(e.CreateVerifyTaskFromFetch, mux, decoder, encoder, errhandler, formatter),
 		GetVerifyTasks:            NewGetVerifyTasksHandler(e.GetVerifyTasks, mux, decoder, encoder, errhandler, formatter),
+		GetSpecificVerifyTask:     NewGetSpecificVerifyTaskHandler(e.GetSpecificVerifyTask, mux, decoder, encoder, errhandler, formatter),
 		CORS:                      NewCORSHandler(),
 		GenHTTPOpenapiJSON:        http.FileServer(fileSystemGenHTTPOpenapiJSON),
 		AssetsDocsHTML:            http.FileServer(fileSystemAssetsDocsHTML),
@@ -101,6 +105,7 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.GetSpecificFetchTask = m(s.GetSpecificFetchTask)
 	s.CreateVerifyTaskFromFetch = m(s.CreateVerifyTaskFromFetch)
 	s.GetVerifyTasks = m(s.GetVerifyTasks)
+	s.GetSpecificVerifyTask = m(s.GetSpecificVerifyTask)
 	s.CORS = m(s.CORS)
 }
 
@@ -114,6 +119,7 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountGetSpecificFetchTaskHandler(mux, h.GetSpecificFetchTask)
 	MountCreateVerifyTaskFromFetchHandler(mux, h.CreateVerifyTaskFromFetch)
 	MountGetVerifyTasksHandler(mux, h.GetVerifyTasks)
+	MountGetSpecificVerifyTaskHandler(mux, h.GetSpecificVerifyTask)
 	MountCORSHandler(mux, h.CORS)
 	MountGenHTTPOpenapiJSON(mux, goahttp.Replace("", "/./gen/http/openapi.json", h.GenHTTPOpenapiJSON))
 	MountAssetsDocsHTML(mux, goahttp.Replace("", "/./assets/docs.html", h.AssetsDocsHTML))
@@ -367,6 +373,58 @@ func NewGetVerifyTasksHandler(
 	})
 }
 
+// MountGetSpecificVerifyTaskHandler configures the mux to serve the
+// "moltservice" service "get_specific_verify_task" endpoint.
+func MountGetSpecificVerifyTaskHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := HandleMoltserviceOrigin(h).(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/api/v1/verify/{id}", f)
+}
+
+// NewGetSpecificVerifyTaskHandler creates a HTTP handler which loads the HTTP
+// request and calls the "moltservice" service "get_specific_verify_task"
+// endpoint.
+func NewGetSpecificVerifyTaskHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeGetSpecificVerifyTaskRequest(mux, decoder)
+		encodeResponse = EncodeGetSpecificVerifyTaskResponse(encoder)
+		encodeError    = goahttp.ErrorEncoder(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "get_specific_verify_task")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "moltservice")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			errhandler(ctx, w, err)
+		}
+	})
+}
+
 // MountGenHTTPOpenapiJSON configures the mux to serve GET request made to
 // "/openapi.json".
 func MountGenHTTPOpenapiJSON(mux goahttp.Muxer, h http.Handler) {
@@ -387,6 +445,7 @@ func MountCORSHandler(mux goahttp.Muxer, h http.Handler) {
 	mux.Handle("OPTIONS", "/api/v1/fetch/{id}", h.ServeHTTP)
 	mux.Handle("OPTIONS", "/api/v1/fetch/{id}/verify", h.ServeHTTP)
 	mux.Handle("OPTIONS", "/api/v1/verify", h.ServeHTTP)
+	mux.Handle("OPTIONS", "/api/v1/verify/{id}", h.ServeHTTP)
 	mux.Handle("OPTIONS", "/openapi.json", h.ServeHTTP)
 	mux.Handle("OPTIONS", "/docs.html", h.ServeHTTP)
 }

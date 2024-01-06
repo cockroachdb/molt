@@ -321,7 +321,9 @@ func (m *moltService) GetSpecificFetchTask(
 		return nil, err
 	}
 
-	// TODO (rluu): extract stats later
+	// TODO (rluu): clean up the logic so it only has to read logs once.
+	// This can be done if we scan through and keep track of both stats and logs
+	// in a slice each, and then go through all log lines. Can make helper for this.
 	stats, err := m.extractStats(lines, run.ConfigurationPayload.Mode)
 	if err != nil {
 		return nil, err

@@ -279,6 +279,50 @@ var Log = Type("log", func() {
 	)
 })
 
+var FetchRunDetailed = Type("fetch_run_detailed", func() {
+	Field(1, "id", Int, "ID of the run",
+		func() {
+			Example(1704233521)
+		},
+	)
+	Field(2, "name", String, "name of the fetch run", func() {
+		Example("jyang pg to crdb")
+	})
+
+	Field(3, "status", String, "status of the fetch run", func() {
+		Enum("IN_PROGRESS", "SUCCESS", "FAILURE")
+		Example("IN_PROGRESS")
+	})
+
+	Field(4, "started_at", Int, "started at time",
+		func() {
+			Example(1704233519)
+		},
+	)
+
+	Field(5, "finished_at", Int, "finished at time",
+		func() {
+			Example(1704233521)
+		},
+	)
+
+	Field(6, "stats", DetailedFetchStats, "fetch statistics")
+
+	Field(7, "logs", ArrayOf(Log), "logs for fetch run")
+
+	Field(8, "verify_runs", ArrayOf(VerifyRun), "verify runs linked to fetch runs")
+
+	Required(
+		"id",
+		"name",
+		"status",
+		"started_at",
+		"finished_at",
+		"logs",
+		"verify_runs",
+	)
+})
+
 var VerifyRun = Type("verify_run", func() {
 	Field(1, "id", Int, "ID of the run",
 		func() {
@@ -323,17 +367,116 @@ var VerifyRun = Type("verify_run", func() {
 	)
 })
 
-var FetchRunDetailed = Type("fetch_run_detailed", func() {
+var VerifyStats = Type("verify_stats_detailed", func() {
+	Field(1, "num_tables", Int, "number of tables processed",
+		func() {
+			Example(5)
+		},
+	)
+	Field(2, "num_truth_rows", Int, "number of rows processed",
+		func() {
+			Example(100000)
+		},
+	)
+	Field(3, "num_success", Int, "number of successful rows processed",
+		func() {
+			Example(50000)
+		},
+	)
+	Field(4, "num_conditional_success", Int, "number of rows that had conditional success",
+		func() {
+			Example(100000)
+		},
+	)
+	Field(5, "num_missing", Int, "number of missing rows",
+		func() {
+			Example(1)
+		},
+	)
+	Field(6, "num_mismatch", Int, "number of mismatching rows",
+		func() {
+			Example(1)
+		},
+	)
+	Field(7, "num_extraneous", Int, "number of extraneous rows",
+		func() {
+			Example(1)
+		},
+	)
+	Field(8, "num_live_retry", Int, "number of live retries",
+		func() {
+			Example(1)
+		},
+	)
+	Field(9, "num_column_mismatch", Int, "number column mismatches",
+		func() {
+			Example(1)
+		},
+	)
+	Field(10, "net_duration_ms", Float64, "net duration in milliseconds",
+		func() {
+			Example(100000.00)
+		},
+	)
+
+	Required(
+		"num_tables",
+		"num_truth_rows",
+		"num_success",
+		"num_conditional_success",
+		"num_missing",
+		"num_mismatch",
+		"num_extraneous",
+		"num_live_retry",
+		"num_column_mismatch",
+		"net_duration_ms",
+	)
+})
+
+var VerifyMismatch = Type("verify_mismatch", func() {
+	Field(1, "timestamp", Int, "timestamp of log",
+		func() {
+			Example(1704233519)
+		},
+	)
+	Field(2, "level", String, "level for logging", func() {
+		Example("INFO")
+	})
+	Field(3, "message", String, "message for the logging", func() {
+		Example("This is a log message")
+	})
+	Field(4, "schema", String, "schema for the db", func() {
+		Example("public")
+	})
+	Field(5, "table", String, "name of the table", func() {
+		Example("users")
+	})
+	Field(6, "type", String, "type of mismatch", func() {
+		Example("mismatching table definition")
+	})
+
+	Required(
+		"timestamp",
+		"level",
+		"message",
+		"schema",
+		"table",
+		"type",
+	)
+})
+
+var VerifyRunDetailed = Type("verify_run_detailed", func() {
 	Field(1, "id", Int, "ID of the run",
 		func() {
 			Example(1704233521)
 		},
 	)
-	Field(2, "name", String, "name of the fetch run", func() {
+
+	Field(2, "name", String, "name of the run", func() {
 		Example("jyang pg to crdb")
 	})
 
-	Field(3, "status", String, "status of the fetch run", func() {
+	Field(3, "status", String, "status of the run", func() {
 		Enum("IN_PROGRESS", "SUCCESS", "FAILURE")
 		Example("IN_PROGRESS")
 	})
@@ -350,11 +493,15 @@ var FetchRunDetailed = Type("fetch_run_detailed", func() {
 		},
 	)
 
-	Field(6, "stats", DetailedFetchStats, "fetch statistics")
+	Field(6, "fetch_id", Int, "ID of the associated fetch run",
+		func() {
+			Example(1704233521)
+		},
+	)
 
-	Field(7, "logs", ArrayOf(Log), "logs for fetch run")
+	Field(7, "stats", VerifyStats, "verify statistics")
 
-	Field(8, "verify_runs", ArrayOf(VerifyRun), "verify runs linked to fetch runs")
+	Field(8, "mismatches", ArrayOf(VerifyMismatch), "verify mismatches (i.e. data mismatches, missing rows)")
 
 	Required(
 		"id",
@@ -362,8 +509,9 @@ var FetchRunDetailed = Type("fetch_run_detailed", func() {
 		"status",
 		"started_at",
 		"finished_at",
-		"logs",
-		"verify_runs",
+		"fetch_id",
+		"stats",
+		"mismatches",
 	)
 })
 

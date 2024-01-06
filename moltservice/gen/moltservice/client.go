@@ -20,16 +20,18 @@ type Client struct {
 	GetSpecificFetchTaskEndpoint      goa.Endpoint
 	CreateVerifyTaskFromFetchEndpoint goa.Endpoint
 	GetVerifyTasksEndpoint            goa.Endpoint
+	GetSpecificVerifyTaskEndpoint     goa.Endpoint
 }
 
 // NewClient initializes a "moltservice" service client given the endpoints.
-func NewClient(createFetchTask, getFetchTasks, getSpecificFetchTask, createVerifyTaskFromFetch, getVerifyTasks goa.Endpoint) *Client {
+func NewClient(createFetchTask, getFetchTasks, getSpecificFetchTask, createVerifyTaskFromFetch, getVerifyTasks, getSpecificVerifyTask goa.Endpoint) *Client {
 	return &Client{
 		CreateFetchTaskEndpoint:           createFetchTask,
 		GetFetchTasksEndpoint:             getFetchTasks,
 		GetSpecificFetchTaskEndpoint:      getSpecificFetchTask,
 		CreateVerifyTaskFromFetchEndpoint: createVerifyTaskFromFetch,
 		GetVerifyTasksEndpoint:            getVerifyTasks,
+		GetSpecificVerifyTaskEndpoint:     getSpecificVerifyTask,
 	}
 }
 
@@ -86,4 +88,15 @@ func (c *Client) GetVerifyTasks(ctx context.Context) (res []*VerifyRun, err erro
 		return
 	}
 	return ires.([]*VerifyRun), nil
+}
+
+// GetSpecificVerifyTask calls the "get_specific_verify_task" endpoint of the
+// "moltservice" service.
+func (c *Client) GetSpecificVerifyTask(ctx context.Context, p *GetSpecificVerifyTaskPayload) (res *VerifyRunDetailed, err error) {
+	var ires any
+	ires, err = c.GetSpecificVerifyTaskEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*VerifyRunDetailed), nil
 }

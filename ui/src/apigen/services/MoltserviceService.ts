@@ -6,6 +6,7 @@ import type { CreateFetchTaskRequestBody } from '../models/CreateFetchTaskReques
 import type { FetchRun } from '../models/FetchRun';
 import type { FetchRunDetailed } from '../models/FetchRunDetailed';
 import type { VerifyRun } from '../models/VerifyRun';
+import type { VerifyRunDetailed } from '../models/VerifyRunDetailed';
 
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
@@ -87,6 +88,24 @@ export class MoltserviceService {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/verify',
+        });
+    }
+
+    /**
+     * get_specific_verify_task moltservice
+     * @param id id for the verify task
+     * @returns VerifyRunDetailed OK response.
+     * @throws ApiError
+     */
+    public static moltserviceGetSpecificVerifyTask(
+        id: number,
+    ): CancelablePromise<VerifyRunDetailed> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/verify/{id}',
+            path: {
+                'id': id,
+            },
         });
     }
 

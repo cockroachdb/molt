@@ -157,6 +157,45 @@ func EncodeGetVerifyTasksResponse(encoder func(context.Context, http.ResponseWri
 	}
 }
 
+// EncodeGetSpecificVerifyTaskResponse returns an encoder for responses
+// returned by the moltservice get_specific_verify_task endpoint.
+func EncodeGetSpecificVerifyTaskResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*moltservice.VerifyRunDetailed)
+		enc := encoder(ctx, w)
+		body := NewGetSpecificVerifyTaskResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
+// DecodeGetSpecificVerifyTaskRequest returns a decoder for requests sent to
+// the moltservice get_specific_verify_task endpoint.
+func DecodeGetSpecificVerifyTaskRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
+	return func(r *http.Request) (any, error) {
+		var (
+			id  int
+			err error
+
+			params = mux.Vars(r)
+		)
+		{
+			idRaw := params["id"]
+			v, err2 := strconv.ParseInt(idRaw, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("id", idRaw, "integer"))
+			}
+			id = int(v)
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewGetSpecificVerifyTaskPayload(id)
+
+		return payload, nil
+	}
+}
+
 // marshalMoltserviceFetchRunToFetchRunResponse builds a value of type
 // *FetchRunResponse from a value of type *moltservice.FetchRun.
 func marshalMoltserviceFetchRunToFetchRunResponse(v *moltservice.FetchRun) *FetchRunResponse {
@@ -229,6 +268,42 @@ func marshalMoltserviceVerifyRunToVerifyRunResponse(v *moltservice.VerifyRun) *V
 		StartedAt:  v.StartedAt,
 		FinishedAt: v.FinishedAt,
 		FetchID:    v.FetchID,
+	}
+
+	return res
+}
+
+// marshalMoltserviceVerifyStatsDetailedToVerifyStatsDetailedResponseBody
+// builds a value of type *VerifyStatsDetailedResponseBody from a value of type
+// *moltservice.VerifyStatsDetailed.
+func marshalMoltserviceVerifyStatsDetailedToVerifyStatsDetailedResponseBody(v *moltservice.VerifyStatsDetailed) *VerifyStatsDetailedResponseBody {
+	res := &VerifyStatsDetailedResponseBody{
+		NumTables:             v.NumTables,
+		NumTruthRows:          v.NumTruthRows,
+		NumSuccess:            v.NumSuccess,
+		NumConditionalSuccess: v.NumConditionalSuccess,
+		NumMissing:            v.NumMissing,
+		NumMismatch:           v.NumMismatch,
+		NumExtraneous:         v.NumExtraneous,
+		NumLiveRetry:          v.NumLiveRetry,
+		NumColumnMismatch:     v.NumColumnMismatch,
+		NetDurationMs:         v.NetDurationMs,
+	}
+
+	return res
+}
+
+// marshalMoltserviceVerifyMismatchToVerifyMismatchResponseBody builds a value
+// of type *VerifyMismatchResponseBody from a value of type
+// *moltservice.VerifyMismatch.
+func marshalMoltserviceVerifyMismatchToVerifyMismatchResponseBody(v *moltservice.VerifyMismatch) *VerifyMismatchResponseBody {
+	res := &VerifyMismatchResponseBody{
+		Timestamp: v.Timestamp,
+		Level:     v.Level,
+		Message:   v.Message,
+		Schema:    v.Schema,
+		Table:     v.Table,
+		Type:      v.Type,
 	}
 
 	return res

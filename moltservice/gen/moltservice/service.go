@@ -23,6 +23,8 @@ type Service interface {
 	CreateVerifyTaskFromFetch(context.Context, *CreateVerifyTaskFromFetchPayload) (res VerifyAttemptID, err error)
 	// GetVerifyTasks implements get_verify_tasks.
 	GetVerifyTasks(context.Context) (res []*VerifyRun, err error)
+	// GetSpecificVerifyTask implements get_specific_verify_task.
+	GetSpecificVerifyTask(context.Context, *GetSpecificVerifyTaskPayload) (res *VerifyRunDetailed, err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -33,7 +35,7 @@ const ServiceName = "moltservice"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [5]string{"create_fetch_task", "get_fetch_tasks", "get_specific_fetch_task", "create_verify_task_from_fetch", "get_verify_tasks"}
+var MethodNames = [6]string{"create_fetch_task", "get_fetch_tasks", "get_specific_fetch_task", "create_verify_task_from_fetch", "get_verify_tasks", "get_specific_verify_task"}
 
 // CreateFetchPayload is the payload type of the moltservice service
 // create_fetch_task method.
@@ -156,6 +158,13 @@ type GetSpecificFetchTaskPayload struct {
 	ID int
 }
 
+// GetSpecificVerifyTaskPayload is the payload type of the moltservice service
+// get_specific_verify_task method.
+type GetSpecificVerifyTaskPayload struct {
+	// id for the verify task
+	ID int
+}
+
 type Log struct {
 	// timestamp of log
 	Timestamp int
@@ -168,6 +177,21 @@ type Log struct {
 // VerifyAttemptID is the result type of the moltservice service
 // create_verify_task_from_fetch method.
 type VerifyAttemptID int
+
+type VerifyMismatch struct {
+	// timestamp of log
+	Timestamp int
+	// level for logging
+	Level string
+	// message for the logging
+	Message string
+	// schema for the db
+	Schema string
+	// name of the table
+	Table string
+	// type of mismatch
+	Type string
+}
 
 type VerifyRun struct {
 	// ID of the run
@@ -182,4 +206,48 @@ type VerifyRun struct {
 	FinishedAt int
 	// ID of the associated fetch run
 	FetchID int
+}
+
+// VerifyRunDetailed is the result type of the moltservice service
+// get_specific_verify_task method.
+type VerifyRunDetailed struct {
+	// ID of the run
+	ID int
+	// name of the run
+	Name string
+	// status of the run
+	Status string
+	// started at time
+	StartedAt int
+	// finished at time
+	FinishedAt int
+	// ID of the associated fetch run
+	FetchID int
+	// verify statistics
+	Stats *VerifyStatsDetailed
+	// verify mismatches (i.e. data mismatches, missing rows)
+	Mismatches []*VerifyMismatch
+}
+
+type VerifyStatsDetailed struct {
+	// number of tables processed
+	NumTables int
+	// number of rows processed
+	NumTruthRows int
+	// number of successful rows processed
+	NumSuccess int
+	// number of rows that had conditional success
+	NumConditionalSuccess int
+	// number of missing rows
+	NumMissing int
+	// number of mismatching rows
+	NumMismatch int
+	// number of extraneous rows
+	NumExtraneous int
+	// number of live retries
+	NumLiveRetry int
+	// number column mismatches
+	NumColumnMismatch int
+	// net duration in milliseconds
+	NetDurationMs float64
 }

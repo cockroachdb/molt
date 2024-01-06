@@ -43,6 +43,11 @@ paths:
                                   name: jyang pg to crdb
                                   started_at: 1704233519
                                   status: IN_PROGRESS
+                                - finished_at: 1704233521
+                                  id: 1704233521
+                                  name: jyang pg to crdb
+                                  started_at: 1704233519
+                                  status: IN_PROGRESS
         post:
             tags:
                 - moltservice
@@ -83,9 +88,9 @@ paths:
                         application/json:
                             schema:
                                 type: integer
-                                example: 5809114746007290805
+                                example: 3302927121504309960
                                 format: int64
-                            example: 7253377208757095973
+                            example: 7039857534460584781
     /api/v1/fetch/{id}:
         get:
             tags:
@@ -100,9 +105,9 @@ paths:
                   schema:
                     type: integer
                     description: id for the fetch task
-                    example: 7883948076744883087
+                    example: 6808169822012210656
                     format: int64
-                  example: 6541387614302834302
+                  example: 8215270065952833247
             responses:
                 "200":
                     description: OK response.
@@ -114,9 +119,6 @@ paths:
                                 finished_at: 1704233521
                                 id: 1704233521
                                 logs:
-                                    - level: INFO
-                                      message: This is a log message
-                                      timestamp: 1704233519
                                     - level: INFO
                                       message: This is a log message
                                       timestamp: 1704233519
@@ -148,6 +150,12 @@ paths:
                                       name: jyang pg to crdb
                                       started_at: 1704233519
                                       status: IN_PROGRESS
+                                    - fetch_id: 1704233521
+                                      finished_at: 1704233521
+                                      id: 1704233521
+                                      name: jyang pg to crdb
+                                      started_at: 1704233519
+                                      status: IN_PROGRESS
     /api/v1/fetch/{id}/verify:
         post:
             tags:
@@ -162,9 +170,9 @@ paths:
                   schema:
                     type: integer
                     description: id for the fetch task
-                    example: 8908982799152761463
+                    example: 1564095258797564901
                     format: int64
-                  example: 5724426082548929869
+                  example: 1882860210854171193
             responses:
                 "200":
                     description: OK response.
@@ -172,9 +180,9 @@ paths:
                         application/json:
                             schema:
                                 type: integer
-                                example: 4818726975252904576
+                                example: 5724426082548929869
                                 format: int64
-                            example: 5164176280402395310
+                            example: 5285387159060614875
     /api/v1/verify:
         get:
             tags:
@@ -203,6 +211,12 @@ paths:
                                       name: jyang pg to crdb
                                       started_at: 1704233519
                                       status: IN_PROGRESS
+                                    - fetch_id: 1704233521
+                                      finished_at: 1704233521
+                                      id: 1704233521
+                                      name: jyang pg to crdb
+                                      started_at: 1704233519
+                                      status: IN_PROGRESS
                             example:
                                 - fetch_id: 1704233521
                                   finished_at: 1704233521
@@ -216,6 +230,79 @@ paths:
                                   name: jyang pg to crdb
                                   started_at: 1704233519
                                   status: IN_PROGRESS
+                                - fetch_id: 1704233521
+                                  finished_at: 1704233521
+                                  id: 1704233521
+                                  name: jyang pg to crdb
+                                  started_at: 1704233519
+                                  status: IN_PROGRESS
+                                - fetch_id: 1704233521
+                                  finished_at: 1704233521
+                                  id: 1704233521
+                                  name: jyang pg to crdb
+                                  started_at: 1704233519
+                                  status: IN_PROGRESS
+    /api/v1/verify/{id}:
+        get:
+            tags:
+                - moltservice
+            summary: get_specific_verify_task moltservice
+            operationId: moltservice#get_specific_verify_task
+            parameters:
+                - name: id
+                  in: path
+                  description: id for the verify task
+                  required: true
+                  schema:
+                    type: integer
+                    description: id for the verify task
+                    example: 8492679589804263923
+                    format: int64
+                  example: 1590673699143463818
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VerifyRunDetailed'
+                            example:
+                                fetch_id: 1704233521
+                                finished_at: 1704233521
+                                id: 1704233521
+                                mismatches:
+                                    - level: INFO
+                                      message: This is a log message
+                                      schema: public
+                                      table: users
+                                      timestamp: 1704233519
+                                      type: mismatching table definition
+                                    - level: INFO
+                                      message: This is a log message
+                                      schema: public
+                                      table: users
+                                      timestamp: 1704233519
+                                      type: mismatching table definition
+                                    - level: INFO
+                                      message: This is a log message
+                                      schema: public
+                                      table: users
+                                      timestamp: 1704233519
+                                      type: mismatching table definition
+                                name: jyang pg to crdb
+                                started_at: 1704233519
+                                stats:
+                                    net_duration_ms: 100000
+                                    num_column_mismatch: 1
+                                    num_conditional_success: 100000
+                                    num_extraneous: 1
+                                    num_live_retry: 1
+                                    num_mismatch: 1
+                                    num_missing: 1
+                                    num_success: 50000
+                                    num_tables: 5
+                                    num_truth_rows: 100000
+                                status: IN_PROGRESS
     /docs.html:
         get:
             tags:
@@ -635,6 +722,48 @@ components:
                 - timestamp
                 - level
                 - message
+        VerifyMismatch:
+            type: object
+            properties:
+                level:
+                    type: string
+                    description: level for logging
+                    example: INFO
+                message:
+                    type: string
+                    description: message for the logging
+                    example: This is a log message
+                schema:
+                    type: string
+                    description: schema for the db
+                    example: public
+                table:
+                    type: string
+                    description: name of the table
+                    example: users
+                timestamp:
+                    type: integer
+                    description: timestamp of log
+                    example: 1704233519
+                    format: int64
+                type:
+                    type: string
+                    description: type of mismatch
+                    example: mismatching table definition
+            example:
+                level: INFO
+                message: This is a log message
+                schema: public
+                table: users
+                timestamp: 1704233519
+                type: mismatching table definition
+            required:
+                - timestamp
+                - level
+                - message
+                - schema
+                - table
+                - type
         VerifyRun:
             type: object
             properties:
@@ -684,6 +813,176 @@ components:
                 - started_at
                 - finished_at
                 - fetch_id
+        VerifyRunDetailed:
+            type: object
+            properties:
+                fetch_id:
+                    type: integer
+                    description: ID of the associated fetch run
+                    example: 1704233521
+                    format: int64
+                finished_at:
+                    type: integer
+                    description: finished at time
+                    example: 1704233521
+                    format: int64
+                id:
+                    type: integer
+                    description: ID of the run
+                    example: 1704233521
+                    format: int64
+                mismatches:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VerifyMismatch'
+                    description: verify mismatches (i.e. data mismatches, missing rows)
+                    example:
+                        - level: INFO
+                          message: This is a log message
+                          schema: public
+                          table: users
+                          timestamp: 1704233519
+                          type: mismatching table definition
+                        - level: INFO
+                          message: This is a log message
+                          schema: public
+                          table: users
+                          timestamp: 1704233519
+                          type: mismatching table definition
+                name:
+                    type: string
+                    description: name of the run
+                    example: jyang pg to crdb
+                started_at:
+                    type: integer
+                    description: started at time
+                    example: 1704233519
+                    format: int64
+                stats:
+                    $ref: '#/components/schemas/VerifyStatsDetailed'
+                status:
+                    type: string
+                    description: status of the run
+                    example: IN_PROGRESS
+                    enum:
+                        - IN_PROGRESS
+                        - SUCCESS
+                        - FAILURE
+            example:
+                fetch_id: 1704233521
+                finished_at: 1704233521
+                id: 1704233521
+                mismatches:
+                    - level: INFO
+                      message: This is a log message
+                      schema: public
+                      table: users
+                      timestamp: 1704233519
+                      type: mismatching table definition
+                    - level: INFO
+                      message: This is a log message
+                      schema: public
+                      table: users
+                      timestamp: 1704233519
+                      type: mismatching table definition
+                name: jyang pg to crdb
+                started_at: 1704233519
+                stats:
+                    net_duration_ms: 100000
+                    num_column_mismatch: 1
+                    num_conditional_success: 100000
+                    num_extraneous: 1
+                    num_live_retry: 1
+                    num_mismatch: 1
+                    num_missing: 1
+                    num_success: 50000
+                    num_tables: 5
+                    num_truth_rows: 100000
+                status: IN_PROGRESS
+            required:
+                - id
+                - name
+                - status
+                - started_at
+                - finished_at
+                - fetch_id
+                - stats
+                - mismatches
+        VerifyStatsDetailed:
+            type: object
+            properties:
+                net_duration_ms:
+                    type: number
+                    description: net duration in milliseconds
+                    example: 100000
+                    format: double
+                num_column_mismatch:
+                    type: integer
+                    description: number column mismatches
+                    example: 1
+                    format: int64
+                num_conditional_success:
+                    type: integer
+                    description: number of rows that had conditional success
+                    example: 100000
+                    format: int64
+                num_extraneous:
+                    type: integer
+                    description: number of extraneous rows
+                    example: 1
+                    format: int64
+                num_live_retry:
+                    type: integer
+                    description: number of live retries
+                    example: 1
+                    format: int64
+                num_mismatch:
+                    type: integer
+                    description: number of mismatching rows
+                    example: 1
+                    format: int64
+                num_missing:
+                    type: integer
+                    description: number of missing rows
+                    example: 1
+                    format: int64
+                num_success:
+                    type: integer
+                    description: number of successful rows processed
+                    example: 50000
+                    format: int64
+                num_tables:
+                    type: integer
+                    description: number of tables processed
+                    example: 5
+                    format: int64
+                num_truth_rows:
+                    type: integer
+                    description: number of rows processed
+                    example: 100000
+                    format: int64
+            example:
+                net_duration_ms: 100000
+                num_column_mismatch: 1
+                num_conditional_success: 100000
+                num_extraneous: 1
+                num_live_retry: 1
+                num_mismatch: 1
+                num_missing: 1
+                num_success: 50000
+                num_tables: 5
+                num_truth_rows: 100000
+            required:
+                - num_tables
+                - num_truth_rows
+                - num_success
+                - num_conditional_success
+                - num_missing
+                - num_mismatch
+                - num_extraneous
+                - num_live_retry
+                - num_column_mismatch
+                - net_duration_ms
 tags:
     - name: moltservice
       description: MOLT service performs operations using MOLT tooling

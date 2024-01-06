@@ -337,6 +337,72 @@ func DecodeGetVerifyTasksResponse(decoder func(*http.Response) goahttp.Decoder, 
 	}
 }
 
+// BuildGetSpecificVerifyTaskRequest instantiates a HTTP request object with
+// method and path set to call the "moltservice" service
+// "get_specific_verify_task" endpoint
+func (c *Client) BuildGetSpecificVerifyTaskRequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		id int
+	)
+	{
+		p, ok := v.(*moltservice.GetSpecificVerifyTaskPayload)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("moltservice", "get_specific_verify_task", "*moltservice.GetSpecificVerifyTaskPayload", v)
+		}
+		id = p.ID
+	}
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: GetSpecificVerifyTaskMoltservicePath(id)}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("moltservice", "get_specific_verify_task", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// DecodeGetSpecificVerifyTaskResponse returns a decoder for responses returned
+// by the moltservice get_specific_verify_task endpoint. restoreBody controls
+// whether the response body should be restored after having been read.
+func DecodeGetSpecificVerifyTaskResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
+		if restoreBody {
+			b, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body GetSpecificVerifyTaskResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("moltservice", "get_specific_verify_task", err)
+			}
+			err = ValidateGetSpecificVerifyTaskResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("moltservice", "get_specific_verify_task", err)
+			}
+			res := NewGetSpecificVerifyTaskVerifyRunDetailedOK(&body)
+			return res, nil
+		default:
+			body, _ := io.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("moltservice", "get_specific_verify_task", resp.StatusCode, string(body))
+		}
+	}
+}
+
 // unmarshalFetchRunResponseToMoltserviceFetchRun builds a value of type
 // *moltservice.FetchRun from a value of type *FetchRunResponse.
 func unmarshalFetchRunResponseToMoltserviceFetchRun(v *FetchRunResponse) *moltservice.FetchRun {
@@ -409,6 +475,42 @@ func unmarshalVerifyRunResponseToMoltserviceVerifyRun(v *VerifyRunResponse) *mol
 		StartedAt:  *v.StartedAt,
 		FinishedAt: *v.FinishedAt,
 		FetchID:    *v.FetchID,
+	}
+
+	return res
+}
+
+// unmarshalVerifyStatsDetailedResponseBodyToMoltserviceVerifyStatsDetailed
+// builds a value of type *moltservice.VerifyStatsDetailed from a value of type
+// *VerifyStatsDetailedResponseBody.
+func unmarshalVerifyStatsDetailedResponseBodyToMoltserviceVerifyStatsDetailed(v *VerifyStatsDetailedResponseBody) *moltservice.VerifyStatsDetailed {
+	res := &moltservice.VerifyStatsDetailed{
+		NumTables:             *v.NumTables,
+		NumTruthRows:          *v.NumTruthRows,
+		NumSuccess:            *v.NumSuccess,
+		NumConditionalSuccess: *v.NumConditionalSuccess,
+		NumMissing:            *v.NumMissing,
+		NumMismatch:           *v.NumMismatch,
+		NumExtraneous:         *v.NumExtraneous,
+		NumLiveRetry:          *v.NumLiveRetry,
+		NumColumnMismatch:     *v.NumColumnMismatch,
+		NetDurationMs:         *v.NetDurationMs,
+	}
+
+	return res
+}
+
+// unmarshalVerifyMismatchResponseBodyToMoltserviceVerifyMismatch builds a
+// value of type *moltservice.VerifyMismatch from a value of type
+// *VerifyMismatchResponseBody.
+func unmarshalVerifyMismatchResponseBodyToMoltserviceVerifyMismatch(v *VerifyMismatchResponseBody) *moltservice.VerifyMismatch {
+	res := &moltservice.VerifyMismatch{
+		Timestamp: *v.Timestamp,
+		Level:     *v.Level,
+		Message:   *v.Message,
+		Schema:    *v.Schema,
+		Table:     *v.Table,
+		Type:      *v.Type,
 	}
 
 	return res
