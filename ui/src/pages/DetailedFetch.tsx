@@ -126,7 +126,6 @@ const createColumns = (showPrettyPrint: boolean): TableColumnProps<FetchLog>[] =
                     const prettyJSON = <pre>{JSON.stringify(JSON.parse(record.message), null, 2)}</pre>;
                     return prettyJSON;
                 }
-                // TODO put toggle for pretty JSON.
 
                 return <Typography variant='body2'>{record.message}</Typography>;
             }

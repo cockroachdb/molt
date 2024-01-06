@@ -2,6 +2,7 @@ import FetchList from './FetchList';
 import ConfigureTask from './ConfigureTask';
 import SetupConnection from './connections/SetupConnection';
 import DetailedFetch from './DetailedFetch';
+import DetailedVerify from './DetailedVerify';
 
 export interface RouteEntry {
     path: string;
@@ -11,9 +12,11 @@ export interface RouteEntry {
 
 export const HOME_PATH = "/";
 export const FETCH_HOME_PATH = "/fetch";
+export const VERIFY_HOME_PATH = "/verify";
 export const DETAILED_FETCH_PATH = "/fetch/:fetchId";
 export const CONFIGURE_TASK_PATH = "/configure-task";
 export const SETUP_CONNECTION_PATH = "/setup-connection";
+export const DETAILED_VERIFY_PATH = `${VERIFY_HOME_PATH}/:verifyId`
 
 export const ROUTES: RouteEntry[] = [
     {
@@ -35,5 +38,10 @@ export const ROUTES: RouteEntry[] = [
         path: SETUP_CONNECTION_PATH,
         name: "Setup Connection",
         element: <SetupConnection />,
+    },
+    {
+        path: DETAILED_VERIFY_PATH,
+        name: "Detailed Verify Page",
+        element: <DetailedVerify />,
     },
 ]

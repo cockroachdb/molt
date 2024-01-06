@@ -77,3 +77,7 @@ export const createFetchTask = (task: TaskFormState) => {
 
     return MoltserviceService.moltserviceCreateFetchTask(reqBody);
 }
+
+export const getSpecificVerifyTask = (id: number) => {
+    return MoltserviceService.moltserviceGetSpecificVerifyTask(id)
+}

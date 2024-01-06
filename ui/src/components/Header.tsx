@@ -6,7 +6,7 @@ import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
 
 import { useNavigate, useLocation } from "react-router-dom";
-import { HOME_PATH, ROUTES } from '../pages/index';
+import { DETAILED_FETCH_PATH, DETAILED_VERIFY_PATH, HOME_PATH, ROUTES } from '../pages/index';
 import { neutral } from '../styles/colors';
 import Logo from './Logo';
 
@@ -28,7 +28,7 @@ export default function Header() {
                 }}>
                     <ButtonBase onClick={() => navigate(HOME_PATH)}><Logo type="cockroach-color-dark-bg" size="default" /></ButtonBase>
                     <Box sx={{ display: "flex", gap: 2 }}>
-                        {navItems.map((item) => (
+                        {navItems.filter(item => ![DETAILED_FETCH_PATH, DETAILED_VERIFY_PATH].includes(item.path)).map((item) => (
                             <Button onClick={() => navigate(item.path)} key={item.name}
                                 sx={
                                     {
