@@ -158,8 +158,13 @@ export default function DetailedFetch() {
     const [fetchName, setFetchName] = useState(fetchId);
     const [logs, setLogs] = useState<FetchLog[]>([]);
     const [stats, setStats] = useState<FetchStats>({});
+    const [isVerifyLoading, setIsVerifyLoading] = useState(false);
+    const [verifyId, setVerifyId] = useState(0);
+
     const navigate = useNavigate();
 
+    // TODO: need to add memoization and tune the interplay between the two useEffects
+    // This is rendering more than it has to.
     // TODO: play around with interval timings for polling logs.
     // TODO: refactor this as a helper later on.
     useEffect(() => {
@@ -255,7 +260,52 @@ export default function DetailedFetch() {
         return () => {
             clearInterval(interval);
         }
-    }, [fetchId, status, stats.percentComplete?.data])
+    }, [fetchId, status, stats.percentComplete?.data]);
+
+    // Handling the verify fetch data.
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const fid = Number(fetchId);
+                const data = await getSpecificFetchTask(fid);
+
+                // Set verify runs
+                const mappedVerifyRuns: VerifyRun[] = data.verify_runs.map(item => {
+                    const startedAtTs = new Date(item.started_at * 1000);
+                    const finishedAtTs = new Date(item.finished_at * 1000);
+
+                    return {
+                        key: `${item.id.toString()}-${crypto.randomUUID()}`,
+                        id: item.id.toString(),
+                        name: item.name,
+                        status: getStatusFromString(item.status),
+                        duration: formatSecondsToHHMMSS(item.finished_at - item.started_at),
+                        startedAt: startedAtTs.toISOString(),
+                        finishedAt: finishedAtTs.toISOString(),
+                        errors: 0,
+                    }
+                });
+                setVerifyRuns(mappedVerifyRuns);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        const interval = setInterval(() => {
+            // Once the load finishes, stop polling.
+            if (verifyId === 0 || verifyRuns.find(item => Number(item.id) === verifyId)) {
+                clearInterval(interval);
+                setIsVerifyLoading(false);
+                return;
+            }
+
+            fetchData()
+        }, POLL_INTERVAL_MS)
+
+        return () => {
+            clearInterval(interval);
+        }
+    }, [fetchId, verifyId, verifyRuns])
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
@@ -327,12 +377,15 @@ export default function DetailedFetch() {
                         <Typography sx={{ mb: 1 }} variant='h6'>Verify Runs</Typography>
                         {status === FetchRunDetailed.status.SUCCESS && <Button variant="contained" onClick={async () => {
                             try {
-                                const val = await createVerifyFromFetchTask(Number(fetchId))
+                                const vId = await createVerifyFromFetchTask(Number(fetchId));
+                                setVerifyId(vId);
+                                setIsVerifyLoading(true);
                             } catch (e) {
                                 console.error(e);
                             }
                         }}>Run Verify</Button>}
                     </Box>
+                    {isVerifyLoading && <LinearProgress />}
                     <SimpleTable containerStyle={{ width: "100%" }} columns={verifyColumns} dataSource={verifyRuns} elevated={false} />
                 </Paper>
                 <Paper sx={{
