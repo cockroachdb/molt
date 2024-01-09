@@ -35,6 +35,8 @@ type verifyOpts struct {
 	rows                     bool
 	dbFilter                 dbverify.FilterConfig
 	liveVerificationSettings *rowverify.LiveReverificationSettings
+
+	testOnly bool
 }
 
 func (o verifyOpts) rateLimit() rate.Limit {
@@ -93,6 +95,12 @@ func WithDBFilter(filter dbverify.FilterConfig) VerifyOpt {
 func WithRows(b bool) VerifyOpt {
 	return func(o *verifyOpts) {
 		o.rows = b
+	}
+}
+
+func WithTestOnly(b bool) VerifyOpt {
+	return func(o *verifyOpts) {
+		o.testOnly = b
 	}
 }
 

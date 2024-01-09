@@ -28,6 +28,10 @@ type Config struct {
 	Truncate    bool
 	Concurrency int
 
+	// TestOnly means this fetch attempt is just for test, and hence all time/duration
+	// stats are deterministic.
+	TestOnly bool
+
 	Compression    compression.Flag
 	ExportSettings dataexport.Settings
 }
@@ -111,7 +115,7 @@ func Fetch(
 	summaryLogger := moltlogger.GetSummaryLogger(logger)
 	summaryLogger.Info().
 		Int("num_tables", len(tables)).
-		Str("cdc_cursor", sqlSrc.CDCCursor()).
+		Str("cdc_cursor", utils.MaybeFormatCDCCursor(cfg.TestOnly, sqlSrc.CDCCursor())).
 		Msgf("starting fetch")
 
 	type statsMu struct {
@@ -156,7 +160,7 @@ func Fetch(
 	summaryLogger.Info().
 		Int("num_tables", stats.numImportedTables).
 		Strs("tables", stats.importedTables).
-		Str("cdc_cursor", sqlSrc.CDCCursor()).
+		Str("cdc_cursor", utils.MaybeFormatCDCCursor(cfg.TestOnly, sqlSrc.CDCCursor())).
 		Msgf("fetch complete")
 	return nil
 }
@@ -171,7 +175,6 @@ func fetchTable(
 	table tableverify.Result,
 ) error {
 	tableStartTime := time.Now()
-	logger = logger.With().Str("table", table.SafeString()).Logger()
 
 	for _, col := range table.MismatchingTableDefinitions {
 		logger.Warn().
@@ -204,7 +207,7 @@ func fetchTable(
 		}()
 	}
 
-	exportDuration := e.EndTime.Sub(e.StartTime)
+	exportDuration := utils.MaybeFormatDurationForTest(cfg.TestOnly, e.EndTime.Sub(e.StartTime))
 	summaryLogger := moltlogger.GetSummaryLogger(logger)
 	summaryLogger.Info().
 		Int("num_rows", e.NumRows).
@@ -247,13 +250,13 @@ func fetchTable(
 				if err != nil {
 					return err
 				}
-				importDuration = r.EndTime.Sub(r.StartTime)
+				importDuration = utils.MaybeFormatDurationForTest(cfg.TestOnly, r.EndTime.Sub(r.StartTime))
 			} else {
 				r, err := Copy(ctx, targetConn, logger, table.VerifiedTable, e.Resources)
 				if err != nil {
 					return err
 				}
-				importDuration = r.EndTime.Sub(r.StartTime)
+				importDuration = utils.MaybeFormatDurationForTest(cfg.TestOnly, r.EndTime.Sub(r.StartTime))
 			}
 			return nil
 		}(); err != nil {
@@ -263,7 +266,8 @@ func fetchTable(
 			return err
 		}
 
-		netDuration := time.Since(tableStartTime)
+		netDuration := utils.MaybeFormatDurationForTest(cfg.TestOnly, time.Since(tableStartTime))
+		cdcCursor := utils.MaybeFormatCDCCursor(cfg.TestOnly, sqlSrc.CDCCursor())
 		summaryLogger.Info().
 			Dur("net_duration_ms", netDuration).
 			Str("net_duration", utils.FormatDurationToTimeString(netDuration)).
@@ -272,7 +276,7 @@ func fetchTable(
 			Dur("export_duration_ms", exportDuration).
 			Str("export_duration", utils.FormatDurationToTimeString(exportDuration)).
 			Int("num_rows", e.NumRows).
-			Str("cdc_cursor", sqlSrc.CDCCursor()).
+			Str("cdc_cursor", cdcCursor).
 			Msgf("data import on target for table complete")
 		return nil
 	}

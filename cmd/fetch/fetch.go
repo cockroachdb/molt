@@ -188,6 +188,15 @@ func Command() *cobra.Command {
 	)
 	cmd.MarkFlagsMutuallyExclusive("s3-bucket", "gcp-bucket", "local-path")
 
+	// The test-only is for internal use only and is hidden from the usage or help prompt.
+	const testOnlyFlagStr = "test-only"
+	cmd.PersistentFlags().BoolVar(
+		&cfg.TestOnly,
+		testOnlyFlagStr,
+		false,
+		"Whether this fetch attempt is only for test, and hence all time/duration related stats are deterministic",
+	)
+
 	cmd.PersistentFlags().BoolVar(
 		&cfg.Truncate,
 		"truncate",
@@ -232,5 +241,10 @@ func Command() *cobra.Command {
 	cmdutil.RegisterDBConnFlags(cmd)
 	cmdutil.RegisterNameFilterFlags(cmd)
 	cmdutil.RegisterMetricsFlags(cmd)
+
+	if err := cmd.PersistentFlags().MarkHidden(testOnlyFlagStr); err != nil {
+		panic(err)
+	}
+
 	return cmd
 }
