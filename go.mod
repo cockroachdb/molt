@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go/storage v1.31.0
 	github.com/alvaroloes/enumer v1.1.2
 	github.com/aws/aws-sdk-go v1.44.310
+	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/cockroachdb/apd/v3 v3.1.0
 	github.com/cockroachdb/cockroachdb-parser v0.0.0-20230705064001-302c9ad52e1a
 	github.com/cockroachdb/crlfmt v0.0.0-20221214225007-b2fc5c302548
