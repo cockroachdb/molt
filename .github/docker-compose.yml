@@ -23,9 +23,12 @@ services:
     ports:
       - 3306:3306
     command:
+      # Enforces Global Transaction Identifier (GTID) consistency, ensuring transactions are uniquely identified across the server.
       - --enforce-gtid-consistency=ON
+      # Ensure that new and replicated transactions must be GTID (Global Transaction ID) transactions.
       - --gtid-mode=ON
       - --default-authentication-plugin=mysql_native_password
+      # Ensure complete metadata for tables added to the binary log when using row-based logging.
       - --binlog_row_metadata=full
   postgresql:
     image: postgres:15
