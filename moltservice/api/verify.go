@@ -173,6 +173,17 @@ func (m *moltService) CreateVerifyTaskFromFetch(
 				Message: errMessage,
 			}
 			writeDetail(log, verifyLogFile)
+		} else {
+			lines, err := readNLines(verifyLogFile, numVerifyLogLines)
+			if err != nil {
+				m.logger.Err(err).Send()
+			}
+
+			if foundIssues, _, err := m.extractVerifyStats(lines); err != nil {
+				m.logger.Err(err).Send()
+			} else if foundIssues {
+				verifyDetail.Status = VerifyStatusFailure
+			}
 		}
 
 		// Write the ending status to the file.
@@ -240,7 +251,7 @@ func (m *moltService) GetSpecificVerifyTask(
 		return nil, err
 	}
 
-	stats, err := m.extractVerifyStats(lines)
+	_, stats, err := m.extractVerifyStats(lines)
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +264,10 @@ func (m *moltService) GetSpecificVerifyTask(
 	return run.mapToDetailedResponse(stats, mismatches), nil
 }
 
-func (m *moltService) extractVerifyStats(lines []string) (*moltservice.VerifyStatsDetailed, error) {
+func (m *moltService) extractVerifyStats(
+	lines []string,
+) (foundIssues bool, statsDetailed *moltservice.VerifyStatsDetailed, err error) {
+	findIssues := true
 	stats := &moltservice.VerifyStatsDetailed{}
 
 	for i := len(lines) - 1; i >= 0; i-- {
@@ -280,7 +294,7 @@ func (m *moltService) extractVerifyStats(lines []string) (*moltservice.VerifySta
 				continue
 			}
 			stats.NumTables++
-			stats.NumTruthRows += logLine.NumTables
+			stats.NumTruthRows += logLine.NumRows
 			stats.NumSuccess += logLine.NumSuccess
 			stats.NumConditionalSuccess += logLine.NumConditionalSuccess
 			stats.NumMismatch += logLine.NumMismatch
@@ -291,7 +305,11 @@ func (m *moltService) extractVerifyStats(lines []string) (*moltservice.VerifySta
 		}
 	}
 
-	return stats, nil
+	if stats.NumSuccess == stats.NumTruthRows || stats.NumConditionalSuccess == stats.NumTruthRows {
+		findIssues = false
+	}
+
+	return findIssues, stats, nil
 }
 
 func (m *moltService) extractVerifyMismatches(
