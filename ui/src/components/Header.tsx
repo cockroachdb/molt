@@ -16,6 +16,7 @@ export default function Header() {
     const navigate = useNavigate();
     const location = useLocation();
 
+    // TODO: put back cockroach logo back when it's blessed by design.
     return (
         <Box sx={{ display: 'flex', pt: 5 }}>
             <CssBaseline />
@@ -26,7 +27,7 @@ export default function Header() {
                     alignItems: "center",
                     gap: 2,
                 }}>
-                    <ButtonBase onClick={() => navigate(HOME_PATH)}><Logo type="cockroach-color-dark-bg" size="default" /></ButtonBase>
+                    <ButtonBase onClick={() => navigate(HOME_PATH)}>{true ? <Box>MOLT Fetch Prototype</Box> : <Logo type="cockroach-color-dark-bg" size="default" />}</ButtonBase>
                     <Box sx={{ display: "flex", gap: 2 }}>
                         {navItems.filter(item => ![DETAILED_FETCH_PATH, DETAILED_VERIFY_PATH].includes(item.path)).map((item) => (
                             <Button onClick={() => navigate(item.path)} key={item.name}
