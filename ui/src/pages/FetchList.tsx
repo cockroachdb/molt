@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
+    Alert,
     Typography,
     Box,
     Link,
@@ -10,13 +11,11 @@ import { Link as RouterLink, useNavigate } from "react-router-dom";
 import SimpleTable, { TableColumnProps } from '../components/tables/Table';
 import { info } from '../styles/colors';
 import { SETUP_CONNECTION_PATH } from '.';
-import { getFetchTasks } from '../api';
-import { formatSecondsToHHMMSS } from '../utils/dates';
-
+import { useGetFetchRunsQuery } from '../app/services/moltServerApi';
 
 export type Status = "In Progress" | "Ready for Review" | "Succeeded" | "Failed" | "Unknown"
 
-export interface FetchRun {
+export interface FetchListRun {
     key: string;
     id: string;
     name: string;
@@ -40,7 +39,7 @@ export const getChipFromStatus = (status: Status) => {
     return <Chip size="small" label={status} variant="info" />
 }
 
-const columns: TableColumnProps<FetchRun>[] = [
+const columns: TableColumnProps<FetchListRun>[] = [
     {
         id: "name",
         title: "Name",
@@ -103,37 +102,16 @@ export const getStatusFromString = (input: string): Status => {
 
 export default function FetchList() {
     const navigate = useNavigate();
-    const [runs, setRuns] = useState<FetchRun[]>([]);
+    const { data, error } = useGetFetchRunsQuery();
+    const [isErrorOpen, setIsErrorOpen] = useState(error !== undefined);
 
-    // TODO: refactor this as a helper later on.
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const data = await getFetchTasks();
-
-                const mappedRuns: FetchRun[] = data.map(item => {
-                    const startedAtTs = new Date(item.started_at * 1000);
-                    const finishedAtTs = new Date(item.finished_at * 1000);
-
-                    return {
-                        key: `${item.id.toString()}-${crypto.randomUUID()}`,
-                        id: item.id.toString(),
-                        name: item.name,
-                        status: getStatusFromString(item.status),
-                        duration: formatSecondsToHHMMSS(item.finished_at - item.started_at),
-                        startedAt: startedAtTs.toISOString(),
-                        finishedAt: finishedAtTs.toISOString(),
-                        errors: 0,
-                    }
-                })
-
-                setRuns(mappedRuns);
-            } catch (e) {
-                console.error(e);
-            }
+        if (error !== undefined) {
+            setIsErrorOpen(true);
+        } else {
+            setIsErrorOpen(false);
         }
-        fetchData()
-    }, [])
+    }, [error])
 
     return (
         <Box sx={{
@@ -144,12 +122,18 @@ export default function FetchList() {
             py: 4,
             px: 2
         }}>
+            {(isErrorOpen) && <Alert onClose={() => setIsErrorOpen(false)} severity="error" sx={{
+                width: '100%',
+                alignSelf: "center"
+            }}>
+                Failed to load fetch runs.
+            </Alert>}
             <Typography sx={{ mb: 1 }} variant='h4'>Fetch Runs</Typography>
             <Button sx={{ width: "120px", alignSelf: "flex-end" }} fullWidth={false} variant="contained"
                 onClick={() => {
                     navigate(SETUP_CONNECTION_PATH);
                 }}>Create New</Button>
-            <SimpleTable columns={columns} dataSource={runs} />
+            <SimpleTable columns={columns} dataSource={data ? data : []} />
         </Box>
     )
 }
