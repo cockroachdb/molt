@@ -6,10 +6,11 @@ require (
 	cloud.google.com/go/storage v1.31.0
 	github.com/alvaroloes/enumer v1.1.2
 	github.com/aws/aws-sdk-go v1.44.310
+	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/cockroachdb/apd/v3 v3.1.0
 	github.com/cockroachdb/cockroachdb-parser v0.0.0-20230705064001-302c9ad52e1a
 	github.com/cockroachdb/crlfmt v0.0.0-20221214225007-b2fc5c302548
-	github.com/cockroachdb/datadriven v1.0.2
+	github.com/cockroachdb/datadriven v1.0.3-0.20230801171734-e384cf455877
 	github.com/cockroachdb/errors v1.9.1
 	github.com/go-sql-driver/mysql v1.7.2-0.20230527164328-99976f4f587d
 	github.com/jackc/pgx/v5 v5.3.0

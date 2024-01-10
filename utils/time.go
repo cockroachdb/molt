@@ -17,3 +17,19 @@ func FormatDurationToTimeString(duration time.Duration) string {
 	// milliseconds, we are still logging out the milliseconds data side by side.
 	return fmt.Sprintf("%03dh %02dm %02ds", hours, minutes, seconds)
 }
+
+// MaybeFormatDurationForTest is to make a deterministic duration for test.
+func MaybeFormatDurationForTest(testOnly bool, duration time.Duration) time.Duration {
+	if !testOnly {
+		return duration
+	}
+	return time.Second
+}
+
+// MaybeFormatCDCCursor is to make a deterministic CDC cursor for test.
+func MaybeFormatCDCCursor(testOnly bool, s string) string {
+	if !testOnly {
+		return s
+	}
+	return "0/19E3610"
+}

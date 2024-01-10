@@ -1,0 +1,73 @@
+exec silent
+mysql -u user -p'password'  -h '0.0.0.0' -P 3306 --database=defaultdb --execute="DROP TABLE IF EXISTS tbl1; CREATE TABLE tbl1 (id INT PRIMARY KEY, t TEXT);"
+----
+
+exec silent
+docker exec -t github-mysql-1 mysql -u root -e 'GRANT FILE, SELECT on *.* to user;'
+----
+
+exec silent
+psql 'postgres://root@localhost:26257/defaultdb?sslmode=disable' -c "DROP TABLE IF EXISTS tbl1; CREATE TABLE tbl1 (id INT PRIMARY KEY, t TEXT);"
+----
+
+exec silent
+docker cp ../.github/e2esampledata/sampledata.csv  github-mysql-1:/var/lib/mysql-files
+----
+
+exec silent
+mysql -u user -p'password'  -h '0.0.0.0' -P 3306 --database=defaultdb --execute="LOAD DATA  INFILE '/var/lib/mysql-files/sampledata.csv'  INTO TABLE tbl1  FIELDS TERMINATED BY ','  ENCLOSED BY '\"' LINES TERMINATED BY '\n' IGNORE 1 ROWS;"
+----
+
+exec
+mysql -u user -p'password'  -h '0.0.0.0' -P 3306 --database=defaultdb --execute="SELECT * FROM tbl1"
+----
+id	t
+1	aaa
+2	bb b
+3	ééé
+4	U0001fae1U0001fae1U0001fae1
+5	卢卡斯
+6	Лукас
+7	ルカス
+
+exec
+psql 'postgres://root@localhost:26257/defaultdb?sslmode=disable' -c "SELECT * FROM tbl1"
+----
+id | t 
+----+---
+(0 rows)
+
+fetch mysql://user:password@0.0.0.0:3306/defaultdb postgres://root@localhost:26257/defaultdb?sslmode=disable tbl1
+----
+{"level":"info","message":"default compression to GZIP"}
+{"level":"info","message":"checking database details"}
+{"level":"info","source_table":"public.tbl1","target_table":"public.tbl1","message":"found matching table"}
+{"level":"info","message":"verifying common tables"}
+{"level":"info","message":"establishing snapshot"}
+{"level":"info","type":"summary","num_tables":1,"cdc_cursor":"0/19E3610","message":"starting fetch"}
+{"level":"info","message":"data extraction phase starting"}
+{"level":"info","type":"summary","num_rows":7,"export_duration_ms":1000,"export_duration":"000h 00m 01s","message":"data extraction from source complete"}
+{"level":"info","message":"starting data import on target"}
+{"level":"info","type":"summary","net_duration_ms":1000,"net_duration":"000h 00m 01s","import_duration_ms":1000,"import_duration":"000h 00m 01s","export_duration_ms":1000,"export_duration":"000h 00m 01s","num_rows":7,"cdc_cursor":"0/19E3610","message":"data import on target for table complete"}
+{"level":"info","type":"summary","num_tables":1,"tables":["public.tbl1"],"cdc_cursor":"0/19E3610","message":"fetch complete"}
+
+verify mysql://user:password@0.0.0.0:3306/defaultdb postgres://root@localhost:26257/defaultdb?sslmode=disable tbl1
+----
+{"level":"info","message":"verification in progress"}
+{"level":"info","message":"starting verify on public.tbl1, shard 1/1"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"tbl1","num_truth_rows":7,"num_success":7,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.tbl1 (shard 1/1)"}
+{"level":"info","net_duration_ms":1000,"net_duration":"000h 00m 01s","message":"verification complete"}
+
+exec
+psql 'postgres://root@localhost:26257/defaultdb?sslmode=disable' -c "SELECT * FROM tbl1"
+----
+id |              t              
+----+-----------------------------
+  1 | aaa
+  2 | bb b
+  3 | ééé
+  4 | U0001fae1U0001fae1U0001fae1
+  5 | 卢卡斯
+  6 | Лукас
+  7 | ルカス
+(7 rows)

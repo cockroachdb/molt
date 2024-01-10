@@ -43,6 +43,7 @@ func Command() *cobra.Command {
 		}
 		verifyLimitRowsPerSecond int
 		verifyRows               bool
+		verifyTestOnly           bool
 		logFile                  string
 	)
 
@@ -109,10 +110,11 @@ func Command() *cobra.Command {
 				verify.WithDBFilter(cmdutil.TableFilter()),
 				verify.WithRowsPerSecond(verifyLimitRowsPerSecond),
 				verify.WithRows(verifyRows),
+				verify.WithTestOnly(verifyTestOnly),
 			); err != nil {
 				return errors.Wrapf(err, "error verifying")
 			}
-			verifyDuration := timer.ObserveDuration()
+			verifyDuration := utils.MaybeFormatDurationForTest(verifyTestOnly, timer.ObserveDuration())
 			logger.Info().
 				Dur("net_duration_ms", verifyDuration).
 				Str("net_duration", utils.FormatDurationToTimeString(verifyDuration)).
@@ -230,7 +232,16 @@ func Command() *cobra.Command {
 		"Multiplier to apply to backoff duration after each failed row verification (live mode only).",
 	)
 
-	for _, hidden := range []string{"fixup", "table-splits"} {
+	// The test-only is for internal use only and is hidden from the usage or help prompt.
+	const testOnlyFlagStr = "test-only"
+	cmd.PersistentFlags().BoolVar(
+		&verifyTestOnly,
+		testOnlyFlagStr,
+		false,
+		"Whether this fetch attempt is only for test, and hence all time/duration related stats are deterministic",
+	)
+
+	for _, hidden := range []string{"fixup", "table-splits", testOnlyFlagStr} {
 		if err := cmd.PersistentFlags().MarkHidden(hidden); err != nil {
 			panic(err)
 		}
