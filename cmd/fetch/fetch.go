@@ -11,6 +11,7 @@ import (
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/fetch"
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
+	"github.com/cockroachdb/molt/fetch/fetchmetrics"
 	"github.com/cockroachdb/molt/moltlogger"
 	"github.com/spf13/cobra"
 	"github.com/thediveo/enumflag/v2"
@@ -96,7 +97,7 @@ func Command() *cobra.Command {
 			default:
 				return errors.AssertionFailedf("data source must be configured (--s3-bucket, --gcp-bucket, --direct-copy)")
 			}
-			return fetch.Fetch(
+			err = fetch.Fetch(
 				ctx,
 				cfg,
 				logger,
@@ -104,6 +105,12 @@ func Command() *cobra.Command {
 				src,
 				cmdutil.TableFilter(),
 			)
+
+			if err != nil {
+				fetchmetrics.NumTaskErrors.Inc()
+			}
+
+			return err
 		},
 	}
 

@@ -14,6 +14,7 @@ import (
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
+	"github.com/cockroachdb/molt/fetch/fetchmetrics"
 	"github.com/cockroachdb/molt/fetch/internal/dataquery"
 	"github.com/cockroachdb/molt/moltlogger"
 	"github.com/cockroachdb/molt/retry"
@@ -101,6 +102,7 @@ func reportImportTableProgress(
 			frac := p[0].FractionCompleted
 			if frac != 0.0 && prevVal != frac {
 				dataLogger.Info().Str("completion", fmt.Sprintf("%.2f%%", frac*100)).Msgf("progress")
+				fetchmetrics.CompletionPercentage.WithLabelValues(table.SafeString()).Set(frac * 100)
 			}
 
 			prevVal = p[0].FractionCompleted
