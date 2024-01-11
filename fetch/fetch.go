@@ -184,6 +184,9 @@ func fetchTable(
 	table tableverify.Result,
 ) error {
 	tableStartTime := time.Now()
+	// Initialize metrics for this table so we can calculate a rate later.
+	fetchmetrics.ExportedRows.WithLabelValues(table.SafeString())
+	fetchmetrics.ImportedRows.WithLabelValues(table.SafeString())
 
 	for _, col := range table.MismatchingTableDefinitions {
 		logger.Warn().
@@ -260,6 +263,7 @@ func fetchTable(
 				if err != nil {
 					return err
 				}
+				fetchmetrics.ImportedRows.WithLabelValues(table.SafeString()).Add(float64(e.NumRows))
 				importDuration = utils.MaybeFormatDurationForTest(cfg.TestOnly, r.EndTime.Sub(r.StartTime))
 			} else {
 				r, err := Copy(ctx, targetConn, logger, table.VerifiedTable, e.Resources)

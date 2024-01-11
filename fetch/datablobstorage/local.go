@@ -161,6 +161,14 @@ func (l *localResource) ImportURL() (string, error) {
 	return fmt.Sprintf("http://%s/%s", l.store.crdbAccessAddr, rel), nil
 }
 
+func (l *localResource) Key() (string, error) {
+	rel, err := filepath.Rel(l.store.basePath, l.path)
+	if err != nil {
+		return "", errors.Wrapf(err, "error finding relative path")
+	}
+	return rel, nil
+}
+
 func (l *localResource) MarkForCleanup(ctx context.Context) error {
 	l.store.logger.Debug().Msgf("removing %s", l.path)
 	return os.Remove(l.path)

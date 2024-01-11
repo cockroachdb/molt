@@ -28,6 +28,12 @@ var (
 		Name:      "rows_imported",
 		Help:      "Number of rows that have been imported by table.",
 	}, []string{"table"})
+	ExportedRows = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: Namespace,
+		Subsystem: Subsystem,
+		Name:      "rows_exported",
+		Help:      "Number of rows that have been exported by table.",
+	}, []string{"table"})
 
 	// Data errors are ones relating to individual rows or files processed
 	// for the import or copy.

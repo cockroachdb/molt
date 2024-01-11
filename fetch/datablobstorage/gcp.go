@@ -90,6 +90,10 @@ func (r *gcpResource) ImportURL() (string, error) {
 	), nil
 }
 
+func (r *gcpResource) Key() (string, error) {
+	return r.key, nil
+}
+
 func (r *gcpResource) Reader(ctx context.Context) (io.ReadCloser, error) {
 	return r.store.client.Bucket(r.store.bucket).Object(r.key).NewReader(ctx)
 }
