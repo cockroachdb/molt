@@ -44,7 +44,7 @@ func newCSVPipe(
 func (p *csvPipe) Pipe(tn dbtable.Name) error {
 	r := csv.NewReader(p.in)
 	r.ReuseRecord = true
-	m := fetchmetrics.ImportedRows.WithLabelValues(tn.SafeString())
+	m := fetchmetrics.ExportedRows.WithLabelValues(tn.SafeString())
 	dataLogger := moltlogger.GetDataLogger(p.logger)
 	for {
 		record, err := r.Read()
@@ -59,7 +59,10 @@ func (p *csvPipe) Pipe(tn dbtable.Name) error {
 		p.numRows++
 		m.Inc()
 		if p.numRows%100000 == 0 {
-			dataLogger.Info().Int("num_rows", p.numRows).Msgf("row import status")
+			dataLogger.Info().
+				Str("table", tn.SafeString()).
+				Int("num_rows", p.numRows).
+				Msgf("row import status")
 		}
 		for _, s := range record {
 			p.currSize += len(s) + 1

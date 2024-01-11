@@ -11,11 +11,13 @@ import (
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
 	"github.com/cockroachdb/molt/fetch/dataexport"
+	"github.com/cockroachdb/molt/fetch/fetchmetrics"
 	"github.com/cockroachdb/molt/moltlogger"
 	"github.com/cockroachdb/molt/molttelemetry"
 	"github.com/cockroachdb/molt/utils"
 	"github.com/cockroachdb/molt/verify/dbverify"
 	"github.com/cockroachdb/molt/verify/tableverify"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"golang.org/x/sync/errgroup"
 )
@@ -44,6 +46,8 @@ func Fetch(
 	blobStore datablobstorage.Store,
 	tableFilter dbverify.FilterConfig,
 ) error {
+	timer := prometheus.NewTimer(prometheus.ObserverFunc(fetchmetrics.OverallDuration.Set))
+
 	if cfg.FlushSize == 0 {
 		cfg.FlushSize = blobStore.DefaultFlushBatchSize()
 	}
@@ -112,11 +116,13 @@ func Fetch(
 		}
 	}()
 
+	numTables := len(tables)
 	summaryLogger := moltlogger.GetSummaryLogger(logger)
 	summaryLogger.Info().
-		Int("num_tables", len(tables)).
+		Int("num_tables", numTables).
 		Str("cdc_cursor", utils.MaybeFormatCDCCursor(cfg.TestOnly, sqlSrc.CDCCursor())).
 		Msgf("starting fetch")
+	fetchmetrics.NumTablesProcessed.Add(float64(numTables))
 
 	type statsMu struct {
 		sync.Mutex
@@ -157,10 +163,13 @@ func Fetch(
 		return err
 	}
 
+	ovrDuration := timer.ObserveDuration()
 	summaryLogger.Info().
 		Int("num_tables", stats.numImportedTables).
 		Strs("tables", stats.importedTables).
 		Str("cdc_cursor", utils.MaybeFormatCDCCursor(cfg.TestOnly, sqlSrc.CDCCursor())).
+		Dur("net_duration_ms", ovrDuration).
+		Str("net_duration", utils.FormatDurationToTimeString(ovrDuration)).
 		Msgf("fetch complete")
 	return nil
 }
@@ -175,6 +184,9 @@ func fetchTable(
 	table tableverify.Result,
 ) error {
 	tableStartTime := time.Now()
+	// Initialize metrics for this table so we can calculate a rate later.
+	fetchmetrics.ExportedRows.WithLabelValues(table.SafeString())
+	fetchmetrics.ImportedRows.WithLabelValues(table.SafeString())
 
 	for _, col := range table.MismatchingTableDefinitions {
 		logger.Warn().
@@ -214,6 +226,7 @@ func fetchTable(
 		Dur("export_duration_ms", exportDuration).
 		Str("export_duration", utils.FormatDurationToTimeString(exportDuration)).
 		Msgf("data extraction from source complete")
+	fetchmetrics.TableExportDuration.WithLabelValues(table.SafeString()).Set(float64(exportDuration.Milliseconds()))
 
 	if blobStore.CanBeTarget() {
 		targetConn, err := conns[1].Clone(ctx)
@@ -250,6 +263,7 @@ func fetchTable(
 				if err != nil {
 					return err
 				}
+				fetchmetrics.ImportedRows.WithLabelValues(table.SafeString()).Add(float64(e.NumRows))
 				importDuration = utils.MaybeFormatDurationForTest(cfg.TestOnly, r.EndTime.Sub(r.StartTime))
 			} else {
 				r, err := Copy(ctx, targetConn, logger, table.VerifiedTable, e.Resources)
@@ -278,6 +292,9 @@ func fetchTable(
 			Int("num_rows", e.NumRows).
 			Str("cdc_cursor", cdcCursor).
 			Msgf("data import on target for table complete")
+		fetchmetrics.TableImportDuration.WithLabelValues(table.SafeString()).Set(float64(importDuration.Milliseconds()))
+		fetchmetrics.TableOverallDuration.WithLabelValues(table.SafeString()).Set(float64(netDuration.Milliseconds()))
+
 		return nil
 	}
 	return nil

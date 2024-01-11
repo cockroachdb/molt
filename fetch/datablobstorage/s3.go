@@ -45,6 +45,10 @@ func (s *s3Resource) ImportURL() (string, error) {
 	), nil
 }
 
+func (s *s3Resource) Key() (string, error) {
+	return s.key, nil
+}
+
 func (s *s3Resource) MarkForCleanup(ctx context.Context) error {
 	s.store.batchDelete.Lock()
 	defer s.store.batchDelete.Unlock()
