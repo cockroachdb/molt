@@ -29,7 +29,7 @@ var (
 		Subsystem: Subsystem,
 		Name:      "num_row_fixups",
 		Help:      "Number of fixups per category.",
-	}, []string{"category"})
+	}, []string{"category", "table"})
 	OverallDuration = promauto.NewGauge(prometheus.GaugeOpts{
 		Namespace: Namespace,
 		Subsystem: Subsystem,
@@ -75,13 +75,13 @@ var (
 		Subsystem: Subsystem,
 		Name:      "row_verification_status",
 		Help:      "Status of rows that have been verified.",
-	}, []string{"status"})
-	RowsRead = promauto.NewCounter(prometheus.CounterOpts{
+	}, []string{"status", "table"})
+	RowsRead = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: Namespace,
 		Subsystem: Subsystem,
 		Name:      "rows_read",
 		Help:      "Rate of rows that are being read from source database.",
-	})
+	}, []string{"table"})
 
 	rowStatusCategories = []string{"extraneous", "missing", "mismatching", "mismatching_column", "success", "conditional_success"}
 	tableCategories     = []string{"verified", "missing", "extraneous"}
@@ -95,10 +95,10 @@ func init() {
 	}
 
 	for _, f := range fixupCategories {
-		NumRowFixups.WithLabelValues(f)
+		NumRowFixups.WithLabelValues(f, "overall")
 	}
 
 	for _, r := range rowStatusCategories {
-		RowStatus.WithLabelValues(r)
+		RowStatus.WithLabelValues(r, "overall")
 	}
 }
