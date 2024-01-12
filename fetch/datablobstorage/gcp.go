@@ -52,10 +52,13 @@ func (s *gcpStore) CreateFromReader(
 	if err := wc.Close(); err != nil {
 		return nil, err
 	}
-	s.logger.Debug().Str("file", key).Msgf("gcp file creation complete complete")
+
+	rows := <-numRows
+	s.logger.Debug().Str("file", key).Int("rows", rows).Msgf("gcp file creation complete complete")
 	return &gcpResource{
 		store: s,
 		key:   key,
+		rows:  rows,
 	}, nil
 }
 
@@ -92,6 +95,10 @@ func (r *gcpResource) ImportURL() (string, error) {
 
 func (r *gcpResource) Key() (string, error) {
 	return r.key, nil
+}
+
+func (r *gcpResource) NumRows() (int, error) {
+	return r.rows, nil
 }
 
 func (r *gcpResource) Reader(ctx context.Context) (io.ReadCloser, error) {

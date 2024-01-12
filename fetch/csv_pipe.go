@@ -79,6 +79,14 @@ func (p *csvPipe) Pipe(tn dbtable.Name) error {
 	}
 }
 
+<<<<<<< HEAD
+=======
+// flush flushes the current csv files when either
+// we reached the end of the file or our file limits.
+// It also sends the current number of rows processed
+// to a channel to be processed by the data storage
+// backend.
+>>>>>>> 1e7bdca (fetch: Add row count per file to blob resource)
 func (p *csvPipe) flush() error {
 	if p.csvWriter != nil {
 		p.csvWriter.Flush()

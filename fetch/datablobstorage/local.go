@@ -105,7 +105,8 @@ func (l *localStore) CreateFromReader(
 		if err != nil {
 			if err == io.EOF {
 				logger.Debug().Msgf("wrote file")
-				return &localResource{path: p, store: l}, nil
+				rows := <-numRows
+				return &localResource{path: p, store: l, rows: rows}, nil
 			}
 			return nil, err
 		}
@@ -167,6 +168,10 @@ func (l *localResource) Key() (string, error) {
 		return "", errors.Wrapf(err, "error finding relative path")
 	}
 	return rel, nil
+}
+
+func (l *localResource) NumRows() (int, error) {
+	return l.rows, nil
 }
 
 func (l *localResource) MarkForCleanup(ctx context.Context) error {

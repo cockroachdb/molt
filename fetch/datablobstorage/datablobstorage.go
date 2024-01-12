@@ -17,6 +17,7 @@ type Store interface {
 
 type Resource interface {
 	Key() (string, error)
+	NumRows() (int, error)
 	ImportURL() (string, error)
 	MarkForCleanup(ctx context.Context) error
 	Reader(ctx context.Context) (io.ReadCloser, error)
