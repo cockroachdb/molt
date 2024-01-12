@@ -61,7 +61,6 @@ services:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
-      # TODO (rluu): put this in when we have a dashboard template.
-      #  - ./grafana/dashboard.json:/grafana/dashboard/dashboard.json
+      - ./grafana/dashboard.json:/grafana/dashboard/dashboard.json
       - ./grafana/dashboard.yaml:/etc/grafana/provisioning/dashboards/main.yaml
       - ./grafana/datasource.yml:/etc/grafana/provisioning/datasources/prometheus_ds.yml
