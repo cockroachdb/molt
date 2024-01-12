@@ -33,6 +33,7 @@ type s3Resource struct {
 	session *session.Session
 	store   *s3Store
 	key     string
+	rows    int
 }
 
 func (s *s3Resource) ImportURL() (string, error) {
@@ -105,7 +106,12 @@ func NewS3Store(
 }
 
 func (s *s3Store) CreateFromReader(
-	ctx context.Context, r io.Reader, table dbtable.VerifiedTable, iteration int, fileExt string,
+	ctx context.Context,
+	r io.Reader,
+	table dbtable.VerifiedTable,
+	iteration int,
+	fileExt string,
+	numRows chan int,
 ) (Resource, error) {
 	key := fmt.Sprintf("%s/part_%08d.%s", table.SafeString(), iteration, fileExt)
 	if s.bucketPath != "" {
@@ -120,11 +126,14 @@ func (s *s3Store) CreateFromReader(
 	}); err != nil {
 		return nil, err
 	}
-	s.logger.Debug().Str("file", key).Msgf("s3 file creation batch complete")
+
+	rows := <-numRows
+	s.logger.Debug().Str("file", key).Int("rows", rows).Msgf("s3 file creation batch complete")
 	return &s3Resource{
 		session: s.session,
 		store:   s,
 		key:     key,
+		rows:    rows,
 	}, nil
 }
 

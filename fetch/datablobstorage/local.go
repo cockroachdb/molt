@@ -86,7 +86,12 @@ func getLocalIP() string {
 }
 
 func (l *localStore) CreateFromReader(
-	ctx context.Context, r io.Reader, table dbtable.VerifiedTable, iteration int, fileExt string,
+	ctx context.Context,
+	r io.Reader,
+	table dbtable.VerifiedTable,
+	iteration int,
+	fileExt string,
+	numRows chan int,
 ) (Resource, error) {
 	baseDir := path.Join(l.basePath, table.SafeString())
 	if err := os.MkdirAll(baseDir, os.ModePerm); err != nil {
@@ -145,6 +150,7 @@ func (l *localStore) TelemetryName() string {
 type localResource struct {
 	path  string
 	store *localStore
+	rows  int
 }
 
 func (l *localResource) Reader(ctx context.Context) (io.ReadCloser, error) {

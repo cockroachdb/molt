@@ -135,14 +135,10 @@ multiline part"
 				zerolog.New(os.Stdout),
 				tc.flushSize,
 				tc.flushRows,
-<<<<<<< HEAD
-				func() io.WriteCloser {
-=======
 				func(numRows chan int) io.WriteCloser {
 					go func() {
 						<-numRows
 					}()
->>>>>>> 1e7bdca (fetch: Add row count per file to blob resource)
 					bufs = append(bufs, testStringBuf{})
 					return &bufs[len(bufs)-1]
 				},

@@ -37,7 +37,12 @@ func NewGCPStore(
 }
 
 func (s *gcpStore) CreateFromReader(
-	ctx context.Context, r io.Reader, table dbtable.VerifiedTable, iteration int, fileExt string,
+	ctx context.Context,
+	r io.Reader,
+	table dbtable.VerifiedTable,
+	iteration int,
+	fileExt string,
+	numRows chan int,
 ) (Resource, error) {
 	key := fmt.Sprintf("%s/part_%08d.%s", table.SafeString(), iteration, fileExt)
 	if s.bucketPath != "" {
@@ -82,6 +87,7 @@ func (r *gcpStore) TelemetryName() string {
 type gcpResource struct {
 	store *gcpStore
 	key   string
+	rows  int
 }
 
 func (r *gcpResource) ImportURL() (string, error) {

@@ -74,7 +74,7 @@ func exportTable(
 	itNum := 0
 	// Errors must be buffered, as pipe can exit without taking the error channel.
 	writerErrCh := make(chan error, 1)
-	pipe := newCSVPipe(sqlRead, logger, cfg.FlushSize, cfg.FlushRows, func() io.WriteCloser {
+	pipe := newCSVPipe(sqlRead, logger, cfg.FlushSize, cfg.FlushRows, func(numRowsCh chan int) io.WriteCloser {
 		resourceWG.Wait()
 		forwardRead, forwardWrite := io.Pipe()
 		wrappedWriter := getWriter(forwardWrite, cfg.Compression)
@@ -83,7 +83,7 @@ func exportTable(
 			defer resourceWG.Done()
 			itNum++
 			if err := func() error {
-				resource, err := datasource.CreateFromReader(ctx, forwardRead, table, itNum, importFileExt)
+				resource, err := datasource.CreateFromReader(ctx, forwardRead, table, itNum, importFileExt, numRowsCh)
 				if err != nil {
 					return err
 				}
