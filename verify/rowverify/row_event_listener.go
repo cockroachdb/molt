@@ -6,6 +6,7 @@ import (
 
 	"github.com/cockroachdb/cockroachdb-parser/pkg/sql/sem/tree"
 	"github.com/cockroachdb/molt/retry"
+	"github.com/cockroachdb/molt/utils"
 	"github.com/cockroachdb/molt/verify/inconsistency"
 	"github.com/cockroachdb/molt/verify/verifymetrics"
 )
@@ -29,24 +30,24 @@ type defaultRowEventListener struct {
 func (n *defaultRowEventListener) OnExtraneousRow(row inconsistency.ExtraneousRow) {
 	n.reporter.Report(row)
 	n.stats.NumExtraneous++
-	verifymetrics.RowStatus.WithLabelValues("extraneous").Inc()
+	verifymetrics.RowStatus.WithLabelValues("extraneous", utils.SchemaTableString(n.table.Schema, n.table.Table)).Inc()
 }
 
 func (n *defaultRowEventListener) OnMissingRow(row inconsistency.MissingRow) {
 	n.stats.NumMissing++
 	n.reporter.Report(row)
-	verifymetrics.RowStatus.WithLabelValues("missing").Inc()
+	verifymetrics.RowStatus.WithLabelValues("missing", utils.SchemaTableString(n.table.Schema, n.table.Table)).Inc()
 }
 
 func (n *defaultRowEventListener) OnMismatchingRow(row inconsistency.MismatchingRow) {
 	n.reporter.Report(row)
 	n.stats.NumMismatch++
-	verifymetrics.RowStatus.WithLabelValues("mismatching").Inc()
+	verifymetrics.RowStatus.WithLabelValues("mismatching", utils.SchemaTableString(n.table.Schema, n.table.Table)).Inc()
 }
 
 func (n *defaultRowEventListener) OnMatch() {
 	n.stats.NumSuccess++
-	verifymetrics.RowStatus.WithLabelValues("success").Inc()
+	verifymetrics.RowStatus.WithLabelValues("success", utils.SchemaTableString(n.table.Schema, n.table.Table)).Inc()
 }
 
 func (n *defaultRowEventListener) OnColumnMismatchNoOtherIssues(
@@ -57,11 +58,11 @@ func (n *defaultRowEventListener) OnColumnMismatchNoOtherIssues(
 	if reportLog {
 		n.reporter.Report(row)
 		numMismatchingCols := len(row.MismatchingColumns)
-		verifymetrics.RowStatus.WithLabelValues("mismatching_column").Add(float64(numMismatchingCols))
+		verifymetrics.RowStatus.WithLabelValues("mismatching_column", utils.SchemaTableString(n.table.Schema, n.table.Table)).Add(float64(numMismatchingCols))
 		n.stats.NumColumnMismatch += numMismatchingCols
 	}
 	n.stats.NumConditionalSuccess++
-	verifymetrics.RowStatus.WithLabelValues("conditional_success").Inc()
+	verifymetrics.RowStatus.WithLabelValues("conditional_success", utils.SchemaTableString(n.table.Schema, n.table.Table)).Inc()
 }
 
 func (n *defaultRowEventListener) OnRowScan() {
@@ -71,7 +72,7 @@ func (n *defaultRowEventListener) OnRowScan() {
 			Stats: n.stats,
 		})
 	}
-	verifymetrics.RowsRead.Inc()
+	verifymetrics.RowsRead.WithLabelValues(utils.SchemaTableString(n.table.Schema, n.table.Table)).Inc()
 	n.stats.NumVerified++
 }
 
