@@ -18,12 +18,14 @@ type csvPipe struct {
 	out       io.WriteCloser
 	logger    zerolog.Logger
 
-	flushSize    int
-	flushRows    int
-	currSize     int
-	currRows     int
-	numRows      int
-	newWriter    func() io.WriteCloser
+	flushSize int
+	flushRows int
+	currSize  int
+	currRows  int
+	numRows   int
+	numRowsCh chan int
+	newWriter func(numRowsCh chan int) io.WriteCloser
+
 	testingKnobs testutils.FetchTestingKnobs
 }
 
@@ -32,17 +34,22 @@ func newCSVPipe(
 	logger zerolog.Logger,
 	flushSize int,
 	flushRows int,
-	newWriter func() io.WriteCloser,
+	newWriter func(numRowsCh chan int) io.WriteCloser,
 ) *csvPipe {
 	return &csvPipe{
 		in:        in,
 		logger:    logger,
 		flushSize: flushSize,
 		flushRows: flushRows,
+		numRowsCh: make(chan int, 1),
 		newWriter: newWriter,
 	}
 }
 
+// Pipe is responsible for reading data from the SQL Pipe
+// and creating a CSV file. The CSV data is either flushed
+// when max rows or max file size is reached. The output
+// is written to another pipe which is used as an io.Reader.
 func (p *csvPipe) Pipe(tn dbtable.Name) error {
 	r := csv.NewReader(p.in)
 	r.ReuseRecord = true
@@ -87,8 +94,14 @@ func (p *csvPipe) Pipe(tn dbtable.Name) error {
 	}
 }
 
+// Flush flushes the current csv files when either
+// we reached the end of the file or our file limits.
+// It also sends the current number of rows processed
+// to a channel to be processed by the data storage
+// backend.
 func (p *csvPipe) flush() error {
 	if p.csvWriter != nil {
+		p.numRowsCh <- p.currRows
 		p.csvWriter.Flush()
 		if err := p.out.Close(); err != nil {
 			return err
@@ -103,7 +116,7 @@ func (p *csvPipe) flush() error {
 
 func (p *csvPipe) maybeInitWriter() {
 	if p.csvWriter == nil {
-		p.out = p.newWriter()
+		p.out = p.newWriter(p.numRowsCh)
 		p.csvWriter = csv.NewWriter(p.out)
 	}
 }

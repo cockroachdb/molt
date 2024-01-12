@@ -86,7 +86,12 @@ func getLocalIP() string {
 }
 
 func (l *localStore) CreateFromReader(
-	ctx context.Context, r io.Reader, table dbtable.VerifiedTable, iteration int, fileExt string,
+	ctx context.Context,
+	r io.Reader,
+	table dbtable.VerifiedTable,
+	iteration int,
+	fileExt string,
+	numRows chan int,
 ) (Resource, error) {
 	baseDir := path.Join(l.basePath, table.SafeString())
 	if err := os.MkdirAll(baseDir, os.ModePerm); err != nil {
@@ -105,7 +110,8 @@ func (l *localStore) CreateFromReader(
 		if err != nil {
 			if err == io.EOF {
 				logger.Debug().Msgf("wrote file")
-				return &localResource{path: p, store: l}, nil
+				rows := <-numRows
+				return &localResource{path: p, store: l, rows: rows}, nil
 			}
 			return nil, err
 		}
@@ -167,6 +173,7 @@ func (l *localStore) TelemetryName() string {
 type localResource struct {
 	path  string
 	store *localStore
+	rows  int
 }
 
 func (l *localResource) Reader(ctx context.Context) (io.ReadCloser, error) {
@@ -190,6 +197,10 @@ func (l *localResource) Key() (string, error) {
 		return "", errors.Wrapf(err, "error finding relative path")
 	}
 	return rel, nil
+}
+
+func (l *localResource) Rows() int {
+	return l.rows
 }
 
 func (l *localResource) MarkForCleanup(ctx context.Context) error {

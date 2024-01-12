@@ -135,7 +135,10 @@ multiline part"
 				zerolog.New(os.Stdout),
 				tc.flushSize,
 				tc.flushRows,
-				func() io.WriteCloser {
+				func(numRows chan int) io.WriteCloser {
+					go func() {
+						<-numRows
+					}()
 					bufs = append(bufs, testStringBuf{})
 					return &bufs[len(bufs)-1]
 				},

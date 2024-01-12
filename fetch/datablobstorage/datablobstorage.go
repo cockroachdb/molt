@@ -19,7 +19,7 @@ type Store interface {
 	// CSVs from the data export process. It will create the file and upload
 	// it to the respetive data store and return the resource object which
 	// will be used in the data import phase.
-	CreateFromReader(ctx context.Context, r io.Reader, table dbtable.VerifiedTable, iteration int, fileExt string) (Resource, error)
+	CreateFromReader(ctx context.Context, r io.Reader, table dbtable.VerifiedTable, iteration int, fileExt string, numRows chan int) (Resource, error)
 	// ListFromContinuationPoint is used when restarting Fetch from
 	// a continuation point. It will query the respective data store
 	// and create the slice of resources that will be used by the
@@ -35,6 +35,7 @@ type Store interface {
 
 type Resource interface {
 	Key() (string, error)
+	Rows() int
 	ImportURL() (string, error)
 	MarkForCleanup(ctx context.Context) error
 	Reader(ctx context.Context) (io.ReadCloser, error)
