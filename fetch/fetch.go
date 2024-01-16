@@ -163,7 +163,7 @@ func Fetch(
 		return err
 	}
 
-	ovrDuration := timer.ObserveDuration()
+	ovrDuration := utils.MaybeFormatDurationForTest(cfg.TestOnly, timer.ObserveDuration())
 	summaryLogger.Info().
 		Int("num_tables", stats.numImportedTables).
 		Strs("tables", stats.importedTables).
