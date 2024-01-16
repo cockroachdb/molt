@@ -24,7 +24,7 @@
     "liveNow": false,
     "panels": [
       {
-        "collapsed": true,
+        "collapsed": false,
         "gridPos": {
           "h": 1,
           "w": 24,
@@ -1611,7 +1611,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "definition": "label_values(molt_fetch_rows_exported,table)",
+          "definition": "label_values({__name__=~ \"molt_verify_rows_read|molt_fetch_rows_exported\"}, table)",
           "description": "Table to filter by",
           "hide": 0,
           "includeAll": true,
@@ -1620,8 +1620,8 @@
           "name": "table",
           "options": [],
           "query": {
-            "qryType": 1,
-            "query": "label_values(molt_fetch_rows_exported,table)",
+            "qryType": 5,
+            "query": "label_values({__name__=~ \"molt_verify_rows_read|molt_fetch_rows_exported\"}, table)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -1633,13 +1633,13 @@
       ]
     },
     "time": {
-      "from": "now-3h",
+      "from": "now-5m",
       "to": "now"
     },
     "timepicker": {},
     "timezone": "",
     "title": "MOLT Dashboard",
     "uid": "debab727-e70a-43af-9cd9-132cb84f9944",
-    "version": 5,
+    "version": 1,
     "weekStart": ""
   }
