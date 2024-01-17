@@ -53,14 +53,33 @@ func (s *gcpStore) CreateFromReader(
 
 	s.logger.Debug().Str("file", key).Msgf("creating new file")
 	wc := s.client.Bucket(s.bucket).Object(key).NewWriter(ctx)
+
+	rows := <-numRows
+
+	// If any error happens before io.Copy returns, the
+	// error will be propagated to the goroutine in exportTable(),
+	// triggering forwardRead.CloseWithError(), which will allow p.out.Close() in
+	// csvPipe.flush() to return with the same error. This is because `forwardRead`
+	// and `p.out` are the 2 ends of a pipe. Once the read side is closed with
+	// error, the same error will be propagated to the write side.
+	// See also: https://go.dev/play/p/H-pHiEffcZE.
+
+	// io.Copy starts execution ONLY after p.csvWriter.Flush() is triggered.
 	if _, err := io.Copy(wc, r); err != nil {
 		return nil, err
 	}
+	// Once io.Copy finished without error, p.csvWriter.Flush() and p.out.Close()
+	// will return without error.
+
+	// If any error after io.Copy returns, the error will trigger
+	// forwardRead.CloseWithError() in the goroutine in exportTable(), but it will
+	// lead to "error closing write goroutine", as the pipe has been closed via
+	// p.out.Close().
+
 	if err := wc.Close(); err != nil {
 		return nil, err
 	}
 
-	rows := <-numRows
 	s.logger.Debug().Str("file", key).Int("rows", rows).Msgf("gcp file creation complete complete")
 	return &gcpResource{
 		store: s,

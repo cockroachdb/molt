@@ -24,7 +24,7 @@ type csvPipe struct {
 	currRows  int
 	numRows   int
 	numRowsCh chan int
-	newWriter func(numRowsCh chan int) io.WriteCloser
+	newWriter func(numRowsCh chan int) (io.WriteCloser, error)
 
 	testingKnobs testutils.FetchTestingKnobs
 }
@@ -34,7 +34,7 @@ func newCSVPipe(
 	logger zerolog.Logger,
 	flushSize int,
 	flushRows int,
-	newWriter func(numRowsCh chan int) io.WriteCloser,
+	newWriter func(numRowsCh chan int) (io.WriteCloser, error),
 ) *csvPipe {
 	return &csvPipe{
 		in:        in,
@@ -63,7 +63,9 @@ func (p *csvPipe) Pipe(tn dbtable.Name) error {
 			}
 			return err
 		}
-		p.maybeInitWriter()
+		if err := p.maybeInitWriter(); err != nil {
+			return err
+		}
 		p.currRows++
 		p.numRows++
 		m.Inc()
@@ -114,9 +116,14 @@ func (p *csvPipe) flush() error {
 	return nil
 }
 
-func (p *csvPipe) maybeInitWriter() {
+func (p *csvPipe) maybeInitWriter() error {
 	if p.csvWriter == nil {
-		p.out = p.newWriter(p.numRowsCh)
+		out, err := p.newWriter(p.numRowsCh)
+		if err != nil {
+			return err
+		}
+		p.out = out
 		p.csvWriter = csv.NewWriter(p.out)
 	}
+	return nil
 }

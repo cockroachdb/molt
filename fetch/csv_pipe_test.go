@@ -135,12 +135,12 @@ multiline part"
 				zerolog.New(os.Stdout),
 				tc.flushSize,
 				tc.flushRows,
-				func(numRows chan int) io.WriteCloser {
+				func(numRows chan int) (io.WriteCloser, error) {
 					go func() {
 						<-numRows
 					}()
 					bufs = append(bufs, testStringBuf{})
-					return &bufs[len(bufs)-1]
+					return &bufs[len(bufs)-1], nil
 				},
 			)
 			require.NoError(t, pipe.Pipe(dbtable.Name{Schema: "test", Table: "test"}))

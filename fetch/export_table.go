@@ -3,7 +3,6 @@ package fetch
 import (
 	"context"
 	"io"
-	"sync"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -72,17 +71,23 @@ func exportTable(
 		)
 	})
 
-	var resourceWG sync.WaitGroup
+	resourceWG, _ := errgroup.WithContext(ctx)
+	resourceWG.SetLimit(1)
+
 	itNum := 0
 	// Errors must be buffered, as pipe can exit without taking the error channel.
-	writerErrCh := make(chan error, 1)
-	pipe := newCSVPipe(sqlRead, logger, cfg.FlushSize, cfg.FlushRows, func(numRowsCh chan int) io.WriteCloser {
-		resourceWG.Wait()
+	pipe := newCSVPipe(sqlRead, logger, cfg.FlushSize, cfg.FlushRows, func(numRowsCh chan int) (io.WriteCloser, error) {
+		if err := resourceWG.Wait(); err != nil {
+			// We need to check if the last iteration saw any error when creating
+			// resource from reader. If so, just exit the current iteration.
+			// Otherwise, with the error from the last iteration congesting writerErrCh,
+			// the current iteration, upon seeing the same error, will hang at
+			// writerErrCh <- err.
+			return nil, err
+		}
 		forwardRead, forwardWrite := io.Pipe()
 		wrappedWriter := getWriter(forwardWrite, cfg.Compression)
-		resourceWG.Add(1)
-		go func() {
-			defer resourceWG.Done()
+		resourceWG.Go(func() error {
 			itNum++
 			if err := func() error {
 				resource, err := datasource.CreateFromReader(ctx, forwardRead, table, itNum, importFileExt, numRowsCh)
@@ -93,34 +98,33 @@ func exportTable(
 				return nil
 			}(); err != nil {
 				logger.Err(err).Msgf("error during data store write")
-				if err := forwardRead.CloseWithError(err); err != nil {
-					logger.Err(err).Msgf("error closing write goroutine")
+				if closeReadErr := forwardRead.CloseWithError(err); closeReadErr != nil {
+					logger.Err(closeReadErr).Msgf("error closing write goroutine")
 				}
-				writerErrCh <- err
+				return err
 			}
-		}()
-		return wrappedWriter
+			return nil
+		})
+		return wrappedWriter, nil
 	})
 
 	// This is so we can simulate corrupted CSVs for testing.
 	pipe.testingKnobs = testingKnobs
 	err := pipe.Pipe(table.Name)
+	if err != nil {
+		return ret, err
+	}
 	// Wait for the resource wait group to complete. It may output an error
 	// that is not captured in the pipe.
-	resourceWG.Wait()
-	// Check any errors are not left behind - this can happen if the data source
-	// creation fails, but the COPY is already done.
-	select {
-	case werr := <-writerErrCh:
-		if werr != nil {
-			cancelFunc()
-			err = errors.CombineErrors(err, werr)
-		}
-	default:
-	}
-	if err != nil {
-		// We do not wait for COPY to complete - we're already in trouble.
-		return ret, err
+	// This is still needed though we also check the resourceWG.wait() in the
+	// newWriter(), because if the error happened at the _last_ iteration,
+	// we won't call newWriter() again, and hence won't reach that error check.
+	// This check here is for this edge case, and is tested with single-row table
+	// in TestFailedWriteToStore.
+	// Note that wg.Wait() is idempotent and returns the same error if there's any,
+	// see https://go.dev/play/p/dLL5v6MqZel.
+	if dataStoreWriteErr := resourceWG.Wait(); dataStoreWriteErr != nil {
+		return ret, dataStoreWriteErr
 	}
 
 	ret.NumRows = pipe.numRows
