@@ -115,6 +115,29 @@ func (l *localStore) CreateFromReader(
 	}
 }
 
+func (l *localStore) ListFromContinuationPoint(
+	ctx context.Context, table dbtable.VerifiedTable, fileName string,
+) ([]Resource, error) {
+	baseDir := path.Join(l.basePath, table.SafeString())
+	files, err := os.ReadDir(baseDir)
+	if err != nil {
+		return nil, err
+	}
+
+	resources := []Resource{}
+	for _, f := range files {
+		if f.Name() >= fileName {
+			p := path.Join(baseDir, f.Name())
+			resources = append(resources, &localResource{
+				path:  p,
+				store: l,
+			})
+		}
+
+	}
+	return resources, nil
+}
+
 func (l *localStore) DefaultFlushBatchSize() int {
 	return 128 * 1024 * 1024
 }

@@ -1,9 +1,14 @@
 package datablobstorage
 
 import (
+	"context"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/stretchr/testify/require"
 )
 
@@ -48,4 +53,45 @@ func TestS3Resource_ImportURL(t *testing.T) {
 			require.Equal(t, tc.expected, u)
 		})
 	}
+}
+
+type mockS3Client struct {
+	s3iface.S3API
+	resp *s3.ListObjectsV2Output
+	err  error
+}
+
+func (m *mockS3Client) ListObjectsV2WithContext(
+	ctx context.Context, params *s3.ListObjectsV2Input, opts ...request.Option,
+) (*s3.ListObjectsV2Output, error) {
+	return m.resp, m.err
+}
+
+func TestListFromContinuationPointAWS(t *testing.T) {
+	s3CLI := &mockS3Client{
+		resp: &s3.ListObjectsV2Output{
+			Contents: []*s3.Object{
+				{Key: aws.String("part_00000001.tar.gz")},
+				{Key: aws.String("part_00000002.tar.gz")},
+				{Key: aws.String("part_00000003.tar.gz")},
+				{Key: aws.String("part_00000004.tar.gz")},
+				{Key: aws.String("part_00000005.tar.gz")},
+				{Key: aws.String("part_00000006.tar.gz")},
+				{Key: aws.String("part_00000007.tar.gz")},
+				{Key: aws.String("part_00000008.tar.gz")},
+			},
+		},
+		err: nil,
+	}
+	ctx := context.Background()
+	s3Store := s3Store{
+		bucket: "fetch-test",
+		creds: credentials.Value{
+			AccessKeyID:     "aaaa",
+			SecretAccessKey: "bbbb",
+		},
+	}
+	resources, err := listFromContinuationPointAWS(ctx, s3CLI, "part_00000004.tar.gz", "public.inventory", &s3Store)
+	require.NoError(t, err)
+	require.Len(t, resources, 5)
 }

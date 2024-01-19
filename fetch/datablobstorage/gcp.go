@@ -8,8 +8,10 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/cockroachdb/molt/dbtable"
+	"github.com/googleapis/google-cloud-go-testing/storage/stiface"
 	"github.com/rs/zerolog"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/iterator"
 )
 
 type gcpStore struct {
@@ -57,6 +59,40 @@ func (s *gcpStore) CreateFromReader(
 		store: s,
 		key:   key,
 	}, nil
+}
+
+func (s *gcpStore) ListFromContinuationPoint(
+	ctx context.Context, table dbtable.VerifiedTable, fileName string,
+) ([]Resource, error) {
+	key, prefix := getKeyAndPrefix(fileName, s.bucketPath, table)
+	return listFromContinuationPointGCP(ctx, stiface.AdaptClient(s.client), key, prefix, s.bucket)
+}
+
+func listFromContinuationPointGCP(
+	ctx context.Context, client stiface.Client, key, prefix, bucket string,
+) ([]Resource, error) {
+	it := client.Bucket(bucket).Objects(ctx, &storage.Query{
+		Prefix: prefix,
+		// The StartOffeset parameter is similar to the StartAfter flag
+		// for S3 except that it is inclusive of the key so
+		// we don't need to do any extra filtering of the
+		// results.
+		StartOffset: key,
+	})
+
+	resources := []Resource{}
+	for {
+		if attrs, err := it.Next(); err != nil {
+			if err == iterator.Done {
+				return resources, nil
+			}
+			return nil, err
+		} else {
+			resources = append(resources, &gcpResource{
+				key: attrs.Name,
+			})
+		}
+	}
 }
 
 func (s *gcpStore) CanBeTarget() bool {

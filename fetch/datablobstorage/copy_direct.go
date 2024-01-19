@@ -34,6 +34,12 @@ func (c *copyCRDBDirect) CreateFromReader(
 	return nil, conn.Close(ctx)
 }
 
+func (c *copyCRDBDirect) ListFromContinuationPoint(
+	ctx context.Context, table dbtable.VerifiedTable, fileName string,
+) ([]Resource, error) {
+	return nil, nil
+}
+
 func (c *copyCRDBDirect) CanBeTarget() bool {
 	return false
 }
