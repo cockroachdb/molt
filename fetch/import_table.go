@@ -16,6 +16,7 @@ import (
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
 	"github.com/cockroachdb/molt/fetch/fetchmetrics"
 	"github.com/cockroachdb/molt/fetch/internal/dataquery"
+	"github.com/cockroachdb/molt/fetch/status"
 	"github.com/cockroachdb/molt/moltlogger"
 	"github.com/cockroachdb/molt/retry"
 	"github.com/jackc/pgx/v5"
@@ -165,7 +166,8 @@ func importTable(
 			ctx,
 			importQuery,
 		); err != nil {
-			return errors.Wrap(err, "error importing data")
+			pgErr := status.MaybeReportException(ctx, logger, baseConn.(*dbconn.PGConn).Conn, table.Name, err, "" /* fileName */, status.StageDataLoad)
+			return errors.Wrap(pgErr, "error importing data")
 		}
 		return nil
 	}, func(err error) {

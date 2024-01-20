@@ -97,6 +97,7 @@ func Command() *cobra.Command {
 			default:
 				return errors.AssertionFailedf("data source must be configured (--s3-bucket, --gcp-bucket, --direct-copy)")
 			}
+
 			err = fetch.Fetch(
 				ctx,
 				cfg,

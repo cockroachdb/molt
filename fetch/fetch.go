@@ -11,12 +11,15 @@ import (
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
 	"github.com/cockroachdb/molt/fetch/dataexport"
+	"github.com/cockroachdb/molt/fetch/fetchcontext"
 	"github.com/cockroachdb/molt/fetch/fetchmetrics"
+	"github.com/cockroachdb/molt/fetch/status"
 	"github.com/cockroachdb/molt/moltlogger"
 	"github.com/cockroachdb/molt/molttelemetry"
 	"github.com/cockroachdb/molt/utils"
 	"github.com/cockroachdb/molt/verify/dbverify"
 	"github.com/cockroachdb/molt/verify/tableverify"
+	"github.com/jackc/pgx/v5"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"golang.org/x/sync/errgroup"
@@ -45,7 +48,22 @@ func Fetch(
 	conns dbconn.OrderedConns,
 	blobStore datablobstorage.Store,
 	tableFilter dbverify.FilterConfig,
-) error {
+) (retErr error) {
+	// Setup fetch status tracking.
+	targetPgConn, valid := conns[1].(*dbconn.PGConn)
+	if !valid {
+		return errors.New("failed to assert conn as a pgconn")
+	}
+	targetPgxConn := targetPgConn.Conn
+	fetchStatus, err := initStatusEntry(ctx, targetPgxConn, conns[0].Dialect())
+	if err != nil {
+		return err
+	}
+	ctx = fetchcontext.ContextWithFetchData(ctx, fetchcontext.FetchContextData{
+		RunID:     fetchStatus.ID,
+		StartedAt: fetchStatus.StartedAt,
+	})
+
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(fetchmetrics.OverallDuration.Set))
 
 	if cfg.FlushSize == 0 {
@@ -320,4 +338,25 @@ func reportTelemetry(
 		"molt_fetch_ingest_method_"+ingestMethod,
 		"molt_fetch_blobstore_"+store.TelemetryName(),
 	)
+}
+
+func initStatusEntry(
+	ctx context.Context, conn *pgx.Conn, dialect string,
+) (*status.FetchStatus, error) {
+	// Setup the status and exception tables.
+	if err := status.CreateStatusAndExceptionTables(ctx, conn); err != nil {
+		return nil, err
+	}
+
+	createdAt := time.Now().UTC()
+	fetchStatus := &status.FetchStatus{
+		Name:          fmt.Sprintf("run at %d", createdAt.Unix()),
+		StartedAt:     createdAt,
+		SourceDialect: dialect,
+	}
+	if err := fetchStatus.CreateEntry(ctx, conn); err != nil {
+		return nil, err
+	}
+
+	return fetchStatus, nil
 }
