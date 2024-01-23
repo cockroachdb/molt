@@ -2,6 +2,7 @@ package fetch
 
 import (
 	"context"
+	"path"
 	"time"
 
 	"github.com/cockroachdb/molt/dbconn"
@@ -9,6 +10,7 @@ import (
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
 	"github.com/cockroachdb/molt/fetch/fetchmetrics"
 	"github.com/cockroachdb/molt/fetch/internal/dataquery"
+	"github.com/cockroachdb/molt/fetch/status"
 	"github.com/cockroachdb/molt/moltlogger"
 	"github.com/rs/zerolog"
 )
@@ -55,7 +57,8 @@ func Copy(
 				r,
 				dataquery.CopyFrom(table),
 			); err != nil {
-				return err
+				fileName := path.Base(key)
+				return status.MaybeReportException(ctx, logger, conn, table.Name, err, fileName, status.StageDataLoad)
 			} else {
 				rowsSoFar += int(copyRet.RowsAffected())
 				dataLogger.Info().

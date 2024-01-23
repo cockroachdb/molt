@@ -9,11 +9,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cockroachdb/cockroachdb-parser/pkg/util/uuid"
 	"github.com/cockroachdb/datadriven"
 	"github.com/cockroachdb/molt/compression"
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
 	"github.com/cockroachdb/molt/fetch/dataexport"
+	"github.com/cockroachdb/molt/fetch/status"
 	"github.com/cockroachdb/molt/testutils"
 	"github.com/cockroachdb/molt/verify/dbverify"
 	"github.com/rs/zerolog"
@@ -186,4 +188,31 @@ func TestDataDriven(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestInitStatusEntry(t *testing.T) {
+	ctx := context.Background()
+	dbName := "fetch_test_status"
+
+	t.Run("successfully initialized when tables not created", func(t *testing.T) {
+		conn, err := dbconn.TestOnlyCleanDatabase(ctx, "target", testutils.CRDBConnStr(), dbName)
+		require.NoError(t, err)
+		pgConn := conn.(*dbconn.PGConn).Conn
+
+		actual, err := initStatusEntry(ctx, pgConn, "PostgreSQL")
+		require.NoError(t, err)
+		require.NotEqual(t, uuid.Nil, actual.ID)
+	})
+
+	t.Run("successfully initialized when tables created beforehand", func(t *testing.T) {
+		conn, err := dbconn.TestOnlyCleanDatabase(ctx, "target", testutils.CRDBConnStr(), dbName)
+		require.NoError(t, err)
+		pgConn := conn.(*dbconn.PGConn).Conn
+		// Setup the tables that we need to write for status.
+		require.NoError(t, status.CreateStatusAndExceptionTables(ctx, pgConn))
+
+		actual, err := initStatusEntry(ctx, pgConn, "PostgreSQL")
+		require.NoError(t, err)
+		require.NotEqual(t, uuid.Nil, actual.ID)
+	})
 }
