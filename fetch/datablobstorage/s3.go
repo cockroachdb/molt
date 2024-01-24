@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/rs/zerolog"
@@ -122,6 +123,56 @@ func (s *s3Store) CreateFromReader(
 		store:   s,
 		key:     key,
 	}, nil
+}
+
+// ListFromContinuationPoint will create the list of s3 resources
+// that will be processed for this iteration of fetch. It uses the
+// passed in table name to construct the key and prefix to look at
+// in the s3 bucket.
+func (s *s3Store) ListFromContinuationPoint(
+	ctx context.Context, table dbtable.VerifiedTable, fileName string,
+) ([]Resource, error) {
+	key, prefix := getKeyAndPrefix(fileName, s.bucketPath, table)
+	s3client := s3.New(s.session)
+	return listFromContinuationPointAWS(ctx, s3client, key, prefix, s)
+}
+
+// listFromContinuationPoint is a helper for listFromContinuationPoint
+// to allow dependancy injection of the S3API since ListFromContinuationPoint
+// needs to satisfy the datablobstore interface, we can't put a s3 specific API
+// as part of the function signature. The helper will make the API call to S3 and
+// create the s3Resource objects that Import or Copy will use.
+func listFromContinuationPointAWS(
+	ctx context.Context, s3Client s3iface.S3API, key, prefix string, s3Store *s3Store,
+) ([]Resource, error) {
+	// Note: There is a StartAfter parameter in ListObjectV2Input
+	// but it is non inclusive of the provided key so we can't use it as we
+	// need to include the file we are starting from.
+	s3Objects, err := s3Client.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
+		Bucket: aws.String(s3Store.bucket),
+		Prefix: aws.String(prefix),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	resources := []Resource{}
+	for _, obj := range s3Objects.Contents {
+		// Find the key we want to start at. Because we name the files
+		// in a specific pattern, we can guarantee lexicographical ordering
+		// based on the guarantee of return order from the S3 API.
+		// eg. If key = fetch/public.inventory/part_00000004.tar.gz,
+		// fetch/public.inventory/part_00000005.tar.gz is >= to key meaning,
+		// it is a file we need to include.
+		if aws.StringValue(obj.Key) >= key {
+			resources = append(resources, &s3Resource{
+				key:     aws.StringValue(obj.Key),
+				session: s3Store.session,
+				store:   s3Store,
+			})
+		}
+	}
+	return resources, nil
 }
 
 func (s *s3Store) CanBeTarget() bool {
