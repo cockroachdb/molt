@@ -77,6 +77,7 @@ func TestDataDriven(t *testing.T) {
 						live := false
 						direct := false
 						compress := false
+						corruptCSVFile := false
 
 						for _, cmd := range d.CmdArgs {
 							switch cmd.Key {
@@ -88,6 +89,8 @@ func TestDataDriven(t *testing.T) {
 								direct = true
 							case "compress":
 								compress = true
+							case "corrupt-csv":
+								corruptCSVFile = true
 							default:
 								t.Errorf("unknown key %s", cmd.Key)
 							}
@@ -158,6 +161,11 @@ func TestDataDriven(t *testing.T) {
 							compressionFlag = compression.GZIP
 						}
 
+						knobs := testutils.FetchTestingKnobs{}
+						if corruptCSVFile {
+							knobs.TriggerCorruptCSVFile = true
+						}
+
 						err = Fetch(
 							ctx,
 							Config{
@@ -172,6 +180,7 @@ func TestDataDriven(t *testing.T) {
 							conns,
 							src,
 							filter,
+							knobs,
 						)
 						if expectError {
 							require.Error(t, err)

@@ -11,6 +11,7 @@ import (
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
 	"github.com/cockroachdb/molt/fetch/dataexport"
+	"github.com/cockroachdb/molt/testutils"
 	"github.com/rs/zerolog"
 	"golang.org/x/sync/errgroup"
 )
@@ -38,6 +39,7 @@ func exportTable(
 	sqlSrc dataexport.Source,
 	datasource datablobstorage.Store,
 	table dbtable.VerifiedTable,
+	testingKnobs testutils.FetchTestingKnobs,
 ) (exportResult, error) {
 	importFileExt := "csv"
 	if cfg.Compression == compression.GZIP {
@@ -100,6 +102,8 @@ func exportTable(
 		return wrappedWriter
 	})
 
+	// This is so we can simulate corrupted CSVs for testing.
+	pipe.testingKnobs = testingKnobs
 	err := pipe.Pipe(table.Name)
 	// Wait for the resource wait group to complete. It may output an error
 	// that is not captured in the pipe.

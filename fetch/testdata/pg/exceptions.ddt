@@ -53,3 +53,27 @@ SELECT table_name, message, sql_state, file_name, stage FROM _molt_fetch_excepti
 table_name	message	sql_state	file_name	stage
 tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) already exists.	23505	part_00000001.csv	data_load
 tag: SELECT 1
+
+fetch live notruncate expect-error corrupt-csv
+----
+ERROR: read CSV record: record on line 2: wrong number of fields (SQLSTATE 22P04)
+
+query target
+SELECT table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception WHERE sql_state='22P04'
+----
+[target]:
+table_name	message	sql_state	file_name	stage
+tbl1	read CSV record: record on line 2: wrong number of fields; 	22P04	part_00000001.csv	data_load
+tag: SELECT 1
+
+fetch notruncate expect-error corrupt-csv
+----
+error importing data: ERROR: http://host.docker.internal:4040/public.tbl1/part_00000001.csv: error parsing row 2: expected 2 fields, got 6 (row: this,should,lead,to,an,error) (SQLSTATE XXUUU)
+
+query target
+SELECT table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception WHERE sql_state='XXUUU'
+----
+[target]:
+table_name	message	sql_state	file_name	stage
+tbl1	http://host.docker.internal:4040/public.tbl1/part_00000001.csv: error parsing row 2: expected 2 fields, got 6 (row: this,should,lead,to,an,error); 	XXUUU	part_00000001.csv	data_load
+tag: SELECT 1

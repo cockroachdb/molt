@@ -13,6 +13,7 @@ import (
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
 	"github.com/cockroachdb/molt/fetch/fetchmetrics"
 	"github.com/cockroachdb/molt/moltlogger"
+	"github.com/cockroachdb/molt/testutils"
 	"github.com/spf13/cobra"
 	"github.com/thediveo/enumflag/v2"
 	"golang.org/x/oauth2/google"
@@ -105,6 +106,7 @@ func Command() *cobra.Command {
 				conns,
 				src,
 				cmdutil.TableFilter(),
+				testutils.FetchTestingKnobs{},
 			)
 
 			if err != nil {

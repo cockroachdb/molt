@@ -7,6 +7,7 @@ import (
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/cockroachdb/molt/fetch/fetchmetrics"
 	"github.com/cockroachdb/molt/moltlogger"
+	"github.com/cockroachdb/molt/testutils"
 	"github.com/rs/zerolog"
 )
 
@@ -17,12 +18,13 @@ type csvPipe struct {
 	out       io.WriteCloser
 	logger    zerolog.Logger
 
-	flushSize int
-	flushRows int
-	currSize  int
-	currRows  int
-	numRows   int
-	newWriter func() io.WriteCloser
+	flushSize    int
+	flushRows    int
+	currSize     int
+	currRows     int
+	numRows      int
+	newWriter    func() io.WriteCloser
+	testingKnobs testutils.FetchTestingKnobs
 }
 
 func newCSVPipe(
@@ -69,6 +71,12 @@ func (p *csvPipe) Pipe(tn dbtable.Name) error {
 		}
 		if err := p.csvWriter.Write(record); err != nil {
 			return err
+		}
+
+		if p.testingKnobs.TriggerCorruptCSVFile {
+			if err := p.csvWriter.Write([]string{"this", "should", "lead", "to", "an", "error"}); err != nil {
+				return err
+			}
 		}
 
 		if p.currSize > p.flushSize || (p.flushRows > 0 && p.currRows >= p.flushRows) {
