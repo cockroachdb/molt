@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -21,6 +22,15 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 )
+
+var dockerInternalRegex = regexp.MustCompile(`host\.docker\.internal`)
+
+// This is needed because tests are usually recorded on MacOS, which will use host.docker.internal.
+// However in CI it tries to use localhost. We enforce this so that we normalize it
+// to localhost for recorded data.
+func replaceDockerInternalLocalHost(input string) string {
+	return dockerInternalRegex.ReplaceAllString(input, "localhost")
+}
 
 func TestDataDriven(t *testing.T) {
 	for _, tc := range []struct {
@@ -70,7 +80,7 @@ func TestDataDriven(t *testing.T) {
 					case "exec":
 						return testutils.ExecConnTestdata(t, d, conns)
 					case "query":
-						return testutils.QueryConnCommand(t, d, conns)
+						return replaceDockerInternalLocalHost(testutils.QueryConnCommand(t, d, conns))
 					case "fetch":
 						filter := dbverify.DefaultFilterConfig()
 						truncate := true
@@ -184,7 +194,7 @@ func TestDataDriven(t *testing.T) {
 						)
 						if expectError {
 							require.Error(t, err)
-							return err.Error()
+							return replaceDockerInternalLocalHost(err.Error())
 						}
 						require.NoError(t, err)
 						return ""
