@@ -19,6 +19,11 @@ import (
 )
 
 func Command() *cobra.Command {
+	const (
+		fetchID              = "fetch-id"
+		continuationToken    = "continuation-token"
+		continuationFileName = "continuation-file-name"
+	)
 	var (
 		s3Bucket                string
 		gcpBucket               string
@@ -34,6 +39,17 @@ func Command() *cobra.Command {
 		Use:   "fetch",
 		Short: "Moves data from source to target.",
 		Long:  `Imports data from source directly into target tables.`,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			// Ensure that if continuation-token is set that fetch-id is set
+			if err := cmdutil.CheckFlagDependency(cmd, fetchID, []string{continuationToken}); err != nil {
+				return err
+			}
+			// Ensure if continuation-file-name is set that continuation-token is set.
+			if err := cmdutil.CheckFlagDependency(cmd, continuationToken, []string{continuationFileName}); err != nil {
+				return err
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			logger, err := moltlogger.Logger(logFile)
@@ -243,6 +259,24 @@ func Command() *cobra.Command {
 		),
 		"compression",
 		"Compression type (default/gzip/none) to use (IMPORT INTO mode only).",
+	)
+	cmd.PersistentFlags().StringVar(
+		&cfg.FetchID,
+		fetchID,
+		"",
+		"If set, restarts the fetch process for all failed tables of the given ID",
+	)
+	cmd.PersistentFlags().StringVar(
+		&cfg.ContinuationToken,
+		continuationToken,
+		"",
+		"If set, restarts the fetch process for the given continuation token for a specific table",
+	)
+	cmd.PersistentFlags().StringVar(
+		&cfg.ContinuationFileName,
+		continuationFileName,
+		"",
+		"If set, restarts the fetch process for at the given file name instead of recorded file in the exceptions table",
 	)
 	moltlogger.RegisterLoggerFlags(cmd)
 	cmdutil.RegisterDBConnFlags(cmd)
