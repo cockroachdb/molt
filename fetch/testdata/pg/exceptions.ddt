@@ -1,3 +1,4 @@
+# Testing for duplicate key errors.
 exec all
 CREATE TABLE tbl1(id INT PRIMARY KEY, t TEXT)
 ----
@@ -54,6 +55,7 @@ table_name	message	sql_state	file_name	stage
 tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) already exists.	23505	part_00000001.csv	data_load
 tag: SELECT 1
 
+# Testing for corrupted CSV.
 fetch live notruncate expect-error corrupt-csv
 ----
 ERROR: read CSV record: record on line 2: wrong number of fields (SQLSTATE 22P04)
@@ -76,4 +78,85 @@ SELECT table_name, message, sql_state, file_name, stage FROM _molt_fetch_excepti
 [target]:
 table_name	message	sql_state	file_name	stage
 tbl1	http://localhost:4040/public.tbl1/part_00000001.csv: error parsing row 2: expected 2 fields, got 6 (row: this,should,lead,to,an,error); 	XXUUU	part_00000001.csv	data_load
+tag: SELECT 1
+
+# Clean up from the previous tests
+exec all
+TRUNCATE tbl1
+----
+[source] TRUNCATE TABLE
+[target] TRUNCATE
+
+exec source
+CREATE TABLE null_text(id INT PRIMARY KEY, t TEXT)
+----
+[source] CREATE TABLE
+
+# Testing for column constraint failures.
+exec target
+CREATE TABLE null_text(id INT PRIMARY KEY, t TEXT NOT NULL)
+----
+[target] CREATE TABLE
+
+exec source
+INSERT INTO null_text(id) VALUES (1), (2)
+----
+[source] INSERT 0 2
+
+fetch live expect-error
+----
+ERROR: null value in column "t" violates not-null constraint (SQLSTATE 23502)
+
+query target
+SELECT table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception WHERE table_name='null_text'
+----
+[target]:
+table_name	message	sql_state	file_name	stage
+null_text	null value in column "t" violates not-null constraint; 	23502	part_00000001.csv	data_load
+tag: SELECT 1
+
+# Clean up from the previous tests
+exec all
+TRUNCATE null_text
+----
+[source] TRUNCATE TABLE
+[target] TRUNCATE
+
+exec all
+CREATE TABLE dependency(id INT PRIMARY KEY, t TEXT)
+----
+[source] CREATE TABLE
+[target] CREATE TABLE
+
+exec source 
+CREATE TABLE dependent(id INT PRIMARY KEY, fid INT, t TEXT)
+----
+[source] CREATE TABLE
+
+# Force a FK constraint error on the other table, by forcing a constraint.
+exec target
+CREATE TABLE dependent(id INT PRIMARY KEY, fid INT NOT NULL REFERENCES dependency (id) ON DELETE CASCADE, t TEXT)
+----
+[target] CREATE TABLE
+
+exec source
+INSERT INTO dependency VALUES (11, 'aaa'), (22, 'bb b'), (33, 'ééé'), (44, '🫡🫡🫡'), (55, '娜娜'), (66, 'Лукас'), (77, 'ルカス')
+----
+[source] INSERT 0 7
+
+exec source
+INSERT INTO dependent VALUES (1, 0, 'aaa')
+----
+[source] INSERT 0 1
+
+fetch live expect-error
+----
+ERROR: "dependency" is referenced by foreign key from table "dependent" (SQLSTATE XXUUU)
+
+query target
+SELECT table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception WHERE table_name='dependent'
+----
+[target]:
+table_name	message	sql_state	file_name	stage
+dependent	insert on table "dependent" violates foreign key constraint "dependent_fid_fkey"; Key (fid)=(0) is not present in table "dependency".	23503	part_00000001.csv	data_load
 tag: SELECT 1
