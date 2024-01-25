@@ -19,6 +19,7 @@ import (
 	"github.com/cockroachdb/molt/fetch/status"
 	"github.com/cockroachdb/molt/moltlogger"
 	"github.com/cockroachdb/molt/retry"
+	"github.com/cockroachdb/molt/testutils"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog"
 )
@@ -129,6 +130,7 @@ func importTable(
 	logger zerolog.Logger,
 	table dbtable.VerifiedTable,
 	resources []datablobstorage.Resource,
+	testingKnobs testutils.FetchTestingKnobs,
 ) (importResult, error) {
 	ret := importResult{
 		StartTime: time.Now(),
@@ -151,6 +153,20 @@ func importTable(
 	if err != nil {
 		return ret, err
 	}
+
+	if testingKnobs.TriggerCorruptCSVFile {
+		// In the case we are testing corrupt CSV file,
+		// we do not want to retry since it will necessarily fail.
+		r, err = retry.NewRetry(retry.Settings{
+			InitialBackoff: 1,
+			Multiplier:     1,
+			MaxRetries:     1,
+		})
+		if err != nil {
+			return ret, err
+		}
+	}
+
 	if err := r.Do(func() error {
 		kvOptions := tree.KVOptions{}
 		if cfg.Compression == compression.GZIP {

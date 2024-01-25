@@ -14,3 +14,6 @@ build_molt_cli:
 
 sync_hooks:
 	cp -a .githooks/ .git/hooks/
+
+rewrite_fetch_tests:
+	go test -v -run ^TestDataDriven github.com/cockroachdb/molt/fetch --rewrite

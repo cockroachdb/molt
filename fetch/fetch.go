@@ -16,6 +16,7 @@ import (
 	"github.com/cockroachdb/molt/fetch/status"
 	"github.com/cockroachdb/molt/moltlogger"
 	"github.com/cockroachdb/molt/molttelemetry"
+	"github.com/cockroachdb/molt/testutils"
 	"github.com/cockroachdb/molt/utils"
 	"github.com/cockroachdb/molt/verify/dbverify"
 	"github.com/cockroachdb/molt/verify/tableverify"
@@ -48,6 +49,7 @@ func Fetch(
 	conns dbconn.OrderedConns,
 	blobStore datablobstorage.Store,
 	tableFilter dbverify.FilterConfig,
+	testingKnobs testutils.FetchTestingKnobs,
 ) (retErr error) {
 	// Setup fetch status tracking.
 	targetPgConn, valid := conns[1].(*dbconn.PGConn)
@@ -158,7 +160,7 @@ func Fetch(
 				if !ok {
 					return nil
 				}
-				if err := fetchTable(ctx, cfg, logger, conns, blobStore, sqlSrc, table); err != nil {
+				if err := fetchTable(ctx, cfg, logger, conns, blobStore, sqlSrc, table, testingKnobs); err != nil {
 					return err
 				}
 
@@ -200,6 +202,7 @@ func fetchTable(
 	blobStore datablobstorage.Store,
 	sqlSrc dataexport.Source,
 	table tableverify.Result,
+	testingKnobs testutils.FetchTestingKnobs,
 ) error {
 	tableStartTime := time.Now()
 	// Initialize metrics for this table so we can calculate a rate later.
@@ -218,7 +221,7 @@ func fetchTable(
 
 	logger.Info().Msgf("data extraction phase starting")
 
-	e, err := exportTable(ctx, cfg, logger, sqlSrc, blobStore, table.VerifiedTable)
+	e, err := exportTable(ctx, cfg, logger, sqlSrc, blobStore, table.VerifiedTable, testingKnobs)
 	if err != nil {
 		return err
 	}
@@ -277,7 +280,7 @@ func fetchTable(
 					}
 				}()
 
-				r, err := importTable(ctx, cfg, targetConn, logger, table.VerifiedTable, e.Resources)
+				r, err := importTable(ctx, cfg, targetConn, logger, table.VerifiedTable, e.Resources, testingKnobs)
 				if err != nil {
 					return err
 				}
