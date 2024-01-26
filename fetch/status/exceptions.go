@@ -49,8 +49,18 @@ type ExceptionLog struct {
 	Time     time.Time
 }
 
+// Added logic to be able to set the time from the struct itself to simplify testing.
+// For some of the tests, we must test exceptions created at multiple times in order
+// to properly validate behavior. Testutils.hook for date doesn't work since all
+// entries would end up having the same.
+// In the actual use case (non-testing) the time will be generated as the current time
+// as the logic below shows.
 func (e *ExceptionLog) CreateEntry(ctx context.Context, conn *pgx.Conn, stage string) error {
 	curTime := time.Now().UTC()
+	if !e.Time.IsZero() {
+		curTime = e.Time
+	}
+
 	query := `INSERT INTO _molt_fetch_exception (fetch_id, table_name, schema_name, message, sql_state, file_name, command, stage, time) VALUES(@fetch_id, @table_name, @schema_name, @message, @sql_state, @file_name, @command, @stage, @time) RETURNING id, stage`
 	args := pgx.NamedArgs{
 		"fetch_id":    e.FetchID,
@@ -78,6 +88,67 @@ func (e *ExceptionLog) CreateEntry(ctx context.Context, conn *pgx.Conn, stage st
 	e.Time = curTime
 
 	return nil
+}
+
+func GetExceptionLogByToken(
+	ctx context.Context, conn *pgx.Conn, token string,
+) (*ExceptionLog, error) {
+	query := `SELECT id, fetch_id, table_name, schema_name, message, sql_state, file_name, command, stage, time 
+		FROM _molt_fetch_exception 
+		WHERE id=@id`
+	args := pgx.NamedArgs{
+		"id": token,
+	}
+	e := &ExceptionLog{}
+
+	row := conn.QueryRow(ctx, query, args)
+	if err := row.Scan(&e.ID, &e.FetchID, &e.Table, &e.Schema, &e.Message,
+		&e.SQLState, &e.FileName, &e.Command, &e.Stage, &e.Time); err != nil {
+		return nil, err
+	}
+
+	return e, nil
+}
+
+func GetAllExceptionLogsByFetchID(
+	ctx context.Context, conn *pgx.Conn, fetchID string,
+) ([]*ExceptionLog, error) {
+	query := `SELECT DISTINCT ON (schema_name, table_name) id, fetch_id, table_name, schema_name, message, sql_state, file_name, command, stage, time 
+	FROM _molt_fetch_exception 
+	WHERE fetch_id=@fetch_id 
+	ORDER BY schema_name, table_name,  time DESC`
+	args := pgx.NamedArgs{
+		"fetch_id": fetchID,
+	}
+	excLogs := []*ExceptionLog{}
+
+	rows, err := conn.Query(ctx, query, args)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		e := &ExceptionLog{}
+		if err := rows.Scan(&e.ID, &e.FetchID, &e.Table, &e.Schema, &e.Message,
+			&e.SQLState, &e.FileName, &e.Command, &e.Stage, &e.Time); err != nil {
+			return nil, err
+		}
+		excLogs = append(excLogs, e)
+	}
+
+	return excLogs, nil
+}
+
+func GetTableSchemaToExceptionLog(el []*ExceptionLog) map[string]*ExceptionLog {
+	mapping := map[string]*ExceptionLog{}
+
+	for _, e := range el {
+		key := fmt.Sprintf("%s.%s", e.Schema, e.Table)
+		mapping[key] = e
+	}
+
+	return mapping
 }
 
 // Stands for undefined_object.

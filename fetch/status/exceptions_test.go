@@ -70,6 +70,167 @@ func TestCreateExceptionEntry(t *testing.T) {
 	})
 }
 
+func TestGetExceptionLogByToken(t *testing.T) {
+	ctx := context.Background()
+	dbName := "fetch_test_get_exception_log_by_token"
+
+	t.Run("successfully retrieved exception log by token", func(t *testing.T) {
+		s := &FetchStatus{
+			Name:          "run 1",
+			StartedAt:     time.Now(),
+			SourceDialect: "postgres",
+		}
+		conn, err := dbconn.TestOnlyCleanDatabase(ctx, "target", testutils.CRDBConnStr(), dbName)
+		require.NoError(t, err)
+		pgConn := conn.(*dbconn.PGConn).Conn
+		// Setup the tables that we need to write for status.
+		require.NoError(t, CreateStatusAndExceptionTables(ctx, pgConn))
+
+		// Create entry first.
+		err = s.CreateEntry(ctx, pgConn)
+		require.NoError(t, err)
+		require.NotEqual(t, uuid.Nil, s.ID)
+
+		curTime := time.Time{}
+		curTime = curTime.Add(time.Minute)
+
+		e := &ExceptionLog{
+			FetchID:  s.ID,
+			FileName: "test.log",
+			Table:    "employees",
+			Schema:   "public",
+			Message:  "this all failed",
+			SQLState: "1000",
+			Command:  "SELECT VERSION()",
+			Time:     curTime,
+		}
+		err = e.CreateEntry(ctx, pgConn, StageDataLoad)
+		require.NoError(t, err)
+
+		retE, err := GetExceptionLogByToken(ctx, pgConn, e.ID.String())
+		require.NoError(t, err)
+		require.Equal(t, e, retE)
+	})
+
+	t.Run("failed because exception ID is invalid", func(t *testing.T) {
+		conn, err := dbconn.TestOnlyCleanDatabase(ctx, "target", testutils.CRDBConnStr(), dbName)
+		require.NoError(t, err)
+		pgConn := conn.(*dbconn.PGConn).Conn
+		// Setup the tables that we need to write for status.
+		require.NoError(t, CreateStatusAndExceptionTables(ctx, pgConn))
+
+		s := &FetchStatus{
+			Name:          "run 1",
+			StartedAt:     time.Now(),
+			SourceDialect: "postgres",
+		}
+		// Create entry first.
+		err = s.CreateEntry(ctx, pgConn)
+		require.NoError(t, err)
+		require.NotEqual(t, uuid.Nil, s.ID)
+
+		e := &ExceptionLog{
+			FetchID:  s.ID,
+			FileName: "test.log",
+			Table:    "employees",
+			Schema:   "public",
+			Message:  "this all failed",
+			SQLState: "1000",
+			Command:  "SELECT VERSION()",
+			Time:     time.Now(),
+		}
+		err = e.CreateEntry(ctx, pgConn, StageDataLoad)
+		require.NoError(t, err)
+
+		retE, err := GetExceptionLogByToken(ctx, pgConn, "")
+		require.EqualError(t, err, `ERROR: error in argument for $1: could not parse "" as type uuid: could not parse "" as type uuid: uuid: incorrect UUID length:  (SQLSTATE 22P02)`)
+		require.Nil(t, retE)
+	})
+}
+
+func TestGetAllExceptionLogsByFetchID(t *testing.T) {
+	ctx := context.Background()
+	dbName := "fetch_test_get_exception_log_by_fid"
+
+	t.Run("successfully retrieved exception logs by fetch ID", func(t *testing.T) {
+		s := &FetchStatus{
+			Name:          "run 1",
+			StartedAt:     time.Now(),
+			SourceDialect: "postgres",
+		}
+		conn, err := dbconn.TestOnlyCleanDatabase(ctx, "target", testutils.CRDBConnStr(), dbName)
+		require.NoError(t, err)
+		pgConn := conn.(*dbconn.PGConn).Conn
+		// Setup the tables that we need to write for status.
+		require.NoError(t, CreateStatusAndExceptionTables(ctx, pgConn))
+
+		// Create entry first.
+		err = s.CreateEntry(ctx, pgConn)
+		require.NoError(t, err)
+		require.NotEqual(t, uuid.Nil, s.ID)
+
+		curTime := time.Time{}
+		curTime = curTime.Add(time.Minute)
+		e1 := &ExceptionLog{
+			FetchID:  s.ID,
+			FileName: "test.log",
+			Table:    "employees",
+			Schema:   "public",
+			Message:  "this all failed",
+			SQLState: "1000",
+			Command:  "SELECT VERSION()",
+			Time:     curTime,
+		}
+		err = e1.CreateEntry(ctx, pgConn, StageDataLoad)
+		require.NoError(t, err)
+
+		// Creating this entry to verify that the first one doesn't
+		// get included, but only the most recent one for a table/schema combo.
+		e2 := &ExceptionLog{
+			FetchID:  s.ID,
+			FileName: "test2.log",
+			Table:    "employees",
+			Schema:   "public",
+			Message:  "i'm failing again",
+			SQLState: "500",
+			Command:  "SELECT VERSION()",
+			Time:     curTime.Add(time.Minute),
+		}
+		err = e2.CreateEntry(ctx, pgConn, StageDataLoad)
+		require.NoError(t, err)
+
+		e3 := &ExceptionLog{
+			FetchID:  s.ID,
+			FileName: "test3.log",
+			Table:    "salary",
+			Schema:   "public",
+			Message:  "wrong salary",
+			SQLState: "1000",
+			Command:  "SELECT VERSION()",
+			Time:     curTime,
+		}
+		err = e3.CreateEntry(ctx, pgConn, StageDataLoad)
+		require.NoError(t, err)
+
+		e4 := &ExceptionLog{
+			FetchID:  s.ID,
+			FileName: "test4.log",
+			Table:    "taxes",
+			Schema:   "public",
+			Message:  "tax offset wrong",
+			SQLState: "188800",
+			Command:  "SELECT VERSION()",
+			Time:     curTime,
+		}
+		err = e4.CreateEntry(ctx, pgConn, StageDataLoad)
+		require.NoError(t, err)
+
+		exceptions, err := GetAllExceptionLogsByFetchID(ctx, pgConn, s.ID.String())
+		require.NoError(t, err)
+		require.Equal(t, []*ExceptionLog{e2, e3, e4}, exceptions)
+	})
+}
+
 func TestExtractFileNameFromErr(t *testing.T) {
 	type args struct {
 		errString string
@@ -104,6 +265,67 @@ func TestExtractFileNameFromErr(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			actual := extractFileNameFromErr(tt.args.errString)
+			require.Equal(t, tt.want, actual)
+		})
+	}
+}
+
+func TestGetTableSchemaToExceptionLog(t *testing.T) {
+	el1 := &ExceptionLog{
+		Message: "failed 1",
+		Schema:  "public",
+		Table:   "table1",
+	}
+	el2 := &ExceptionLog{
+		Message: "failed 2",
+		Schema:  "public",
+		Table:   "table2",
+	}
+	el3 := &ExceptionLog{
+		Message: "failed 3",
+		Schema:  "public",
+		Table:   "table3",
+	}
+
+	type args struct {
+		el []*ExceptionLog
+	}
+	tests := []struct {
+		name string
+		args args
+		want map[string]*ExceptionLog
+	}{
+		{
+			name: "only 1 item in exception log list",
+			args: args{
+				el: []*ExceptionLog{el1},
+			},
+			want: map[string]*ExceptionLog{
+				"public.table1": el1,
+			},
+		},
+		{
+			name: "multiple items in exception log list",
+			args: args{
+				el: []*ExceptionLog{el1, el2, el3},
+			},
+			want: map[string]*ExceptionLog{
+				"public.table1": el1,
+				"public.table2": el2,
+				"public.table3": el3,
+			},
+		},
+		{
+			name: "no items in exception log list",
+			args: args{
+				el: []*ExceptionLog{},
+			},
+			want: map[string]*ExceptionLog{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := GetTableSchemaToExceptionLog(tt.args.el)
 			require.Equal(t, tt.want, actual)
 		})
 	}
