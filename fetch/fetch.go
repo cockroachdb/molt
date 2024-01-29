@@ -27,13 +27,15 @@ import (
 )
 
 type Config struct {
-	FlushSize   int
-	FlushRows   int
-	Cleanup     bool
-	Live        bool
-	Truncate    bool
-	Concurrency int
-
+	FlushSize            int
+	FlushRows            int
+	Cleanup              bool
+	Live                 bool
+	Truncate             bool
+	Concurrency          int
+	FetchID              string
+	ContinuationToken    string
+	ContinuationFileName string
 	// TestOnly means this fetch attempt is just for test, and hence all time/duration
 	// stats are deterministic.
 	TestOnly bool
