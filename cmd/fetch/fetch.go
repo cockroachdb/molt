@@ -2,6 +2,7 @@ package fetch
 
 import (
 	"context"
+	"strings"
 
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/cmd/internal/cmdutil"
@@ -12,6 +13,7 @@ import (
 	"github.com/cockroachdb/molt/fetch/fetchmetrics"
 	"github.com/cockroachdb/molt/moltlogger"
 	"github.com/cockroachdb/molt/testutils"
+	"github.com/cockroachdb/molt/utils"
 	"github.com/spf13/cobra"
 	"github.com/thediveo/enumflag/v2"
 )
@@ -46,6 +48,12 @@ func Command() *cobra.Command {
 			if err := cmdutil.CheckFlagDependency(cmd, continuationToken, []string{continuationFileName}); err != nil {
 				return err
 			}
+
+			// Ensure the continuation-file-name matches the file pattern.
+			if strings.TrimSpace(cfg.ContinuationFileName) != "" && !utils.MatchesFileConvention(cfg.ContinuationFileName) {
+				return errors.Newf(`continuation file name "%s" doesn't match the file convention "%s"`, cfg.ContinuationFileName, utils.FileConventionRegex.String())
+			}
+
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {

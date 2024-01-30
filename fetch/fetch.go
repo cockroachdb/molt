@@ -3,6 +3,7 @@ package fetch
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -138,6 +139,13 @@ func Fetch(
 		}
 	}()
 
+	// Wait until all the verification portions are completed first before deferring this.
+	// If verify fails, we don't need to report fetch_id.
+	defer func() {
+		logger.Info().
+			Str("fetch_id", fetchStatus.ID.String()).Msg("continue from this fetch ID")
+	}()
+
 	numTables := len(tables)
 	summaryLogger := moltlogger.GetSummaryLogger(logger)
 	summaryLogger.Info().
@@ -153,6 +161,11 @@ func Fetch(
 	}
 	var stats statsMu
 
+	exceptionLogMapping, err := getExceptionLogMapping(ctx, cfg, targetPgxConn)
+	if err != nil {
+		return err
+	}
+
 	workCh := make(chan tableverify.Result)
 	g, _ := errgroup.WithContext(ctx)
 	for i := 0; i < cfg.Concurrency; i++ {
@@ -162,8 +175,20 @@ func Fetch(
 				if !ok {
 					return nil
 				}
-				if err := fetchTable(ctx, cfg, logger, conns, blobStore, sqlSrc, table, testingKnobs); err != nil {
-					return err
+
+				var relevantExceptionLog *status.ExceptionLog
+				if v, ok := exceptionLogMapping[table.SafeString()]; ok {
+					relevantExceptionLog = v
+				}
+
+				// We want to run the fetch in only two cases:
+				// 1. Export + import mode combined (when fetch ID is not passed in; means new fetch)
+				// 2. When the fetch ID is passed in and exception log is not nil, which means it is a table we want to continue from.
+				// This means we want to skip if we are trying to continue but there is no entry that specifies where to continue from.
+				if (cfg.FetchID != "" && relevantExceptionLog != nil) || (cfg.FetchID == "") {
+					if err := fetchTable(ctx, cfg, logger, conns, blobStore, sqlSrc, table, relevantExceptionLog, testingKnobs); err != nil {
+						return err
+					}
 				}
 
 				stats.Lock()
@@ -187,6 +212,7 @@ func Fetch(
 
 	ovrDuration := utils.MaybeFormatDurationForTest(cfg.TestOnly, timer.ObserveDuration())
 	summaryLogger.Info().
+		Str("fetch_id", fetchStatus.ID.String()).
 		Int("num_tables", stats.numImportedTables).
 		Strs("tables", stats.importedTables).
 		Str("cdc_cursor", utils.MaybeFormatCDCCursor(cfg.TestOnly, sqlSrc.CDCCursor())).
@@ -196,6 +222,9 @@ func Fetch(
 	return nil
 }
 
+// Note that if `ExceptionLog` is not nil, then that means
+// there is an exception log and import/copy only mode
+// was specified.
 func fetchTable(
 	ctx context.Context,
 	cfg Config,
@@ -204,8 +233,9 @@ func fetchTable(
 	blobStore datablobstorage.Store,
 	sqlSrc dataexport.Source,
 	table tableverify.Result,
+	exceptionLog *status.ExceptionLog,
 	testingKnobs testutils.FetchTestingKnobs,
-) error {
+) (retErr error) {
 	tableStartTime := time.Now()
 	// Initialize metrics for this table so we can calculate a rate later.
 	fetchmetrics.ExportedRows.WithLabelValues(table.SafeString())
@@ -223,13 +253,45 @@ func fetchTable(
 
 	logger.Info().Msgf("data extraction phase starting")
 
-	e, err := exportTable(ctx, cfg, logger, sqlSrc, blobStore, table.VerifiedTable, testingKnobs)
-	if err != nil {
-		return err
+	var e exportResult
+	// In the case that exception log is nil or fetch id is empty,
+	// this means that we want to export the table because it means
+	// we want export + copy mode.
+	if exceptionLog == nil || cfg.FetchID == "" {
+		er, err := exportTable(ctx, cfg, logger, sqlSrc, blobStore, table.VerifiedTable, testingKnobs)
+		if err != nil {
+			return err
+		}
+		e = er
+	} else {
+		if exceptionLog.FileName == "" {
+			logger.Warn().Msgf("skipping table %s because no file name is present in the exception log", table.SafeString())
+			return errors.Newf("table %s not imported because no file name is present in the exception log", table.SafeString())
+		}
+		logger.Warn().Msgf("skipping export for table %s due to running in import-copy only mode", table.SafeString())
+
+		// TODO: future PR needs to add number of rows estimation. and populate exportResult.NumRows
+		// TODO: need to figure out start and end time too.
+		rsc, err := blobStore.ListFromContinuationPoint(ctx, table.VerifiedTable, exceptionLog.FileName)
+		if err != nil {
+			return err
+		}
+		e.Resources = rsc
+
+		if len(e.Resources) == 0 {
+			return errors.Newf("exported resources for table %s is empty, please make sure you did not accidentally delete from the intermediate store", table.SafeString())
+		}
 	}
 
+	// We actually need to skip the cleanup for something that has an error
+	// On a continuation run we can cleanup so long as it's successful.
 	if cfg.Cleanup {
 		defer func() {
+			if retErr != nil {
+				logger.Info().Msg("skipping cleanup because an error occurred and files may need to be kept for continuation")
+				return
+			}
+
 			for _, r := range e.Resources {
 				if r == nil {
 					continue
@@ -242,6 +304,7 @@ func fetchTable(
 		}()
 	}
 
+	// TODO: consider if we want to skip this portion since we don't export anything....
 	exportDuration := utils.MaybeFormatDurationForTest(cfg.TestOnly, e.EndTime.Sub(e.StartTime))
 	summaryLogger := moltlogger.GetSummaryLogger(logger)
 	summaryLogger.Info().
@@ -364,4 +427,40 @@ func initStatusEntry(
 	}
 
 	return fetchStatus, nil
+}
+
+// TODO: handle the case where the file override happens.
+func getExceptionLogMapping(
+	ctx context.Context, cfg Config, targetPgxConn *pgx.Conn,
+) (map[string]*status.ExceptionLog, error) {
+	exceptionLogMapping := map[string]*status.ExceptionLog{}
+	if IsImportCopyOnlyMode(cfg) {
+		exceptionLogs := []*status.ExceptionLog{}
+		if strings.TrimSpace(cfg.ContinuationToken) == "" {
+			exceptionLogsFID, err := status.GetAllExceptionLogsByFetchID(ctx, targetPgxConn, cfg.FetchID)
+			if err != nil {
+				return nil, err
+			}
+			exceptionLogs = append(exceptionLogs, exceptionLogsFID...)
+		} else {
+			exceptionLog, err := status.GetExceptionLogByToken(ctx, targetPgxConn, cfg.ContinuationToken)
+			if err != nil {
+				return nil, err
+			}
+
+			if cfg.ContinuationFileName != "" {
+				exceptionLog.FileName = cfg.ContinuationFileName
+			}
+
+			exceptionLogs = append(exceptionLogs, exceptionLog)
+		}
+
+		exceptionLogMapping = status.GetTableSchemaToExceptionLog(exceptionLogs)
+	}
+
+	return exceptionLogMapping, nil
+}
+
+func IsImportCopyOnlyMode(cfg Config) bool {
+	return strings.TrimSpace(cfg.FetchID) != ""
 }
