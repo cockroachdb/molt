@@ -278,7 +278,7 @@ func TestExtractFileNameFromErr(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := extractFileNameFromErr(tt.args.errString)
+			actual := ExtractFileNameFromErr(tt.args.errString)
 			require.Equal(t, tt.want, actual)
 		})
 	}

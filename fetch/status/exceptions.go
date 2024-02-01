@@ -180,7 +180,7 @@ func MaybeReportException(
 	// File name currently undetermined,
 	// see if we can extract from the error message.
 	if fileName == "" {
-		fileName = extractFileNameFromErr(errMsg)
+		fileName = ExtractFileNameFromErr(errMsg)
 	}
 
 	exceptionLog := ExceptionLog{
@@ -204,6 +204,6 @@ func MaybeReportException(
 
 var fileNameRegEx = regexp.MustCompile(`part_[\d+]{8}(\.csv|\.tar\.gz)`)
 
-func extractFileNameFromErr(errString string) string {
+func ExtractFileNameFromErr(errString string) string {
 	return fileNameRegEx.FindString(errString)
 }
