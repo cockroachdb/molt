@@ -90,7 +90,7 @@ func exportTable(
 		resourceWG.Go(func() error {
 			itNum++
 			if err := func() error {
-				resource, err := datasource.CreateFromReader(ctx, forwardRead, table, itNum, importFileExt, numRowsCh)
+				resource, err := datasource.CreateFromReader(ctx, forwardRead, table, itNum, importFileExt, numRowsCh, testingKnobs)
 				if err != nil {
 					return err
 				}

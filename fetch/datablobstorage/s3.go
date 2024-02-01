@@ -14,7 +14,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager/s3manageriface"
 	"github.com/cockroachdb/molt/dbtable"
+	"github.com/cockroachdb/molt/testutils"
 	"github.com/rs/zerolog"
 )
 
@@ -113,6 +115,7 @@ func (s *s3Store) CreateFromReader(
 	iteration int,
 	fileExt string,
 	numRows chan int,
+	testingKnobs testutils.FetchTestingKnobs,
 ) (Resource, error) {
 	key := fmt.Sprintf("%s/part_%08d.%s", table.SafeString(), iteration, fileExt)
 	if s.bucketPath != "" {
@@ -120,8 +123,19 @@ func (s *s3Store) CreateFromReader(
 	}
 
 	s.logger.Debug().Str("file", key).Msgf("creating new file")
-	if _, err := s3manager.NewUploader(s.session).UploadWithContext(ctx, &s3manager.UploadInput{
-		Bucket: aws.String(s.bucket),
+
+	bucketName := s.bucket
+
+	var uploader s3manageriface.UploaderAPI
+
+	if testingKnobs.FailedWriteToBucket.FailedAfterReadFromPipe {
+		uploader = &s3UploaderMock{}
+	} else {
+		uploader = s3manager.NewUploader(s.session)
+	}
+
+	if _, err := uploader.UploadWithContext(ctx, &s3manager.UploadInput{
+		Bucket: aws.String(bucketName),
 		Key:    aws.String(key),
 		Body:   r,
 	}); err != nil {

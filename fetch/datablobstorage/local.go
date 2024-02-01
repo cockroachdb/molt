@@ -13,6 +13,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/dbtable"
+	"github.com/cockroachdb/molt/testutils"
 	"github.com/rs/zerolog"
 )
 
@@ -92,10 +93,14 @@ func (l *localStore) CreateFromReader(
 	iteration int,
 	fileExt string,
 	numRows chan int,
+	testingKnobs testutils.FetchTestingKnobs,
 ) (Resource, error) {
 	baseDir := path.Join(l.basePath, table.SafeString())
 	if err := os.MkdirAll(baseDir, os.ModePerm); err != nil {
 		return nil, err
+	}
+	if testingKnobs.FailedWriteToBucket.FailedBeforeReadFromPipe {
+		return nil, errors.New(LocalWriterMockErrMsg)
 	}
 	p := path.Join(baseDir, fmt.Sprintf("part_%08d.%s", iteration, fileExt))
 	logger := l.logger.With().Str("path", p).Logger()
@@ -107,6 +112,9 @@ func (l *localStore) CreateFromReader(
 	buf := make([]byte, 1024*1024)
 	for {
 		n, err := r.Read(buf)
+		if testingKnobs.FailedWriteToBucket.FailedAfterReadFromPipe {
+			return nil, errors.New(LocalWriterMockErrMsg)
+		}
 		if err != nil {
 			if err == io.EOF {
 				logger.Debug().Msgf("wrote file")
@@ -207,3 +215,5 @@ func (l *localResource) MarkForCleanup(ctx context.Context) error {
 	l.store.logger.Debug().Msgf("removing %s", l.path)
 	return os.Remove(l.path)
 }
+
+const LocalWriterMockErrMsg = "forced error for local path storage"

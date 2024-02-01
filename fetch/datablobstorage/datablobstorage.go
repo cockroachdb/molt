@@ -6,9 +6,11 @@ import (
 	"io"
 
 	"cloud.google.com/go/storage"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/dbtable"
+	"github.com/cockroachdb/molt/testutils"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog"
 	"golang.org/x/oauth2/google"
@@ -19,7 +21,7 @@ type Store interface {
 	// CSVs from the data export process. It will create the file and upload
 	// it to the respetive data store and return the resource object which
 	// will be used in the data import phase.
-	CreateFromReader(ctx context.Context, r io.Reader, table dbtable.VerifiedTable, iteration int, fileExt string, numRows chan int) (Resource, error)
+	CreateFromReader(ctx context.Context, r io.Reader, table dbtable.VerifiedTable, iteration int, fileExt string, numRows chan int, testingKnobs testutils.FetchTestingKnobs) (Resource, error)
 	// ListFromContinuationPoint is used when restarting Fetch from
 	// a continuation point. It will query the respective data store
 	// and create the slice of resources that will be used by the
@@ -74,6 +76,7 @@ type GCPPayload struct {
 type S3Payload struct {
 	S3Bucket   string
 	BucketPath string
+	Region     string
 }
 
 type DatastoreCreationPayload struct {
@@ -83,6 +86,8 @@ type DatastoreCreationPayload struct {
 	LocalPathPl  *LocalPathPayload
 
 	logger zerolog.Logger
+
+	TestFailedWriteToBucket bool
 }
 
 func GenerateDatastore(
@@ -148,23 +153,39 @@ func GenerateDatastoreNew(ctx context.Context, cfg DatastoreCreationPayload) (St
 	case cfg.DirectCopyPl != nil:
 		src = NewCopyCRDBDirect(cfg.logger, cfg.DirectCopyPl.TargetConnForCopy)
 	case cfg.GCPPl != nil:
-		creds, err := google.FindDefaultCredentials(ctx)
-		if err != nil {
-			return nil, err
+		var creds *google.Credentials
+		var err error
+		var emptyClient storage.Client
+		gcpClient := &emptyClient
+		// For this test, we don't need the real credentials or client.
+		if !cfg.TestFailedWriteToBucket {
+			creds, err = google.FindDefaultCredentials(ctx)
+			if err != nil {
+				return nil, err
+			}
+			gcpClient, err = storage.NewClient(ctx)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to make new gcp client")
+			}
 		}
-		gcpClient, err := storage.NewClient(context.Background())
-		if err != nil {
-			return nil, err
-		}
+
 		src = NewGCPStore(cfg.logger, gcpClient, creds, cfg.GCPPl.GCPBucket, cfg.GCPPl.BucketPath)
 	case cfg.S3Pl != nil:
-		sess, err := session.NewSession()
-		if err != nil {
+		var sess *session.Session
+		var creds credentials.Value
+		var err error
+
+		if sess, err = session.NewSession(); err != nil {
 			return nil, err
 		}
-		creds, err := sess.Config.Credentials.Get()
-		if err != nil {
-			return nil, err
+		if cfg.S3Pl.Region != "" {
+			sess.Config.Region = &cfg.S3Pl.Region
+		}
+		// For this test, we don't need the real credentials or client.
+		if !cfg.TestFailedWriteToBucket {
+			if creds, err = sess.Config.Credentials.Get(); err != nil {
+				return nil, err
+			}
 		}
 		src = NewS3Store(cfg.logger, sess, creds, cfg.S3Pl.S3Bucket, cfg.S3Pl.BucketPath)
 	case cfg.LocalPathPl != nil:
