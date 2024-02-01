@@ -3,8 +3,6 @@ package fetch
 import (
 	"context"
 
-	"cloud.google.com/go/storage"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/cmd/internal/cmdutil"
 	"github.com/cockroachdb/molt/compression"
@@ -16,7 +14,6 @@ import (
 	"github.com/cockroachdb/molt/testutils"
 	"github.com/spf13/cobra"
 	"github.com/thediveo/enumflag/v2"
-	"golang.org/x/oauth2/google"
 )
 
 func Command() *cobra.Command {
@@ -82,37 +79,36 @@ func Command() *cobra.Command {
 				return errors.AssertionFailedf("target must be cockroach")
 			}
 
-			var src datablobstorage.Store
+			var datastorePayload any
+
 			switch {
 			case directCRDBCopy:
-				src = datablobstorage.NewCopyCRDBDirect(logger, conns[1].(*dbconn.PGConn).Conn)
+				datastorePayload = &datablobstorage.DirectCopyPayload{
+					TargetConnForCopy: conns[1].(*dbconn.PGConn).Conn,
+				}
 			case gcpBucket != "":
-				creds, err := google.FindDefaultCredentials(ctx)
-				if err != nil {
-					return err
+				datastorePayload = &datablobstorage.GCPPayload{
+					GCPBucket:  gcpBucket,
+					BucketPath: bucketPath,
 				}
-				gcpClient, err := storage.NewClient(context.Background())
-				if err != nil {
-					return err
-				}
-				src = datablobstorage.NewGCPStore(logger, gcpClient, creds, gcpBucket, bucketPath)
 			case s3Bucket != "":
-				sess, err := session.NewSession()
-				if err != nil {
-					return err
+				datastorePayload = &datablobstorage.S3Payload{
+					S3Bucket:   s3Bucket,
+					BucketPath: bucketPath,
 				}
-				creds, err := sess.Config.Credentials.Get()
-				if err != nil {
-					return err
-				}
-				src = datablobstorage.NewS3Store(logger, sess, creds, s3Bucket, bucketPath)
 			case localPath != "":
-				src, err = datablobstorage.NewLocalStore(logger, localPath, localPathListenAddr, localPathCRDBAccessAddr)
-				if err != nil {
-					return err
+				datastorePayload = &datablobstorage.LocalPathPayload{
+					LocalPath:               localPath,
+					LocalPathListenAddr:     localPathListenAddr,
+					LocalPathCRDBAccessAddr: localPathCRDBAccessAddr,
 				}
 			default:
-				return errors.AssertionFailedf("data source must be configured (--s3-bucket, --gcp-bucket, --direct-copy)")
+				return errors.AssertionFailedf("data source must be configured (--s3-bucket, --gcp-bucket, --direct-copy, --local-path)")
+			}
+
+			src, err := datablobstorage.GenerateDatastore(ctx, datastorePayload, logger, false /* testFailedWriteToBucket */)
+			if err != nil {
+				return err
 			}
 
 			err = fetch.Fetch(
