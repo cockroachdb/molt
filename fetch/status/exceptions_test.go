@@ -241,11 +241,25 @@ func TestExtractFileNameFromErr(t *testing.T) {
 		want string
 	}{
 		{
-			name: "found file name in error string",
+			name: "found file name csv in error string",
 			args: args{
 				errString: "error importing data: ERROR: http://192.168.0.207:9005/public.employees/part_00000001.csv: error parsing row 1: expected 9 fields, got 16 (row: e8400-e29b-41d4-a716-446655440000,Employee_1,2023-11-03 09:00:00+00,2023-11-03,t,24,5000.00,100.252,550e8400-e29b-41d4-a716-446655440000,Employee_2,2023-11-03 09:00:00+00,2023-11-03,t,24,5000.00,100.25) (SQLSTATE XXUUU)exit status 1",
 			},
 			want: "part_00000001.csv",
+		},
+		{
+			name: "found file name gzip in error string",
+			args: args{
+				errString: "error importing data: ERROR: http://192.168.0.207:9005/public.employees/part_00000001.tar.gz: error parsing row 1: expected 9 fields, got 16 (row: e8400-e29b-41d4-a716-446655440000,Employee_1,2023-11-03 09:00:00+00,2023-11-03,t,24,5000.00,100.252,550e8400-e29b-41d4-a716-446655440000,Employee_2,2023-11-03 09:00:00+00,2023-11-03,t,24,5000.00,100.25) (SQLSTATE XXUUU)exit status 1",
+			},
+			want: "part_00000001.tar.gz",
+		},
+		{
+			name: "did not find matching pattern",
+			args: args{
+				errString: "error importing data: ERROR: http://192.168.0.207:9005/public.employees/part_1.tar.gz: error parsing row 1: expected 9 fields, got 16 (row: e8400-e29b-41d4-a716-446655440000,Employee_1,2023-11-03 09:00:00+00,2023-11-03,t,24,5000.00,100.252,550e8400-e29b-41d4-a716-446655440000,Employee_2,2023-11-03 09:00:00+00,2023-11-03,t,24,5000.00,100.25) (SQLSTATE XXUUU)exit status 1",
+			},
+			want: "",
 		},
 		{
 			name: "file name not found",
