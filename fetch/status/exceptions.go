@@ -202,7 +202,7 @@ func MaybeReportException(
 	return inputErr
 }
 
-var fileNameRegEx = regexp.MustCompile(`(part.+csv?)`)
+var fileNameRegEx = regexp.MustCompile(`part_[\d+]{8}(\.csv|\.tar\.gz)`)
 
 func extractFileNameFromErr(errString string) string {
 	return fileNameRegEx.FindString(errString)
