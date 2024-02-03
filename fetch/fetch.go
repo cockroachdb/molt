@@ -292,6 +292,7 @@ func fetchTable(
 				return
 			}
 
+			logger.Info().Msg("cleaning up resources created during fetch run")
 			for _, r := range e.Resources {
 				if r == nil {
 					continue
