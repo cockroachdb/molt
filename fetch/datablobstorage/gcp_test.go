@@ -5,11 +5,9 @@ import (
 	"testing"
 
 	"cloud.google.com/go/storage"
-	"github.com/googleapis/google-cloud-go-testing/storage/stiface"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2/google"
-	"google.golang.org/api/iterator"
 )
 
 func TestGCPResource_ImportURL(t *testing.T) {
@@ -38,41 +36,6 @@ func TestGCPResource_ImportURL(t *testing.T) {
 			require.Equal(t, tc.expected, u)
 		})
 	}
-}
-
-type gcpClientMock struct {
-	stiface.Client
-	mock.Mock
-}
-type gcpBucketMock struct {
-	stiface.BucketHandle
-	mock.Mock
-}
-type gcpObjectITMock struct {
-	stiface.ObjectIterator
-	i    int
-	next []storage.ObjectAttrs
-}
-
-func (m *gcpClientMock) Bucket(name string) stiface.BucketHandle {
-	args := m.Called(name)
-	return args.Get(0).(*gcpBucketMock)
-}
-
-func (m *gcpBucketMock) Objects(ctx context.Context, q *storage.Query) (it stiface.ObjectIterator) {
-	args := m.Called(ctx, q)
-	return args.Get(0).(*gcpObjectITMock)
-}
-
-func (it *gcpObjectITMock) Next() (a *storage.ObjectAttrs, err error) {
-	if it.i == len(it.next) {
-		err = iterator.Done
-		return
-	}
-
-	a = &it.next[it.i]
-	it.i += 1
-	return
 }
 
 func TestListFromContinuationPointGCP(t *testing.T) {

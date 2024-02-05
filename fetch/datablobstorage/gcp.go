@@ -8,6 +8,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/cockroachdb/molt/dbtable"
+	"github.com/cockroachdb/molt/testutils"
 	"github.com/googleapis/google-cloud-go-testing/storage/stiface"
 	"github.com/rs/zerolog"
 	"golang.org/x/oauth2/google"
@@ -39,7 +40,13 @@ func NewGCPStore(
 }
 
 func (s *gcpStore) CreateFromReader(
-	ctx context.Context, r io.Reader, table dbtable.VerifiedTable, iteration int, fileExt string,
+	ctx context.Context,
+	r io.Reader,
+	table dbtable.VerifiedTable,
+	iteration int,
+	fileExt string,
+	numRows chan int,
+	testingKnobs testutils.FetchTestingKnobs,
 ) (Resource, error) {
 	key := fmt.Sprintf("%s/part_%08d.%s", table.SafeString(), iteration, fileExt)
 	if s.bucketPath != "" {
@@ -47,17 +54,53 @@ func (s *gcpStore) CreateFromReader(
 	}
 
 	s.logger.Debug().Str("file", key).Msgf("creating new file")
-	wc := s.client.Bucket(s.bucket).Object(key).NewWriter(ctx)
+
+	// wc can only be *storage.Writer or GCPStorageWriterMock as the struct,
+	// but since we need to accommodate both of them, we have to pick a generalized
+	// interface.
+	var wc interface {
+		io.Closer
+		io.Writer
+	}
+
+	wc = s.client.Bucket(s.bucket).Object(key).NewWriter(ctx)
+
+	rows := <-numRows
+
+	// If any error happens before io.Copy returns, the
+	// error will be propagated to the goroutine in exportTable(),
+	// triggering forwardRead.CloseWithError(), which will allow p.out.Close() in
+	// csvPipe.flush() to return with the same error. This is because `forwardRead`
+	// and `p.out` are the 2 ends of a pipe. Once the read side is closed with
+	// error, the same error will be propagated to the write side.
+	// See also: https://go.dev/play/p/H-pHiEffcZE.
+
+	if testingKnobs.FailedWriteToBucket.FailedAfterReadFromPipe {
+		// We need a mock writer which simulates the failed upload.
+		wc = &GCPStorageWriterMock{wc.(*storage.Writer)}
+	}
+
+	// io.Copy starts execution ONLY after p.csvWriter.Flush() is triggered.
 	if _, err := io.Copy(wc, r); err != nil {
 		return nil, err
 	}
+	// Once io.Copy finished without error, p.csvWriter.Flush() and p.out.Close()
+	// will return without error.
+
+	// If any error after io.Copy returns, the error will trigger
+	// forwardRead.CloseWithError() in the goroutine in exportTable(), but it will
+	// lead to "error closing write goroutine", as the pipe has been closed via
+	// p.out.Close().
+
 	if err := wc.Close(); err != nil {
 		return nil, err
 	}
-	s.logger.Debug().Str("file", key).Msgf("gcp file creation complete complete")
+
+	s.logger.Debug().Str("file", key).Int("rows", rows).Msgf("gcp file creation complete complete")
 	return &gcpResource{
 		store: s,
 		key:   key,
+		rows:  rows,
 	}, nil
 }
 
@@ -115,6 +158,7 @@ func (r *gcpStore) TelemetryName() string {
 type gcpResource struct {
 	store *gcpStore
 	key   string
+	rows  int
 }
 
 func (r *gcpResource) ImportURL() (string, error) {
@@ -128,6 +172,10 @@ func (r *gcpResource) ImportURL() (string, error) {
 
 func (r *gcpResource) Key() (string, error) {
 	return r.key, nil
+}
+
+func (r *gcpResource) Rows() int {
+	return r.rows
 }
 
 func (r *gcpResource) Reader(ctx context.Context) (io.ReadCloser, error) {

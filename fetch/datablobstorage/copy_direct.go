@@ -8,6 +8,7 @@ import (
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/cockroachdb/molt/fetch/internal/dataquery"
 	"github.com/cockroachdb/molt/fetch/status"
+	"github.com/cockroachdb/molt/testutils"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog"
 )
@@ -20,17 +21,32 @@ type copyCRDBDirect struct {
 	target *pgx.Conn
 }
 
+const DirectCopyWriterMockErrMsg = "forced error for direct copy"
+
 func (c *copyCRDBDirect) CreateFromReader(
-	ctx context.Context, r io.Reader, table dbtable.VerifiedTable, iteration int, fileExt string,
+	ctx context.Context,
+	r io.Reader,
+	table dbtable.VerifiedTable,
+	iteration int,
+	fileExt string,
+	numRows chan int,
+	testingKnobs testutils.FetchTestingKnobs,
 ) (Resource, error) {
 	conn, err := pgx.ConnectConfig(ctx, c.target.Config())
 	if err != nil {
 		return nil, err
 	}
+	if testingKnobs.FailedWriteToBucket.FailedBeforeReadFromPipe {
+		return nil, errors.New(DirectCopyWriterMockErrMsg)
+	}
+
 	c.logger.Debug().Int("batch", iteration).Msgf("csv batch starting")
 	if _, err := conn.PgConn().CopyFrom(ctx, r, dataquery.CopyFrom(table)); err != nil {
 		pgErr := status.MaybeReportException(ctx, c.logger, conn, table.Name, err, "" /* fileName */, status.StageDataLoad)
 		return nil, errors.CombineErrors(pgErr, conn.Close(ctx))
+	}
+	if testingKnobs.FailedWriteToBucket.FailedAfterReadFromPipe {
+		return nil, errors.New(DirectCopyWriterMockErrMsg)
 	}
 	c.logger.Debug().Int("batch", iteration).Msgf("csv batch complete")
 	return nil, conn.Close(ctx)
