@@ -232,6 +232,25 @@ func Fetch(
 	return nil
 }
 
+func truncateTable(
+	ctx context.Context, logger zerolog.Logger, table tableverify.Result, conns dbconn.OrderedConns,
+) error {
+	truncateTargetTableConn, err := conns[1].Clone(ctx)
+	if err != nil {
+		return errors.Wrap(err, "unable to clone a connection to truncate the table on the target db")
+	}
+	logger.Info().Msgf("truncating table")
+	_, err = truncateTargetTableConn.(*dbconn.PGConn).Conn.Exec(ctx, "TRUNCATE TABLE "+table.SafeString())
+	if err != nil {
+		return errors.Wrap(err, "failed executing the TRUNCATE TABLE statement")
+	}
+	if err := truncateTargetTableConn.Close(ctx); err != nil {
+		return errors.Wrap(err, "unable to close the connection that is used to truncate the table on the target db")
+	}
+	logger.Info().Msgf("finished truncating table")
+	return nil
+}
+
 // Note that if `ExceptionLog` is not nil, then that means
 // there is an exception log and import/copy only mode
 // was specified.
@@ -259,6 +278,13 @@ func fetchTable(
 	if !table.RowVerifiable {
 		logger.Error().Msgf("table %s do not have matching primary keys, cannot migrate", table.SafeString())
 		return nil
+	}
+
+	// Truncate table on the target side, if applicable.
+	if cfg.Truncate {
+		if err := truncateTable(ctx, logger, table, conns); err != nil {
+			return err
+		}
 	}
 
 	logger.Info().Msgf("data extraction phase starting")
@@ -332,14 +358,6 @@ func fetchTable(
 		}
 		var importDuration time.Duration
 		if err := func() error {
-			if cfg.Truncate {
-				logger.Info().Msgf("truncating table")
-				_, err := targetConn.(*dbconn.PGConn).Conn.Exec(ctx, "TRUNCATE TABLE "+table.SafeString())
-				if err != nil {
-					return err
-				}
-			}
-
 			logger.Info().
 				Msgf("starting data import on target")
 
