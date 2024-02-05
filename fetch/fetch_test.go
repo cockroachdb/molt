@@ -16,7 +16,7 @@ import (
 	"github.com/cockroachdb/molt/fetch/dataexport"
 	"github.com/cockroachdb/molt/fetch/status"
 	"github.com/cockroachdb/molt/testutils"
-	"github.com/cockroachdb/molt/verify/dbverify"
+	"github.com/cockroachdb/molt/utils"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 )
@@ -83,7 +83,7 @@ func TestDataDriven(t *testing.T) {
 					case "query":
 						return replaceDockerInternalLocalHost(testutils.QueryConnCommand(t, d, conns))
 					case "fetch":
-						filter := dbverify.DefaultFilterConfig()
+						filter := utils.DefaultFilterConfig()
 						truncate := true
 						live := false
 						direct := false

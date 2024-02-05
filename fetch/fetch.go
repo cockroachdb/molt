@@ -32,7 +32,6 @@ type Config struct {
 	FlushRows            int
 	Cleanup              bool
 	Live                 bool
-	Truncate             bool
 	Concurrency          int
 	FetchID              string
 	ContinuationToken    string
@@ -41,8 +40,16 @@ type Config struct {
 	// stats are deterministic.
 	TestOnly bool
 
+	// The target table handling configs.
+	Truncate bool
+
 	Compression    compression.Flag
 	ExportSettings dataexport.Settings
+}
+
+type SchemaCreationConfig struct {
+	TableFilter  string
+	SchemaFilter string
 }
 
 func Fetch(
@@ -51,7 +58,7 @@ func Fetch(
 	logger zerolog.Logger,
 	conns dbconn.OrderedConns,
 	blobStore datablobstorage.Store,
-	tableFilter dbverify.FilterConfig,
+	tableFilter utils.FilterConfig,
 	testingKnobs testutils.FetchTestingKnobs,
 ) (retErr error) {
 	// Setup fetch status tracking.
@@ -103,7 +110,7 @@ func Fetch(
 	if err != nil {
 		return err
 	}
-	if dbTables, err = dbverify.FilterResult(tableFilter, dbTables); err != nil {
+	if dbTables, err = utils.FilterResult(tableFilter, dbTables); err != nil {
 		return err
 	}
 	for _, tbl := range dbTables.ExtraneousTables {
@@ -165,6 +172,9 @@ func Fetch(
 	if err != nil {
 		return err
 	}
+
+	// TODO(janexing): ingest the schema creation logic here. We create the schemas
+	// one by one, and exit if any of them errors out.
 
 	workCh := make(chan tableverify.Result)
 	g, _ := errgroup.WithContext(ctx)

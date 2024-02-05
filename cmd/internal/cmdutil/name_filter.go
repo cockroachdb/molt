@@ -1,11 +1,11 @@
 package cmdutil
 
 import (
-	"github.com/cockroachdb/molt/verify/dbverify"
+	"github.com/cockroachdb/molt/utils"
 	"github.com/spf13/cobra"
 )
 
-var tableFilter = dbverify.DefaultFilterConfig()
+var tableFilter = utils.DefaultFilterConfig()
 
 func RegisterNameFilterFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringVar(
@@ -22,6 +22,6 @@ func RegisterNameFilterFlags(cmd *cobra.Command) {
 	)
 }
 
-func TableFilter() dbverify.FilterConfig {
+func TableFilter() utils.FilterConfig {
 	return tableFilter
 }

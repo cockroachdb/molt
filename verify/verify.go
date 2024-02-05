@@ -9,6 +9,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/molttelemetry"
+	"github.com/cockroachdb/molt/utils"
 	"github.com/cockroachdb/molt/verify/dbverify"
 	"github.com/cockroachdb/molt/verify/inconsistency"
 	"github.com/cockroachdb/molt/verify/rowverify"
@@ -33,7 +34,7 @@ type verifyOpts struct {
 	continuous               bool
 	continuousPause          time.Duration
 	rows                     bool
-	dbFilter                 dbverify.FilterConfig
+	dbFilter                 utils.FilterConfig
 	liveVerificationSettings *rowverify.LiveReverificationSettings
 
 	testOnly bool
@@ -86,7 +87,7 @@ func WithLive(live bool, settings rowverify.LiveReverificationSettings) VerifyOp
 	}
 }
 
-func WithDBFilter(filter dbverify.FilterConfig) VerifyOpt {
+func WithDBFilter(filter utils.FilterConfig) VerifyOpt {
 	return func(o *verifyOpts) {
 		o.dbFilter = filter
 	}
@@ -117,7 +118,7 @@ func Verify(
 		rowBatchSize: DefaultRowBatchSize,
 		tableSplits:  DefaultTableSplits,
 		rows:         true,
-		dbFilter:     dbverify.DefaultFilterConfig(),
+		dbFilter:     utils.DefaultFilterConfig(),
 	}
 	for _, applyOpt := range inOpts {
 		applyOpt(&opts)
@@ -132,7 +133,7 @@ func Verify(
 	if err != nil {
 		return errors.Wrap(err, "error comparing database tables")
 	}
-	if dbTables, err = dbverify.FilterResult(opts.dbFilter, dbTables); err != nil {
+	if dbTables, err = utils.FilterResult(opts.dbFilter, dbTables); err != nil {
 		return err
 	}
 
@@ -316,7 +317,7 @@ func verifyRowShard(
 	)
 }
 
-func reportTableCategories(result dbverify.Result) {
+func reportTableCategories(result utils.Result) {
 	verifymetrics.NumTablesProcessed.WithLabelValues("missing").Add(float64(len(result.MissingTables)))
 	verifymetrics.NumTablesProcessed.WithLabelValues("extraneous").Add(float64(len(result.ExtraneousTables)))
 	verifymetrics.NumTablesProcessed.WithLabelValues("verified").Add(float64(len(result.Verified)))

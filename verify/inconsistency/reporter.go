@@ -58,12 +58,12 @@ func (l LogReporter) Report(obj ReportableObject) {
 	summaryLogger := moltlogger.GetSummaryLogger(l.Logger)
 
 	switch obj := obj.(type) {
-	case MissingTable:
+	case utils.MissingTable:
 		dataLogger.Warn().
 			Str("table_schema", string(obj.Schema)).
 			Str("table_name", string(obj.Table)).
 			Msgf("missing table detected")
-	case ExtraneousTable:
+	case utils.ExtraneousTable:
 		dataLogger.Warn().
 			Str("table_schema", string(obj.Schema)).
 			Str("table_name", string(obj.Table)).
