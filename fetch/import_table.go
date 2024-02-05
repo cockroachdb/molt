@@ -21,6 +21,7 @@ import (
 	"github.com/cockroachdb/molt/retry"
 	"github.com/cockroachdb/molt/testutils"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/rs/zerolog"
 )
 
@@ -35,9 +36,14 @@ type importProgress struct {
 	FractionCompleted float64 `db:"fraction_completed"`
 }
 
+type PGIface interface {
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+}
+
 const (
 	pattern     = `%`
 	replacement = `\%`
+	batchSize   = 10
 )
 
 var re = regexp.MustCompile(pattern)
@@ -145,52 +151,77 @@ func importTable(
 		locs = append(locs, u)
 	}
 	conn := baseConn.(*dbconn.PGConn)
-	r, err := retry.NewRetry(retry.Settings{
-		InitialBackoff: time.Second,
-		Multiplier:     2,
-		MaxRetries:     4,
-	})
-	if err != nil {
-		return ret, err
-	}
 
-	if testingKnobs.TriggerCorruptCSVFile {
-		// In the case we are testing corrupt CSV file,
-		// we do not want to retry since it will necessarily fail.
-		r, err = retry.NewRetry(retry.Settings{
-			InitialBackoff: 1,
-			Multiplier:     1,
-			MaxRetries:     1,
+	kvOptions := tree.KVOptions{}
+	if cfg.Compression == compression.GZIP {
+		kvOptions = append(kvOptions, tree.KVOption{
+			Key:   "decompress",
+			Value: tree.NewStrVal("gzip"),
 		})
-		if err != nil {
-			return ret, err
-		}
 	}
 
-	if err := r.Do(func() error {
-		kvOptions := tree.KVOptions{}
-		if cfg.Compression == compression.GZIP {
-			kvOptions = append(kvOptions, tree.KVOption{
-				Key:   "decompress",
-				Value: tree.NewStrVal("gzip"),
-			})
+	for i := 0; i < len(locs); i += batchSize {
+		end := i + batchSize
+		// necessary to prevent going over len
+		if end > len(locs) {
+			end = len(locs)
 		}
-
-		importQuery := dataquery.ImportInto(table, locs, kvOptions)
-		logger.Debug().Msgf("running import query: %q", importQuery)
-		if _, err := conn.Exec(
-			ctx,
-			importQuery,
-		); err != nil {
-			pgErr := status.MaybeReportException(ctx, logger, baseConn.(*dbconn.PGConn).Conn, table.Name, err, "" /* fileName */, status.StageDataLoad)
-			return errors.Wrap(pgErr, "error importing data")
+		locBatch := locs[i:end]
+		file, err := importWithBisect(ctx, kvOptions, table, logger, conn, locBatch)
+		if err != nil {
+			fileName := status.ExtractFileNameFromErr(file)
+			pgErr := status.MaybeReportException(ctx, logger, baseConn.(*dbconn.PGConn).Conn, table.Name, err, fileName, status.StageDataLoad)
+			return ret, errors.Wrap(pgErr, "error importing data")
 		}
-		return nil
-	}, func(err error) {
-		logger.Err(err).Msgf("error importing data, retrying")
-	}); err != nil {
-		return ret, err
 	}
 	ret.EndTime = time.Now()
 	return ret, nil
+}
+
+// importWithBisect handles the logic of trying to find the
+// broken file in a batch of files that were sent to import.
+// We are using a batch size of 10 files and the way the algorithm
+// breaks up the files is as follows.
+// [1,2,3,4,5,6,7,8,9,10]
+// [1,2,3,4,5][6,7,8,9,10]
+// [1,2][3,4,5][6,7][8,9,10]
+// [1][2][3][4,5][6][7][8][9,10]
+// [4][5][9][10]
+// Since the pushes to the stack are in FIFO order, if there are multiple
+// files with errors, there is a guarantee that the lowest file part is
+// returned first to preserve import order. So, in the example above, if file
+// 3 and 5 had errors, 3 would be returned first since the row showing the
+// breakdown [1][2][3][4,5] shows that 3 is being processed before 5 in the
+// stack.
+func importWithBisect(
+	ctx context.Context,
+	kvOptions tree.KVOptions,
+	table dbtable.VerifiedTable,
+	logger zerolog.Logger,
+	conn PGIface,
+	locs []string,
+) (string, error) {
+	stack := [][]string{locs}
+	for len(stack) > 0 {
+		curr := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		importQuery := dataquery.ImportInto(table, curr, kvOptions)
+		logger.Debug().Msgf("running import query: %q", importQuery)
+		_, err := conn.Exec(ctx, importQuery)
+
+		// If the import query returns an error, then we need to bisect.
+		// Otherwise do nothing. If the len is more than 1, we have
+		// not bottomed out yet on a leaf node.
+		if err != nil && len(curr) > 1 {
+			mid := len(curr) / 2
+			stack = append(stack, curr[mid:], curr[:mid])
+			// If there is an error and the current batch is of
+			// length 1, then we reached a leaf and found the issue.
+		} else if err != nil && len(curr) == 1 {
+			return curr[0], err
+		}
+		// No else case needed since we are just pruning all successful files
+		// and don't want to push to the stack.
+	}
+	return "", nil
 }

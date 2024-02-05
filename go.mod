@@ -14,9 +14,10 @@ require (
 	github.com/cockroachdb/errors v1.9.1
 	github.com/go-sql-driver/mysql v1.7.2-0.20230527164328-99976f4f587d
 	github.com/googleapis/google-cloud-go-testing v0.0.0-20210719221736-1c9a4c676720
-	github.com/jackc/pgx/v5 v5.3.0
+	github.com/jackc/pgx/v5 v5.5.1
 	github.com/jstemmer/go-junit-report v1.0.0
 	github.com/lib/pq v1.10.6
+	github.com/pashagolub/pgxmock/v3 v3.3.0
 	github.com/pingcap/tidb v1.1.0-beta.0.20211124132551-4a1b2e9fe5b5
 	github.com/pingcap/tidb/parser v0.0.0-20211124132551-4a1b2e9fe5b5
 	github.com/pkg/errors v0.9.1
@@ -47,7 +48,7 @@ require (
 	github.com/cockroachdb/logtags v0.0.0-20211118104740-dabe8e521a4f // indirect
 	github.com/cockroachdb/redact v1.1.3 // indirect
 	github.com/cockroachdb/ttycolor v0.0.0-20180709150743-a1d5aaeb377d // indirect
-	github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e // indirect
+	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f // indirect
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
 	github.com/cznic/mathutil v0.0.0-20181122101859-297441e03548 // indirect
 	github.com/danjacques/gofslock v0.0.0-20191023191349-0a45f885bc37 // indirect
@@ -71,6 +72,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
+	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
@@ -91,7 +93,7 @@ require (
 	github.com/prometheus/common v0.9.1 // indirect
 	github.com/prometheus/procfs v0.0.8 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0 // indirect
-	github.com/rogpeppe/go-internal v1.10.0 // indirect
+	github.com/rogpeppe/go-internal v1.11.0 // indirect
 	github.com/sasha-s/go-deadlock v0.3.1 // indirect
 	github.com/shirou/gopsutil v3.21.2+incompatible // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect

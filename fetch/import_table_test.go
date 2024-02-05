@@ -3,6 +3,7 @@ package fetch
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,6 +15,8 @@ import (
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/cockroachdb/molt/retry"
 	"github.com/cockroachdb/molt/testutils"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/pashagolub/pgxmock/v3"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 )
@@ -174,6 +177,100 @@ ORDER BY created DESC`,
 		t.Run(tc.name, func(t *testing.T) {
 			query := getShowJobsQuery(tc.table, tc.curTime)
 			require.Equal(t, tc.expected, query)
+		})
+	}
+}
+
+func TestImportWithBisect(t *testing.T) {
+	logger := zerolog.New(zerolog.NewConsoleWriter())
+	tbl := dbtable.VerifiedTable{
+		Name: dbtable.Name{
+			Schema: tree.Name("public"),
+			Table:  tree.Name("test1"),
+		},
+	}
+
+	for _, tc := range []struct {
+		name           string
+		dbExpectations func(mock pgxmock.PgxConnIface)
+		expected       string
+	}{
+		{
+			name: "file 3 error",
+			dbExpectations: func(mock pgxmock.PgxConnIface) {
+				mock.ExpectExec("IMPORT INTO").Times(2).WillReturnError(errors.New("mock error"))
+				mock.ExpectExec("IMPORT INTO").WillReturnResult(pgconn.NewCommandTag("tag"))
+				mock.ExpectExec("IMPORT INTO").Times(2).WillReturnError(errors.New("mock error"))
+			},
+			expected: "part_00000003.csv",
+		},
+		{
+			name: "file 5 error",
+			dbExpectations: func(mock pgxmock.PgxConnIface) {
+				mock.ExpectExec("IMPORT INTO").Times(2).WillReturnError(errors.New("mock error"))
+				mock.ExpectExec("IMPORT INTO").WillReturnResult(pgconn.NewCommandTag("tag"))
+				mock.ExpectExec("IMPORT INTO").Times(1).WillReturnError(errors.New("mock error"))
+				mock.ExpectExec("IMPORT INTO").WillReturnResult(pgconn.NewCommandTag("tag"))
+				mock.ExpectExec("IMPORT INTO").Times(1).WillReturnError(errors.New("mock error"))
+				mock.ExpectExec("IMPORT INTO").WillReturnResult(pgconn.NewCommandTag("tag"))
+				mock.ExpectExec("IMPORT INTO").Times(1).WillReturnError(errors.New("mock error"))
+			},
+			expected: "part_00000005.csv",
+		},
+		{
+			name: "file 6 error",
+			dbExpectations: func(mock pgxmock.PgxConnIface) {
+				mock.ExpectExec("IMPORT INTO").Times(1).WillReturnError(errors.New("mock error"))
+				mock.ExpectExec("IMPORT INTO").WillReturnResult(pgconn.NewCommandTag("tag"))
+				mock.ExpectExec("IMPORT INTO").Times(3).WillReturnError(errors.New("mock error"))
+			},
+			expected: "part_00000006.csv",
+		},
+		{
+			name: "file 8 error",
+			dbExpectations: func(mock pgxmock.PgxConnIface) {
+				mock.ExpectExec("IMPORT INTO").Times(1).WillReturnError(errors.New("mock error"))
+				mock.ExpectExec("IMPORT INTO").WillReturnResult(pgconn.NewCommandTag("tag"))
+				mock.ExpectExec("IMPORT INTO").Times(1).WillReturnError(errors.New("mock error"))
+				mock.ExpectExec("IMPORT INTO").WillReturnResult(pgconn.NewCommandTag("tag"))
+				mock.ExpectExec("IMPORT INTO").Times(2).WillReturnError(errors.New("mock error"))
+			},
+			expected: "part_00000008.csv",
+		},
+		{
+			name: "no error",
+			dbExpectations: func(mock pgxmock.PgxConnIface) {
+				mock.ExpectExec("IMPORT INTO").WillReturnResult(pgconn.NewCommandTag("tag"))
+			},
+			// If theres no error, no file is returned
+			expected: "",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			db, err := pgxmock.NewConn(pgxmock.QueryMatcherOption(pgxmock.QueryMatcherRegexp))
+			require.NoError(t, err)
+			tc.dbExpectations(db)
+			file, _ := importWithBisect(
+				context.Background(),
+				nil,
+				tbl,
+				logger,
+				db,
+				[]string{"part_00000001.csv",
+					"part_00000002.csv",
+					"part_00000003.csv",
+					"part_00000004.csv",
+					"part_00000005.csv",
+					"part_00000006.csv",
+					"part_00000007.csv",
+					"part_00000008.csv",
+					"part_00000009.csv",
+					"part_00000010.csv",
+				},
+			)
+			err = db.ExpectationsWereMet()
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, file)
 		})
 	}
 }
