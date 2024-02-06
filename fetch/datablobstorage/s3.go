@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager/s3manageriface"
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/cockroachdb/molt/testutils"
+	"github.com/cockroachdb/molt/utils"
 	"github.com/rs/zerolog"
 )
 
@@ -191,7 +192,7 @@ func listFromContinuationPointAWS(
 		// eg. If key = fetch/public.inventory/part_00000004.tar.gz,
 		// fetch/public.inventory/part_00000005.tar.gz is >= to key meaning,
 		// it is a file we need to include.
-		if aws.StringValue(obj.Key) >= key {
+		if aws.StringValue(obj.Key) >= key && utils.MatchesFileConvention(aws.StringValue(obj.Key)) {
 			resources = append(resources, &s3Resource{
 				key:     aws.StringValue(obj.Key),
 				session: s3Store.session,

@@ -64,10 +64,13 @@ func TestDataDriven(t *testing.T) {
 					// Extract common arguments.
 					args := d.CmdArgs[:0]
 					var expectError bool
+					var suppressErrorMessage bool
 					for _, arg := range d.CmdArgs {
 						switch arg.Key {
 						case "expect-error":
 							expectError = true
+						case "suppress-error":
+							suppressErrorMessage = true
 						default:
 							args = append(args, arg)
 						}
@@ -86,6 +89,10 @@ func TestDataDriven(t *testing.T) {
 						direct := false
 						compress := false
 						corruptCSVFile := false
+						fetchId := ""
+						passedInDir := ""
+						cleanup := false
+						continuationToken := ""
 
 						for _, cmd := range d.CmdArgs {
 							switch cmd.Key {
@@ -99,12 +106,28 @@ func TestDataDriven(t *testing.T) {
 								compress = true
 							case "corrupt-csv":
 								corruptCSVFile = true
+							case "fetch-id":
+								fetchId = cmd.Vals[0]
+							case "store-dir":
+								passedInDir = cmd.Vals[0]
+							case "cleanup-dir":
+								cleanup = true
+							case "continuation-token":
+								continuationToken = cmd.Vals[0]
 							default:
 								t.Errorf("unknown key %s", cmd.Key)
 							}
 						}
-						dir, err := os.MkdirTemp("", "")
-						require.NoError(t, err)
+
+						dir := ""
+						if passedInDir == "" {
+							createDir, err := os.MkdirTemp("", "")
+							require.NoError(t, err)
+							dir = createDir
+						} else {
+							dir = passedInDir
+						}
+
 						var src datablobstorage.Store
 						defer func() {
 							if src != nil {
@@ -140,7 +163,10 @@ func TestDataDriven(t *testing.T) {
 								ExportSettings: dataexport.Settings{
 									RowBatchSize: 2,
 								},
-								Compression: compressionFlag,
+								Compression:       compressionFlag,
+								FetchID:           fetchId,
+								Cleanup:           cleanup,
+								ContinuationToken: continuationToken,
 							},
 							logger,
 							conns,
@@ -148,9 +174,22 @@ func TestDataDriven(t *testing.T) {
 							filter,
 							knobs,
 						)
-						if expectError {
+
+						// We want a more thorough cleanup if we want to cleanup dir.
+						// This makes it so that we ensure we ahve fresh
+						defer func() {
+							if cleanup {
+								err := os.RemoveAll(dir)
+								require.NoError(t, err)
+							}
+						}()
+
+						if expectError && !suppressErrorMessage {
 							require.Error(t, err)
 							return replaceDockerInternalLocalHost(err.Error())
+						} else if expectError && suppressErrorMessage {
+							require.Error(t, err)
+							return ""
 						}
 						require.NoError(t, err)
 						return ""

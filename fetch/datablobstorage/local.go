@@ -14,6 +14,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/cockroachdb/molt/testutils"
+	"github.com/cockroachdb/molt/utils"
 	"github.com/rs/zerolog"
 )
 
@@ -140,7 +141,7 @@ func (l *localStore) ListFromContinuationPoint(
 
 	resources := []Resource{}
 	for _, f := range files {
-		if f.Name() >= fileName {
+		if f.Name() >= fileName && utils.MatchesFileConvention(f.Name()) {
 			p := path.Join(baseDir, f.Name())
 			resources = append(resources, &localResource{
 				path:  p,

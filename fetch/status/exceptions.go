@@ -199,6 +199,10 @@ func MaybeReportException(
 		return errors.CombineErrors(inputErr, err)
 	}
 
+	logger.Info().
+		Str("table", fmt.Sprintf("%s.%s", table.Schema.String(), table.Table.String())).
+		Str("continuation_token", exceptionLog.ID.String()).Msg("created continuation token")
+
 	return inputErr
 }
 

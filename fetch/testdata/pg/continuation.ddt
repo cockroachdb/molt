@@ -1,0 +1,244 @@
+# Testing for duplicate key errors.
+exec all
+CREATE TABLE tbl1(id INT PRIMARY KEY, t TEXT)
+----
+[source] CREATE TABLE
+[target] CREATE TABLE
+
+exec all
+CREATE TABLE tbl2(id INT PRIMARY KEY, t TEXT)
+----
+[source] CREATE TABLE
+[target] CREATE TABLE
+
+exec all
+INSERT INTO tbl1 VALUES (11, 'aaa'), (22, 'bb b'), (33, 'ééé'), (44, '🫡🫡🫡'), (55, '娜娜'), (66, 'Лукас'), (77, 'ルカス')
+----
+[source] INSERT 0 7
+[target] INSERT 0 7
+
+exec all
+INSERT INTO tbl2 VALUES (00, 'aaa'), (55, 'bb b'), (66, 'ééé'), (77, '🫡🫡🫡'), (88, '娜娜'), (1010, 'Лукас'), (1212, 'ルカス')
+----
+[source] INSERT 0 7
+[target] INSERT 0 7
+
+query all
+SELECT * FROM tbl1
+----
+[source]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+[target]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+
+query all
+SELECT * FROM tbl2
+----
+[source]:
+id	t
+0	aaa
+55	bb b
+66	ééé
+77	🫡🫡🫡
+88	娜娜
+1010	Лукас
+1212	ルカス
+tag: SELECT 7
+[target]:
+id	t
+0	aaa
+55	bb b
+66	ééé
+77	🫡🫡🫡
+88	娜娜
+1010	Лукас
+1212	ルカス
+tag: SELECT 7
+
+# Force exception log.
+fetch live notruncate expect-error suppress-error store-dir=continuation-test
+----
+
+
+# Create new fetch that has an ID that we can control so we can control args passed in later.
+exec target
+INSERT INTO _molt_fetch_status (id, name, source_dialect) VALUES('d44762e5-6f70-43f8-8e15-58b4de10a007', 'dummy_run', 'PostgreSQL') RETURNING id
+----
+[target] INSERT 0 1
+
+# Make it so that the exception id is deterministic for future steps.
+exec target
+UPDATE _molt_fetch_exception SET fetch_id = 'd44762e5-6f70-43f8-8e15-58b4de10a007' WHERE table_name LIKE 'tbl%'
+----
+[target] UPDATE 2
+
+# Ensure that the fetch_id stays consistent between test recordings.
+query target
+SELECT fetch_id, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception ORDER BY table_name DESC
+----
+[target]:
+fetch_id	table_name	message	sql_state	file_name	stage
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	tbl2	duplicate key value violates unique constraint "tbl2_pkey"; Key (id)=(0) already exists.	23505	part_00000001.csv	data_load
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) already exists.	23505	part_00000001.csv	data_load
+tag: SELECT 2
+
+# Clean up the target table and verify that it's cleaned.
+exec target
+TRUNCATE tbl1
+----
+[target] TRUNCATE
+
+exec target
+TRUNCATE tbl2
+----
+[target] TRUNCATE
+
+query all
+SELECT * FROM tbl1
+----
+[source]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+[target]:
+id	t
+tag: SELECT 0
+
+# Run fetch with continue and verify that it loads the data properly.
+fetch live notruncate store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007
+----
+
+# Verify that the continuation worked and that data for both tables is loaded properly.
+query all
+SELECT * FROM tbl1
+----
+[source]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+[target]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+
+query all
+SELECT * FROM tbl2
+----
+[source]:
+id	t
+0	aaa
+55	bb b
+66	ééé
+77	🫡🫡🫡
+88	娜娜
+1010	Лукас
+1212	ルカス
+tag: SELECT 7
+[target]:
+id	t
+0	aaa
+55	bb b
+66	ééé
+77	🫡🫡🫡
+88	娜娜
+1010	Лукас
+1212	ルカス
+tag: SELECT 7
+
+# Cleanup both tables on the target.
+exec target
+TRUNCATE tbl1
+----
+[target] TRUNCATE
+
+exec target
+TRUNCATE tbl2
+----
+[target] TRUNCATE
+
+# Update the entry so we can continue from a known token we control.
+exec target
+UPDATE _molt_fetch_exception SET id = '011762e5-6f70-43f8-8e15-58b4de10a007' WHERE table_name LIKE 'tbl2'
+----
+[target] UPDATE 1
+
+# Run fetch again on only one table.
+fetch live notruncate cleanup-dir store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 continuation-token=011762e5-6f70-43f8-8e15-58b4de10a007
+----
+
+# Verify that the continuation worked and that data for table 2 is loaded properly.
+# Table 1 should not have any data loaded.
+query all
+SELECT * FROM tbl1
+----
+[source]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+[target]:
+id	t
+tag: SELECT 0
+
+query all
+SELECT * FROM tbl2
+----
+[source]:
+id	t
+0	aaa
+55	bb b
+66	ééé
+77	🫡🫡🫡
+88	娜娜
+1010	Лукас
+1212	ルカス
+tag: SELECT 7
+[target]:
+id	t
+0	aaa
+55	bb b
+66	ééé
+77	🫡🫡🫡
+88	娜娜
+1010	Лукас
+1212	ルカス
+tag: SELECT 7

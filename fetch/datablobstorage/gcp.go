@@ -9,6 +9,7 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/cockroachdb/molt/testutils"
+	"github.com/cockroachdb/molt/utils"
 	"github.com/googleapis/google-cloud-go-testing/storage/stiface"
 	"github.com/rs/zerolog"
 	"golang.org/x/oauth2/google"
@@ -131,9 +132,11 @@ func listFromContinuationPointGCP(
 			}
 			return nil, err
 		} else {
-			resources = append(resources, &gcpResource{
-				key: attrs.Name,
-			})
+			if utils.MatchesFileConvention(attrs.Name) {
+				resources = append(resources, &gcpResource{
+					key: attrs.Name,
+				})
+			}
 		}
 	}
 }
