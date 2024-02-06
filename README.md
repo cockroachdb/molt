@@ -156,7 +156,7 @@ It currently supports the following:
 By default, data is imported using `IMPORT INTO`. You can use `--live` if you
 need target data to be queriable during loading, which uses `COPY FROM` instead.
 
-Data can be truncated automatically if run with `--truncate`.
+Data can be truncated automatically if run with `--table-handling 'truncate-if-exists'`. Molt Fetch can also automatically create the new table on the target side if run with `--table-handling 'drop-on-target-and-recreate'`. The user can also manually create the new table schema on the target side, and run with `--table-handling 'none'` (which is the default setting of table handling options).
 
 A PG replication slot can be created for you if you use `pg-logical-replication-slot-name`,
 see `--help` for more related flags.
@@ -181,7 +181,7 @@ molt fetch \
   --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' \
   --table-filter 'good_table' \
   --s3-bucket 'otan-test-bucket' \
-  --truncate \ # automatically truncate destination tables before importing
+  --table-handling 'truncate-if-exists' \ # automatically truncate destination tables before importing
   --cleanup # cleans up any created s3 files
 ```
 

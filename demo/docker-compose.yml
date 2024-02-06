@@ -42,7 +42,7 @@ services:
     # Using a low concurency here for the demo so cdcsink catches up quickly and theres not much 
     # to replicate.
     command:
-      --truncate 
+      --table-handling 'truncate-if-exists'
       --verbosity=2
       --conn-str='root:password@(lms:9043)/defaultdb'
       --concurrency=3

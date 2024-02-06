@@ -5,7 +5,7 @@ import (
 
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/dbtable"
-	"github.com/cockroachdb/molt/verify/inconsistency"
+	"github.com/cockroachdb/molt/utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,7 +43,7 @@ func TestTableCompare(t *testing.T) {
 	for _, tc := range []struct {
 		desc     string
 		its      [2]tableVerificationIterator
-		expected Result
+		expected utils.Result
 	}{
 		{
 			desc: "exactly the same",
@@ -61,7 +61,7 @@ func TestTableCompare(t *testing.T) {
 					},
 				},
 			},
-			expected: Result{
+			expected: utils.Result{
 				Verified: [][2]dbtable.DBTable{
 					{table1, table1},
 					{table2, table2},
@@ -84,8 +84,8 @@ func TestTableCompare(t *testing.T) {
 					},
 				},
 			},
-			expected: Result{
-				MissingTables: []inconsistency.MissingTable{
+			expected: utils.Result{
+				MissingTables: []utils.MissingTable{
 					{DBTable: table1},
 					{DBTable: table2},
 					{DBTable: table3},
@@ -107,8 +107,8 @@ func TestTableCompare(t *testing.T) {
 					},
 				},
 			},
-			expected: Result{
-				ExtraneousTables: []inconsistency.ExtraneousTable{
+			expected: utils.Result{
+				ExtraneousTables: []utils.ExtraneousTable{
 					{DBTable: table1},
 					{DBTable: table2},
 					{DBTable: table3},
@@ -131,14 +131,14 @@ func TestTableCompare(t *testing.T) {
 					},
 				},
 			},
-			expected: Result{
+			expected: utils.Result{
 				Verified: [][2]dbtable.DBTable{
 					{table2, table2},
 				},
-				MissingTables: []inconsistency.MissingTable{
+				MissingTables: []utils.MissingTable{
 					{DBTable: table1},
 				},
-				ExtraneousTables: []inconsistency.ExtraneousTable{
+				ExtraneousTables: []utils.ExtraneousTable{
 					{DBTable: table3},
 				},
 			},

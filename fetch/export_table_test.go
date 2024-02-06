@@ -11,6 +11,7 @@ import (
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
 	"github.com/cockroachdb/molt/fetch/dataexport"
 	"github.com/cockroachdb/molt/testutils"
+	"github.com/cockroachdb/molt/utils"
 	"github.com/cockroachdb/molt/verify/dbverify"
 	"github.com/cockroachdb/molt/verify/tableverify"
 	"github.com/rs/zerolog"
@@ -191,7 +192,7 @@ func TestFailedWriteToStore(t *testing.T) {
 
 							dbTables, err := dbverify.Verify(ctx, conns)
 							require.NoError(t, err)
-							dbTables, err = dbverify.FilterResult(dbverify.FilterConfig{
+							dbTables, err = utils.FilterResult(utils.FilterConfig{
 								SchemaFilter: schemaName,
 								TableFilter:  tableName,
 							}, dbTables)

@@ -1,10 +1,9 @@
-package dbverify
+package utils
 
 import (
 	"testing"
 
 	"github.com/cockroachdb/molt/dbtable"
-	"github.com/cockroachdb/molt/verify/inconsistency"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,12 +32,12 @@ func TestFilterResult(t *testing.T) {
 						{Name: dbtable.Name{Schema: "ccc", Table: "bbb"}},
 					},
 				},
-				MissingTables: []inconsistency.MissingTable{
+				MissingTables: []MissingTable{
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "aaa", Table: "aaa"}}},
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "aaa", Table: "bbb"}}},
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "ccc", Table: "aaa"}}},
 				},
-				ExtraneousTables: []inconsistency.ExtraneousTable{
+				ExtraneousTables: []ExtraneousTable{
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "aaa", Table: "aaa"}}},
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "aaa", Table: "bbb"}}},
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "ccc", Table: "aaa"}}},
@@ -59,12 +58,12 @@ func TestFilterResult(t *testing.T) {
 						{Name: dbtable.Name{Schema: "ccc", Table: "bbb"}},
 					},
 				},
-				MissingTables: []inconsistency.MissingTable{
+				MissingTables: []MissingTable{
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "aaa", Table: "aaa"}}},
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "aaa", Table: "bbb"}}},
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "ccc", Table: "aaa"}}},
 				},
-				ExtraneousTables: []inconsistency.ExtraneousTable{
+				ExtraneousTables: []ExtraneousTable{
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "aaa", Table: "aaa"}}},
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "aaa", Table: "bbb"}}},
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "ccc", Table: "aaa"}}},
@@ -92,12 +91,12 @@ func TestFilterResult(t *testing.T) {
 						{Name: dbtable.Name{Schema: "ccc", Table: "bbb"}},
 					},
 				},
-				MissingTables: []inconsistency.MissingTable{
+				MissingTables: []MissingTable{
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "aaa", Table: "aaa"}}},
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "aaa", Table: "bbb"}}},
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "ccc", Table: "aaa"}}},
 				},
-				ExtraneousTables: []inconsistency.ExtraneousTable{
+				ExtraneousTables: []ExtraneousTable{
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "aaa", Table: "aaa"}}},
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "aaa", Table: "bbb"}}},
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "ccc", Table: "aaa"}}},
@@ -114,10 +113,10 @@ func TestFilterResult(t *testing.T) {
 						{Name: dbtable.Name{Schema: "ccc", Table: "bbb"}},
 					},
 				},
-				MissingTables: []inconsistency.MissingTable{
+				MissingTables: []MissingTable{
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "aaa", Table: "bbb"}}},
 				},
-				ExtraneousTables: []inconsistency.ExtraneousTable{
+				ExtraneousTables: []ExtraneousTable{
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "aaa", Table: "bbb"}}},
 				},
 			},
@@ -143,12 +142,12 @@ func TestFilterResult(t *testing.T) {
 						{Name: dbtable.Name{Schema: "ccc", Table: "bbb"}},
 					},
 				},
-				MissingTables: []inconsistency.MissingTable{
+				MissingTables: []MissingTable{
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "aaa", Table: "aaa"}}},
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "aaa", Table: "bbb"}}},
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "ccc", Table: "aaa"}}},
 				},
-				ExtraneousTables: []inconsistency.ExtraneousTable{
+				ExtraneousTables: []ExtraneousTable{
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "aaa", Table: "aaa"}}},
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "aaa", Table: "bbb"}}},
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "ccc", Table: "aaa"}}},
@@ -161,10 +160,10 @@ func TestFilterResult(t *testing.T) {
 						{Name: dbtable.Name{Schema: "ccc", Table: "bbb"}},
 					},
 				},
-				MissingTables: []inconsistency.MissingTable{
+				MissingTables: []MissingTable{
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "ccc", Table: "aaa"}}},
 				},
-				ExtraneousTables: []inconsistency.ExtraneousTable{
+				ExtraneousTables: []ExtraneousTable{
 					{DBTable: dbtable.DBTable{Name: dbtable.Name{Schema: "ccc", Table: "aaa"}}},
 				},
 			},

@@ -9,15 +9,8 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/dbtable"
-	"github.com/cockroachdb/molt/verify/inconsistency"
+	"github.com/cockroachdb/molt/utils"
 )
-
-type Result struct {
-	Verified [][2]dbtable.DBTable
-
-	MissingTables    []inconsistency.MissingTable
-	ExtraneousTables []inconsistency.ExtraneousTable
-}
 
 type connWithTables struct {
 	dbconn.Conn
@@ -42,7 +35,7 @@ func (c *tableVerificationIterator) curr() dbtable.DBTable {
 }
 
 // Verify verifies tables exist in all databases.
-func Verify(ctx context.Context, conns dbconn.OrderedConns) (Result, error) {
+func Verify(ctx context.Context, conns dbconn.OrderedConns) (utils.Result, error) {
 	// Grab all tables and verify them.
 	var in []connWithTables
 	for _, conn := range conns {
@@ -56,13 +49,13 @@ WHERE table_schema = database() AND table_type = "BASE TABLE"
 ORDER BY table_name`,
 			)
 			if err != nil {
-				return Result{}, err
+				return utils.Result{}, err
 			}
 
 			for rows.Next() {
 				var tn string
 				if err := rows.Scan(&tn); err != nil {
-					return Result{}, errors.Wrap(err, "error decoding tables metadata")
+					return utils.Result{}, errors.Wrap(err, "error decoding tables metadata")
 				}
 				// Fake the public schema for now.
 				tm := dbtable.DBTable{
@@ -74,10 +67,10 @@ ORDER BY table_name`,
 				tms = append(tms, tm)
 			}
 			if rows.Err() != nil {
-				return Result{}, errors.Wrap(err, "error collecting tables metadata")
+				return utils.Result{}, errors.Wrap(err, "error collecting tables metadata")
 			}
 			if err := rows.Close(); err != nil {
-				return Result{}, err
+				return utils.Result{}, err
 			}
 		case *dbconn.OracleConn:
 			rows, err := conn.QueryContext(
@@ -85,14 +78,14 @@ ORDER BY table_name`,
 				`select tablespace_name, table_name from all_tables where tablespace_name not in ( 'SYSTEM', 'SYSAUX', 'ADMINISTRATOR' )`,
 			)
 			if err != nil {
-				return Result{}, err
+				return utils.Result{}, err
 			}
 
 			for rows.Next() {
 				var sn string
 				var tn string
 				if err := rows.Scan(&sn, &tn); err != nil {
-					return Result{}, errors.Wrap(err, "error decoding tables metadata")
+					return utils.Result{}, errors.Wrap(err, "error decoding tables metadata")
 				}
 				tm := dbtable.DBTable{
 					Name: dbtable.Name{
@@ -103,10 +96,10 @@ ORDER BY table_name`,
 				tms = append(tms, tm)
 			}
 			if rows.Err() != nil {
-				return Result{}, errors.Wrap(err, "error collecting tables metadata")
+				return utils.Result{}, errors.Wrap(err, "error collecting tables metadata")
 			}
 			if err := rows.Close(); err != nil {
-				return Result{}, err
+				return utils.Result{}, err
 			}
 		case *dbconn.PGConn:
 			rows, err := conn.Query(
@@ -118,22 +111,22 @@ WHERE relkind = 'r' AND pg_namespace.nspname NOT IN ('pg_catalog', 'information_
 ORDER BY 3, 2`,
 			)
 			if err != nil {
-				return Result{}, err
+				return utils.Result{}, err
 			}
 
 			for rows.Next() {
 				var tm dbtable.DBTable
 				if err := rows.Scan(&tm.OID, &tm.Table, &tm.Schema); err != nil {
-					return Result{}, errors.Wrap(err, "error decoding tables metadata")
+					return utils.Result{}, errors.Wrap(err, "error decoding tables metadata")
 				}
 				tms = append(tms, tm)
 			}
 			if rows.Err() != nil {
-				return Result{}, errors.Wrap(err, "error collecting tables metadata")
+				return utils.Result{}, errors.Wrap(err, "error collecting tables metadata")
 			}
 			rows.Close()
 		default:
-			return Result{}, errors.Newf("connection %T not supported", conn)
+			return utils.Result{}, errors.Newf("connection %T not supported", conn)
 		}
 
 		// Sort tables by schemas and names.
@@ -157,8 +150,8 @@ ORDER BY 3, 2`,
 
 // compare compares two lists of tables.
 // It assumes tables are in sorted order in each iterator.
-func compare(iterators [2]tableVerificationIterator) Result {
-	ret := Result{}
+func compare(iterators [2]tableVerificationIterator) utils.Result {
+	ret := utils.Result{}
 	// Iterate through all tables in source of truthIterator, moving iterators
 	// across
 	truthIterator := &iterators[0]
@@ -176,7 +169,7 @@ func compare(iterators [2]tableVerificationIterator) Result {
 			// Extraneous row compared to source of truthIterator.
 			ret.ExtraneousTables = append(
 				ret.ExtraneousTables,
-				inconsistency.ExtraneousTable{DBTable: nonTruthIterator.curr()},
+				utils.ExtraneousTable{DBTable: nonTruthIterator.curr()},
 			)
 			nonTruthIterator.next()
 		case 0:
@@ -191,7 +184,7 @@ func compare(iterators [2]tableVerificationIterator) Result {
 			// Missing a row from source of truth.
 			ret.MissingTables = append(
 				ret.MissingTables,
-				inconsistency.MissingTable{DBTable: truthIterator.curr()},
+				utils.MissingTable{DBTable: truthIterator.curr()},
 			)
 			truthIterator.next()
 		}
@@ -200,7 +193,7 @@ func compare(iterators [2]tableVerificationIterator) Result {
 	for !nonTruthIterator.done() {
 		ret.ExtraneousTables = append(
 			ret.ExtraneousTables,
-			inconsistency.ExtraneousTable{DBTable: nonTruthIterator.curr()},
+			utils.ExtraneousTable{DBTable: nonTruthIterator.curr()},
 		)
 		nonTruthIterator.next()
 	}

@@ -1,4 +1,4 @@
-package dbverify
+package utils
 
 import (
 	"regexp"
@@ -40,23 +40,40 @@ func FilterResult(cfg FilterConfig, r Result) (Result, error) {
 		ExtraneousTables: r.ExtraneousTables[:0],
 	}
 	for _, v := range r.Verified {
-		if matchesFilter(v[0].Name, schemaRe, tableRe) {
+		if MatchesFilter(v[0].Name, schemaRe, tableRe) {
 			newResult.Verified = append(newResult.Verified, v)
 		}
 	}
 	for _, t := range r.MissingTables {
-		if matchesFilter(t.Name, schemaRe, tableRe) {
+		if MatchesFilter(t.Name, schemaRe, tableRe) {
 			newResult.MissingTables = append(newResult.MissingTables, t)
 		}
 	}
 	for _, t := range r.ExtraneousTables {
-		if matchesFilter(t.Name, schemaRe, tableRe) {
+		if MatchesFilter(t.Name, schemaRe, tableRe) {
 			newResult.ExtraneousTables = append(newResult.ExtraneousTables, t)
 		}
 	}
 	return newResult, nil
 }
 
-func matchesFilter(n dbtable.Name, schemaRe, tableRe *regexp.Regexp) bool {
+func MatchesFilter(n dbtable.Name, schemaRe, tableRe *regexp.Regexp) bool {
 	return schemaRe.MatchString(string(n.Schema)) && tableRe.MatchString(string(n.Table))
+}
+
+type Result struct {
+	Verified [][2]dbtable.DBTable
+
+	MissingTables    []MissingTable
+	ExtraneousTables []ExtraneousTable
+}
+
+// MissingTable represents a table that is missing from a database.
+type MissingTable struct {
+	dbtable.DBTable
+}
+
+// ExtraneousTable represents a table that is extraneous to a database.
+type ExtraneousTable struct {
+	dbtable.DBTable
 }

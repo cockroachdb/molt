@@ -2,6 +2,7 @@ package fetch
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -18,12 +19,41 @@ import (
 	"github.com/thediveo/enumflag/v2"
 )
 
+type TableHandlingOption enumflag.Flag
+
 func Command() *cobra.Command {
 	const (
 		fetchID              = "fetch-id"
 		continuationToken    = "continuation-token"
 		continuationFileName = "continuation-file-name"
 	)
+
+	const (
+		// None means we will start ingesting into the target db without
+		// affecting the existing data.
+		None TableHandlingOption = iota
+		// DropOnTargetAndRecreate means we will drop the tables with matching
+		// names if they exist and automatically recreate it on the target side.
+		// This is also the entrypoint for the schema creation functionality of
+		// molt fetch.
+		DropOnTargetAndRecreate
+		// TruncateIfExists means we truncate the table with the matching name
+		// if it exists on the target side. If it doesn't exist, we exit with error.
+		TruncateIfExists
+	)
+
+	const (
+		noneTableHandlingKey                    = "none"
+		dropOnTargetAndRecreateTableHandlingKey = "drop-on-target-and-recreate"
+		truncateIfExistsTableHandlingKey        = "truncate-if-exists"
+	)
+
+	var TableHandlingOptionStringRepresentations = map[TableHandlingOption][]string{
+		None:                    {noneTableHandlingKey},
+		DropOnTargetAndRecreate: {dropOnTargetAndRecreateTableHandlingKey},
+		TruncateIfExists:        {truncateIfExistsTableHandlingKey},
+	}
+
 	var (
 		s3Bucket                string
 		gcpBucket               string
@@ -33,6 +63,7 @@ func Command() *cobra.Command {
 		localPathCRDBAccessAddr string
 		logFile                 string
 		directCRDBCopy          bool
+		tableHandlingMode       TableHandlingOption
 		cfg                     fetch.Config
 	)
 	cmd := &cobra.Command{
@@ -63,6 +94,15 @@ func Command() *cobra.Command {
 				return err
 			}
 			cmdutil.RunMetricsServer(logger)
+
+			//TODO(janexing): remove once finished the implementation.
+			if tableHandlingMode == DropOnTargetAndRecreate {
+				return errors.New("drop-on-target-and-recreate feature not implemented yet")
+			}
+
+			if tableHandlingMode == TruncateIfExists {
+				cfg.Truncate = true
+			}
 
 			isCopyMode := cfg.Live || directCRDBCopy
 			if isCopyMode {
@@ -227,12 +267,6 @@ func Command() *cobra.Command {
 		"Whether this fetch attempt is only for test, and hence all time/duration related stats are deterministic",
 	)
 
-	cmd.PersistentFlags().BoolVar(
-		&cfg.Truncate,
-		"truncate",
-		false,
-		"Whether to truncate the target tables before source data is imported.",
-	)
 	cmd.PersistentFlags().IntVar(
 		&cfg.ExportSettings.RowBatchSize,
 		"row-batch-size",
@@ -289,6 +323,16 @@ func Command() *cobra.Command {
 	cmdutil.RegisterDBConnFlags(cmd)
 	cmdutil.RegisterNameFilterFlags(cmd)
 	cmdutil.RegisterMetricsFlags(cmd)
+
+	cmd.PersistentFlags().Var(
+		enumflag.NewWithoutDefault(&tableHandlingMode, "string", TableHandlingOptionStringRepresentations, enumflag.EnumCaseInsensitive),
+		"table-handling",
+		fmt.Sprintf("the way to handle the table initialization on the target database: %q(default), %q or %q",
+			noneTableHandlingKey,
+			dropOnTargetAndRecreateTableHandlingKey,
+			truncateIfExistsTableHandlingKey,
+		),
+	)
 
 	if err := cmd.PersistentFlags().MarkHidden(testOnlyFlagStr); err != nil {
 		panic(err)
