@@ -8,16 +8,18 @@ import (
 
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestCSVPipe(t *testing.T) {
 	for _, tc := range []struct {
-		desc      string
-		toWrite   string
-		files     []string
-		flushSize int
-		flushRows int
+		desc         string
+		toWrite      string
+		files        []string
+		flushSize    int
+		flushRows    int
+		rowsPerBatch []int
 	}{
 		{
 			desc: "one big file",
@@ -31,7 +33,8 @@ func TestCSVPipe(t *testing.T) {
 3,%,g
 `,
 			},
-			flushSize: 1024,
+			flushSize:    1024,
+			rowsPerBatch: []int{3},
 		},
 		{
 			desc: "split files",
@@ -49,7 +52,8 @@ func TestCSVPipe(t *testing.T) {
 				`4,a
 `,
 			},
-			flushSize: 4,
+			flushSize:    4,
+			rowsPerBatch: []int{2, 1, 1},
 		},
 		{
 			desc: "quoted new lines",
@@ -65,7 +69,8 @@ multiline part"
 				`2,a,c
 `,
 			},
-			flushSize: 4,
+			flushSize:    4,
+			rowsPerBatch: []int{1, 1},
 		},
 		{
 			desc: "flush after 1 row",
@@ -79,8 +84,9 @@ multiline part"
 				`3,%,g
 `,
 			},
-			flushSize: 1024,
-			flushRows: 1,
+			flushSize:    1024,
+			flushRows:    1,
+			rowsPerBatch: []int{1, 1, 1},
 		},
 		{
 			desc: "flush after two rows",
@@ -91,8 +97,9 @@ multiline part"
 				"1,abcd,efgh\n2,efgh,\"\"\"\"\n",
 				"3,%,g\n",
 			},
-			flushSize: 1024,
-			flushRows: 2,
+			flushSize:    1024,
+			flushRows:    2,
+			rowsPerBatch: []int{2, 1},
 		},
 		{
 			desc: "flush after multiple rows",
@@ -105,8 +112,9 @@ multiline part"
 3,%,g
 `,
 			},
-			flushSize: 1024,
-			flushRows: 4,
+			flushSize:    1024,
+			flushRows:    4,
+			rowsPerBatch: []int{3},
 		},
 		{
 			desc: "flush after mix of flush size and flush rows",
@@ -124,11 +132,14 @@ multiline part"
 				`4,a,b
 `,
 			},
-			flushSize: 10,
-			flushRows: 2,
+			flushSize:    10,
+			flushRows:    2,
+			rowsPerBatch: []int{1, 2, 1},
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
+			rowsCh := make(chan int)
+			doneCh := make(chan struct{})
 			var bufs []testStringBuf
 			pipe := newCSVPipe(
 				strings.NewReader(tc.toWrite),
@@ -137,18 +148,30 @@ multiline part"
 				tc.flushRows,
 				func(numRows chan int) (io.WriteCloser, error) {
 					go func() {
-						<-numRows
+						rowsCh <- <-numRows
 					}()
 					bufs = append(bufs, testStringBuf{})
 					return &bufs[len(bufs)-1], nil
 				},
 			)
 			require.NoError(t, pipe.Pipe(dbtable.Name{Schema: "test", Table: "test"}))
+			it := 0
+			go func() {
+				for rows := range rowsCh {
+					assert.Equal(t, rows, tc.rowsPerBatch[it])
+					it++
+					if it == len(tc.rowsPerBatch) {
+						close(doneCh)
+						return
+					}
+				}
+			}()
 			var written []string
 			for _, buf := range bufs {
 				written = append(written, buf.String())
 			}
 			require.Equal(t, tc.files, written)
+			<-doneCh
 		})
 	}
 }
