@@ -31,7 +31,7 @@ func NewGCPStore(
 	bucket string,
 	bucketPath string,
 ) *gcpStore {
-	utils.RedactedQueryParams = map[string]struct{}{"CREDENTIALS": {}}
+	utils.RedactedQueryParams = map[string]struct{}{utils.GCPCredentials: {}}
 	return &gcpStore{
 		bucket:     bucket,
 		bucketPath: bucketPath,
@@ -80,6 +80,8 @@ func (s *gcpStore) CreateFromReader(
 		wc = &GCPStorageWriterMock{wc.(*storage.Writer)}
 	}
 
+	rows := <-numRows
+
 	// io.Copy starts execution ONLY after p.csvWriter.Flush() is triggered.
 	if _, err := io.Copy(wc, r); err != nil {
 		return nil, err
@@ -91,8 +93,6 @@ func (s *gcpStore) CreateFromReader(
 	// forwardRead.CloseWithError() in the goroutine in exportTable(), but it will
 	// lead to "error closing write goroutine", as the pipe has been closed via
 	// p.out.Close().
-
-	rows := <-numRows
 
 	if err := wc.Close(); err != nil {
 		return nil, err

@@ -3,7 +3,9 @@ package utils
 import "net/url"
 
 const (
-	redactionMarker = "redacted"
+	redactionMarker    = "redacted"
+	AWSSecretAccessKey = "AWS_SECRET_ACCESS_KEY"
+	GCPCredentials     = "CREDENTIALS"
 )
 
 // redactedQueryParams is the set of query parameter names registered by the
@@ -17,8 +19,7 @@ var RedactedQueryParams = map[string]struct{}{}
 // redacted -- to make it clearer that that value is indeed persisted interally.
 // extraParams which should be scrubbed -- for params beyond those that the
 // various cloud-storage URIs supported by this package know about -- can be
-// passed allowing this function to be used to scrub other URIs too (such as
-// non-cloudstorage changefeed sinks).
+// passed allowing this function to be used to scrub other URIs too.
 func SanitizeExternalStorageURI(path string, extraParams []string) (string, error) {
 	uri, err := url.Parse(path)
 	if err != nil {
