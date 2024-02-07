@@ -143,12 +143,14 @@ func importTable(
 	}
 
 	var locs []string
+	var numRows []int
 	for _, resource := range resources {
 		u, err := resource.ImportURL()
 		if err != nil {
 			return importResult{}, err
 		}
 		locs = append(locs, u)
+		numRows = append(numRows, resource.Rows())
 	}
 	conn := baseConn.(*dbconn.PGConn)
 
@@ -167,15 +169,29 @@ func importTable(
 			end = len(locs)
 		}
 		locBatch := locs[i:end]
+		totalRows := sumSlice(numRows[i:end])
+
 		file, err := importWithBisect(ctx, kvOptions, table, logger, conn, locBatch)
 		if err != nil {
 			fileName := status.ExtractFileNameFromErr(file)
 			pgErr := status.MaybeReportException(ctx, logger, baseConn.(*dbconn.PGConn).Conn, table.Name, err, fileName, status.StageDataLoad)
 			return ret, errors.Wrap(pgErr, "error importing data")
 		}
+
+		// TODO (rluu): need to increment the metrics counter here for num rows imported
+		// once we accomplish this for all aws, gcp, local.
+		logger.Info().Msgf("imported %d rows for batch for files %d to %d", totalRows, i+1, end)
 	}
 	ret.EndTime = time.Now()
 	return ret, nil
+}
+
+func sumSlice(input []int) int {
+	output := 0
+	for _, val := range input {
+		output += val
+	}
+	return output
 }
 
 // importWithBisect handles the logic of trying to find the

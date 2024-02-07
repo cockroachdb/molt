@@ -16,6 +16,8 @@ import (
 	"golang.org/x/oauth2/google"
 )
 
+const numRowsKey = "numRows"
+
 type Store interface {
 	// CreateFromReader is responsible for the creation of the individual
 	// CSVs from the data export process. It will create the file and upload
