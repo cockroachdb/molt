@@ -148,9 +148,12 @@ func Fetch(
 
 	// Wait until all the verification portions are completed first before deferring this.
 	// If verify fails, we don't need to report fetch_id.
+	// We only want to log out if the fetch fails.
 	defer func() {
-		logger.Info().
-			Str("fetch_id", fetchStatus.ID.String()).Msg("continue from this fetch ID")
+		if retErr != nil {
+			logger.Info().
+				Str("fetch_id", fetchStatus.ID.String()).Msg("continue from this fetch ID")
+		}
 	}()
 
 	numTables := len(tables)

@@ -17,3 +17,9 @@ sync_hooks:
 
 rewrite_fetch_tests:
 	go test -v -run ^TestDataDriven github.com/cockroachdb/molt/fetch --rewrite
+
+run_e2e_tests:
+	go test -timeout 100s -run TestDataDriven github.com/cockroachdb/molt/e2e -e2e-enabled
+
+rewrite_e2e_tests:
+	go test -timeout 100s -run TestDataDriven github.com/cockroachdb/molt/e2e -e2e-enabled --rewrite
