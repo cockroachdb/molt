@@ -100,6 +100,7 @@ func NewS3Store(
 	bucket string,
 	bucketPath string,
 ) *s3Store {
+	utils.RedactedQueryParams = map[string]struct{}{"AWS_SECRET_ACCESS_KEY": {}}
 	return &s3Store{
 		bucket:     bucket,
 		bucketPath: bucketPath,

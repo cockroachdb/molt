@@ -31,6 +31,7 @@ func NewGCPStore(
 	bucket string,
 	bucketPath string,
 ) *gcpStore {
+	utils.RedactedQueryParams = map[string]struct{}{"CREDENTIALS": {}}
 	return &gcpStore{
 		bucket:     bucket,
 		bucketPath: bucketPath,
@@ -66,8 +67,6 @@ func (s *gcpStore) CreateFromReader(
 
 	wc = s.client.Bucket(s.bucket).Object(key).NewWriter(ctx)
 
-	rows := <-numRows
-
 	// If any error happens before io.Copy returns, the
 	// error will be propagated to the goroutine in exportTable(),
 	// triggering forwardRead.CloseWithError(), which will allow p.out.Close() in
@@ -92,6 +91,8 @@ func (s *gcpStore) CreateFromReader(
 	// forwardRead.CloseWithError() in the goroutine in exportTable(), but it will
 	// lead to "error closing write goroutine", as the pipe has been closed via
 	// p.out.Close().
+
+	rows := <-numRows
 
 	if err := wc.Close(); err != nil {
 		return nil, err
