@@ -152,7 +152,7 @@ func Fetch(
 	defer func() {
 		if retErr != nil {
 			logger.Info().
-				Str("fetch_id", fetchStatus.ID.String()).Msg("continue from this fetch ID")
+				Str("fetch_id", utils.MaybeFormatFetchID(cfg.TestOnly, fetchStatus.ID.String())).Msg("continue from this fetch ID")
 		}
 	}()
 
@@ -225,7 +225,7 @@ func Fetch(
 
 	ovrDuration := utils.MaybeFormatDurationForTest(cfg.TestOnly, timer.ObserveDuration())
 	summaryLogger.Info().
-		Str("fetch_id", fetchStatus.ID.String()).
+		Str("fetch_id", utils.MaybeFormatFetchID(cfg.TestOnly, fetchStatus.ID.String())).
 		Int("num_tables", stats.numImportedTables).
 		Strs("tables", stats.importedTables).
 		Str("cdc_cursor", utils.MaybeFormatCDCCursor(cfg.TestOnly, sqlSrc.CDCCursor())).
