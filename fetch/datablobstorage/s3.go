@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"strconv"
 	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -19,7 +20,12 @@ import (
 	"github.com/cockroachdb/molt/testutils"
 	"github.com/cockroachdb/molt/utils"
 	"github.com/rs/zerolog"
+	"golang.org/x/sync/errgroup"
 )
+
+// AWS capitalizes the first letter of the string and lowercases the rest, hence
+// the naming discrepancy between this and GCP.
+const numRowKeysAWS = "Numrows"
 
 type s3Store struct {
 	logger      zerolog.Logger
@@ -137,11 +143,13 @@ func (s *s3Store) CreateFromReader(
 	}
 
 	rows := <-numRows
+	numRowStr := fmt.Sprintf("%d", rows)
 
 	if _, err := uploader.UploadWithContext(ctx, &s3manager.UploadInput{
-		Bucket: aws.String(bucketName),
-		Key:    aws.String(key),
-		Body:   r,
+		Bucket:   aws.String(bucketName),
+		Key:      aws.String(key),
+		Body:     r,
+		Metadata: map[string]*string{numRowKeysAWS: &numRowStr},
 	}); err != nil {
 		return nil, err
 	}
@@ -186,23 +194,69 @@ func listFromContinuationPointAWS(
 		return nil, err
 	}
 
-	resources := []Resource{}
-	for _, obj := range s3Objects.Contents {
+	g, _ := errgroup.WithContext(ctx)
+	resources := make([]Resource, len(s3Objects.Contents))
+	for i, obj := range s3Objects.Contents {
+		curI := i
+		curObj := obj
 		// Find the key we want to start at. Because we name the files
 		// in a specific pattern, we can guarantee lexicographical ordering
 		// based on the guarantee of return order from the S3 API.
 		// eg. If key = fetch/public.inventory/part_00000004.tar.gz,
 		// fetch/public.inventory/part_00000005.tar.gz is >= to key meaning,
 		// it is a file we need to include.
-		if aws.StringValue(obj.Key) >= key && utils.MatchesFileConvention(aws.StringValue(obj.Key)) {
-			resources = append(resources, &s3Resource{
-				key:     aws.StringValue(obj.Key),
-				session: s3Store.session,
-				store:   s3Store,
+		g.Go(func() error {
+			objResp, err := s3Client.GetObject(&s3.GetObjectInput{
+				Bucket: aws.String(s3Store.bucket),
+				Key:    aws.String(*curObj.Key),
 			})
+			if err != nil {
+				return err
+			}
+
+			mdNumRows, ok := objResp.Metadata[numRowKeysAWS]
+			if !ok {
+				mdNumRows = aws.String("")
+				s3Store.logger.Error().Msgf("failed to find metadata for key %s", numRowKeysAWS)
+			}
+
+			numRows, err := strconv.Atoi(*mdNumRows)
+			if err != nil {
+				s3Store.logger.Err(err).Msgf("failed to convert %s to integer", *mdNumRows)
+			}
+			// Continue even if the integer conversion or metadata get fails because
+			// file is likely still fine, but metadata was not updated properly.
+			// Log to let user know.
+
+			if aws.StringValue(curObj.Key) >= key && utils.MatchesFileConvention(aws.StringValue(curObj.Key)) {
+				resources[curI] = &s3Resource{
+					key:     aws.StringValue(curObj.Key),
+					session: s3Store.session,
+					store:   s3Store,
+					rows:    numRows,
+				}
+			}
+
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	return removeNilResources(resources), nil
+}
+
+func removeNilResources(input []Resource) []Resource {
+	output := []Resource{}
+	for _, res := range input {
+		if res != nil {
+			output = append(output, res)
 		}
 	}
-	return resources, nil
+
+	return output
 }
 
 func (s *s3Store) CanBeTarget() bool {

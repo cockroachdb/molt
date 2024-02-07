@@ -57,19 +57,25 @@ func TestS3Resource_ImportURL(t *testing.T) {
 
 type mockS3Client struct {
 	s3iface.S3API
-	resp *s3.ListObjectsV2Output
-	err  error
+	listResp *s3.ListObjectsV2Output
+	getResp  *s3.GetObjectOutput
+	err      error
 }
 
 func (m *mockS3Client) ListObjectsV2WithContext(
 	ctx context.Context, params *s3.ListObjectsV2Input, opts ...request.Option,
 ) (*s3.ListObjectsV2Output, error) {
-	return m.resp, m.err
+	return m.listResp, m.err
+}
+
+func (m *mockS3Client) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
+	return m.getResp, m.err
 }
 
 func TestListFromContinuationPointAWS(t *testing.T) {
+	rows := "10"
 	s3CLI := &mockS3Client{
-		resp: &s3.ListObjectsV2Output{
+		listResp: &s3.ListObjectsV2Output{
 			Contents: []*s3.Object{
 				{Key: aws.String("part_00000001.tar.gz")},
 				{Key: aws.String("part_00000002.tar.gz")},
@@ -79,6 +85,11 @@ func TestListFromContinuationPointAWS(t *testing.T) {
 				{Key: aws.String("part_00000006.tar.gz")},
 				{Key: aws.String("part_00000007.tar.gz")},
 				{Key: aws.String("part_00000008.tar.gz")},
+			},
+		},
+		getResp: &s3.GetObjectOutput{
+			Metadata: map[string]*string{
+				numRowKeysAWS: &rows,
 			},
 		},
 		err: nil,
