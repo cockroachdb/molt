@@ -1,6 +1,7 @@
 package fetch
 
 import (
+	"context"
 	"io"
 	"os"
 	"strings"
@@ -10,9 +11,11 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
 )
 
 func TestCSVPipe(t *testing.T) {
+	ctx := context.Background()
 	for _, tc := range []struct {
 		desc         string
 		toWrite      string
@@ -141,20 +144,8 @@ multiline part"
 			rowsCh := make(chan int)
 			doneCh := make(chan struct{})
 			var bufs []testStringBuf
-			pipe := newCSVPipe(
-				strings.NewReader(tc.toWrite),
-				zerolog.New(os.Stdout),
-				tc.flushSize,
-				tc.flushRows,
-				func(numRows chan int) (io.WriteCloser, error) {
-					go func() {
-						rowsCh <- <-numRows
-					}()
-					bufs = append(bufs, testStringBuf{})
-					return &bufs[len(bufs)-1], nil
-				},
-			)
-			require.NoError(t, pipe.Pipe(dbtable.Name{Schema: "test", Table: "test"}))
+
+			// Set up the reader of rowsCh first, and then write to it.
 			it := 0
 			go func() {
 				for rows := range rowsCh {
@@ -166,6 +157,32 @@ multiline part"
 					}
 				}
 			}()
+
+			resourceWG, _ := errgroup.WithContext(ctx)
+			resourceWG.SetLimit(1)
+			pipe := newCSVPipe(
+				strings.NewReader(tc.toWrite),
+				zerolog.New(os.Stdout),
+				tc.flushSize,
+				tc.flushRows,
+				func(numRows chan int) (io.WriteCloser, error) {
+					// We need the Wait() here to ensure the numRows are pushed
+					// in the correct order one by one.
+					if err := resourceWG.Wait(); err != nil {
+						return nil, err
+					}
+					resourceWG.Go(func() error {
+						rowCnt := <-numRows
+						t.Logf("received from numRows: %d", rowCnt)
+						rowsCh <- rowCnt
+						return nil
+					})
+					bufs = append(bufs, testStringBuf{})
+					return &bufs[len(bufs)-1], nil
+				},
+			)
+			require.NoError(t, pipe.Pipe(dbtable.Name{Schema: "test", Table: "test"}))
+
 			var written []string
 			for _, buf := range bufs {
 				written = append(written, buf.String())
