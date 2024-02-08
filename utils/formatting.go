@@ -49,5 +49,9 @@ func MaybeFormatCDCCursor(testOnly bool, s string) string {
 
 // MaybeFormatFetchID is to make a deterministic fetch id for test.
 func MaybeFormatFetchID(testOnly bool, s string) string {
+	if !testOnly {
+		return s
+	}
+
 	return "0000000000"
 }
