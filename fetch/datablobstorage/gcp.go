@@ -17,6 +17,8 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+const numRowsKeyGCP = "numRows"
+
 type gcpStore struct {
 	logger     zerolog.Logger
 	bucket     string
@@ -103,7 +105,7 @@ func (s *gcpStore) CreateFromReader(
 	// Update the object to set the metadata.
 	objectAttrsToUpdate := storage.ObjectAttrsToUpdate{
 		Metadata: map[string]string{
-			numRowsKey: fmt.Sprintf("%d", rows),
+			numRowsKeyGCP: fmt.Sprintf("%d", rows),
 		},
 	}
 
@@ -147,9 +149,9 @@ func listFromContinuationPointGCP(
 			return nil, err
 		} else {
 			if utils.MatchesFileConvention(attrs.Name) {
-				mdNumRows, ok := attrs.Metadata[numRowsKey]
+				mdNumRows, ok := attrs.Metadata[numRowsKeyGCP]
 				if !ok {
-					gcpStore.logger.Error().Msgf("failed to find metadata for key %s", numRowsKey)
+					gcpStore.logger.Error().Msgf("failed to find metadata for key %s", numRowsKeyGCP)
 				}
 
 				numRows, err := strconv.Atoi(mdNumRows)

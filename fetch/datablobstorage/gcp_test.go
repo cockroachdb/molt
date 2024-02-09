@@ -49,11 +49,11 @@ func TestListFromContinuationPointGCP(t *testing.T) {
 		Return(&gcpObjectITMock{
 			i: 0,
 			next: []storage.ObjectAttrs{
-				{Name: "part_00000004.tar.gz", Metadata: map[string]string{numRowsKey: "10"}},
-				{Name: "part_00000005.tar.gz", Metadata: map[string]string{numRowsKey: "10"}},
-				{Name: "part_00000006.tar.gz", Metadata: map[string]string{numRowsKey: "10"}},
-				{Name: "part_00000007.tar.gz", Metadata: map[string]string{numRowsKey: "10"}},
-				{Name: "part_00000008.tar.gz", Metadata: map[string]string{numRowsKey: "10"}},
+				{Name: "part_00000004.tar.gz", Metadata: map[string]string{numRowsKeyGCP: "10"}},
+				{Name: "part_00000005.tar.gz", Metadata: map[string]string{numRowsKeyGCP: "10"}},
+				{Name: "part_00000006.tar.gz", Metadata: map[string]string{numRowsKeyGCP: "10"}},
+				{Name: "part_00000007.tar.gz", Metadata: map[string]string{numRowsKeyGCP: "10"}},
+				{Name: "part_00000008.tar.gz", Metadata: map[string]string{numRowsKeyGCP: "10"}},
 			},
 		})
 
