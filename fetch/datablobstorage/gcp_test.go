@@ -49,11 +49,11 @@ func TestListFromContinuationPointGCP(t *testing.T) {
 		Return(&gcpObjectITMock{
 			i: 0,
 			next: []storage.ObjectAttrs{
-				{Name: "part_00000004.tar.gz"},
-				{Name: "part_00000005.tar.gz"},
-				{Name: "part_00000006.tar.gz"},
-				{Name: "part_00000007.tar.gz"},
-				{Name: "part_00000008.tar.gz"},
+				{Name: "part_00000004.tar.gz", Metadata: map[string]string{numRowsKey: "10"}},
+				{Name: "part_00000005.tar.gz", Metadata: map[string]string{numRowsKey: "10"}},
+				{Name: "part_00000006.tar.gz", Metadata: map[string]string{numRowsKey: "10"}},
+				{Name: "part_00000007.tar.gz", Metadata: map[string]string{numRowsKey: "10"}},
+				{Name: "part_00000008.tar.gz", Metadata: map[string]string{numRowsKey: "10"}},
 			},
 		})
 
@@ -63,7 +63,7 @@ func TestListFromContinuationPointGCP(t *testing.T) {
 			JSON: []byte(`{"a":b}`),
 		},
 	}
-	resources, err := listFromContinuationPointGCP(ctx, gcpClient, "part_00000004.tar.gz", "public.inventory", gcpStore.bucket)
+	resources, err := listFromContinuationPointGCP(ctx, gcpClient, "part_00000004.tar.gz", "public.inventory", gcpStore.bucket, nil /* gcpStore */)
 	require.NoError(t, err)
 	require.Len(t, resources, 5)
 }

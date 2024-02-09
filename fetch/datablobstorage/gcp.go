@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"strconv"
 
 	"cloud.google.com/go/storage"
 	"github.com/cockroachdb/molt/dbtable"
@@ -65,7 +66,8 @@ func (s *gcpStore) CreateFromReader(
 		io.Writer
 	}
 
-	wc = s.client.Bucket(s.bucket).Object(key).NewWriter(ctx)
+	o := s.client.Bucket(s.bucket).Object(key)
+	wc = o.NewWriter(ctx)
 
 	// If any error happens before io.Copy returns, the
 	// error will be propagated to the goroutine in exportTable(),
@@ -98,6 +100,17 @@ func (s *gcpStore) CreateFromReader(
 		return nil, err
 	}
 
+	// Update the object to set the metadata.
+	objectAttrsToUpdate := storage.ObjectAttrsToUpdate{
+		Metadata: map[string]string{
+			numRowsKey: fmt.Sprintf("%d", rows),
+		},
+	}
+
+	if _, err := o.Update(ctx, objectAttrsToUpdate); err != nil {
+		return nil, err
+	}
+
 	s.logger.Debug().Str("file", key).Int("rows", rows).Msgf("gcp file creation complete complete")
 	return &gcpResource{
 		store: s,
@@ -110,11 +123,11 @@ func (s *gcpStore) ListFromContinuationPoint(
 	ctx context.Context, table dbtable.VerifiedTable, fileName string,
 ) ([]Resource, error) {
 	key, prefix := getKeyAndPrefix(fileName, s.bucketPath, table)
-	return listFromContinuationPointGCP(ctx, stiface.AdaptClient(s.client), key, prefix, s.bucket)
+	return listFromContinuationPointGCP(ctx, stiface.AdaptClient(s.client), key, prefix, s.bucket, s)
 }
 
 func listFromContinuationPointGCP(
-	ctx context.Context, client stiface.Client, key, prefix, bucket string,
+	ctx context.Context, client stiface.Client, key, prefix, bucket string, gcpStore *gcpStore,
 ) ([]Resource, error) {
 	it := client.Bucket(bucket).Objects(ctx, &storage.Query{
 		Prefix: prefix,
@@ -134,8 +147,23 @@ func listFromContinuationPointGCP(
 			return nil, err
 		} else {
 			if utils.MatchesFileConvention(attrs.Name) {
+				mdNumRows, ok := attrs.Metadata[numRowsKey]
+				if !ok {
+					gcpStore.logger.Error().Msgf("failed to find metadata for key %s", numRowsKey)
+				}
+
+				numRows, err := strconv.Atoi(mdNumRows)
+				if err != nil {
+					gcpStore.logger.Err(err).Msgf("failed to convert %s to integer", mdNumRows)
+				}
+				// Continue even if the integer conversion or metadata get fails because
+				// file is likely still fine, but metadata was not updated properly.
+				// Log to let user know.
+
 				resources = append(resources, &gcpResource{
-					key: attrs.Name,
+					store: gcpStore,
+					key:   attrs.Name,
+					rows:  numRows,
 				})
 			}
 		}
