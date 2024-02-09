@@ -8,7 +8,7 @@ import (
 // compressedPipeWriter wraps around the underlying pipe writer and
 // gzip writer so that we can access both to close them.
 type compressedPipeWriter struct {
-	pipeWriter        *io.PipeWriter
+	pipeWriter        *Pipe
 	compressionWriter io.WriteCloser
 }
 
@@ -28,7 +28,7 @@ func (c *compressedPipeWriter) Write(p []byte) (n int, err error) {
 	return c.compressionWriter.Write(p)
 }
 
-func newGZIPPipeWriter(w *io.PipeWriter) *compressedPipeWriter {
+func newGZIPPipeWriter(w *Pipe) *compressedPipeWriter {
 	return &compressedPipeWriter{
 		pipeWriter:        w,
 		compressionWriter: gzip.NewWriter(w),

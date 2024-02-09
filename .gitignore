@@ -24,3 +24,4 @@ go.work
 # Misc
 task.log
 *.log
+.vscode/

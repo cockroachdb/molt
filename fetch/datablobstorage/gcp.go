@@ -31,6 +31,7 @@ func NewGCPStore(
 	bucket string,
 	bucketPath string,
 ) *gcpStore {
+	utils.RedactedQueryParams = map[string]struct{}{utils.GCPCredentials: {}}
 	return &gcpStore{
 		bucket:     bucket,
 		bucketPath: bucketPath,
@@ -66,8 +67,6 @@ func (s *gcpStore) CreateFromReader(
 
 	wc = s.client.Bucket(s.bucket).Object(key).NewWriter(ctx)
 
-	rows := <-numRows
-
 	// If any error happens before io.Copy returns, the
 	// error will be propagated to the goroutine in exportTable(),
 	// triggering forwardRead.CloseWithError(), which will allow p.out.Close() in
@@ -80,6 +79,8 @@ func (s *gcpStore) CreateFromReader(
 		// We need a mock writer which simulates the failed upload.
 		wc = &GCPStorageWriterMock{wc.(*storage.Writer)}
 	}
+
+	rows := <-numRows
 
 	// io.Copy starts execution ONLY after p.csvWriter.Flush() is triggered.
 	if _, err := io.Copy(wc, r); err != nil {

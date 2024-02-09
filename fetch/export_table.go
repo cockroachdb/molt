@@ -1,6 +1,7 @@
 package fetch
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"time"
@@ -22,7 +23,7 @@ type exportResult struct {
 	NumRows   int
 }
 
-func getWriter(w *io.PipeWriter, compressionType compression.Flag) io.WriteCloser {
+func getWriter(w *Pipe, compressionType compression.Flag) io.WriteCloser {
 	switch compressionType {
 	case compression.GZIP:
 		return newGZIPPipeWriter(w)
@@ -51,8 +52,8 @@ func exportTable(
 
 	cancellableCtx, cancelFunc := context.WithCancel(ctx)
 	defer cancelFunc()
-
-	sqlRead, sqlWrite := io.Pipe()
+	buf := new(bytes.Buffer)
+	sqlRW := NewPipe(buf)
 	// Run the COPY TO, which feeds into the pipe, concurrently.
 	copyWG, _ := errgroup.WithContext(ctx)
 	copyWG.Go(func() error {
@@ -62,10 +63,10 @@ func exportTable(
 		}
 		return errors.CombineErrors(
 			func() error {
-				if err := sqlSrcConn.Export(cancellableCtx, sqlWrite, table); err != nil {
-					return errors.CombineErrors(err, sqlWrite.CloseWithError(err))
+				if err := sqlSrcConn.Export(cancellableCtx, sqlRW, table); err != nil {
+					return errors.CombineErrors(err, sqlRW.CloseWithError(err))
 				}
-				return sqlWrite.Close()
+				return sqlRW.Close()
 			}(),
 			sqlSrcConn.Close(ctx),
 		)
@@ -73,10 +74,9 @@ func exportTable(
 
 	resourceWG, _ := errgroup.WithContext(ctx)
 	resourceWG.SetLimit(1)
-
 	itNum := 0
 	// Errors must be buffered, as pipe can exit without taking the error channel.
-	pipe := newCSVPipe(sqlRead, logger, cfg.FlushSize, cfg.FlushRows, func(numRowsCh chan int) (io.WriteCloser, error) {
+	pipe := newCSVPipe(sqlRW, logger, cfg.FlushSize, cfg.FlushRows, func(numRowsCh chan int) (io.WriteCloser, error) {
 		if err := resourceWG.Wait(); err != nil {
 			// We need to check if the last iteration saw any error when creating
 			// resource from reader. If so, just exit the current iteration.
@@ -85,12 +85,13 @@ func exportTable(
 			// writerErrCh <- err.
 			return nil, err
 		}
-		forwardRead, forwardWrite := io.Pipe()
-		wrappedWriter := getWriter(forwardWrite, cfg.Compression)
+		fbuf := new(bytes.Buffer)
+		fRW := NewPipe(fbuf)
+		wrappedWriter := getWriter(fRW, cfg.Compression)
 		resourceWG.Go(func() error {
 			itNum++
 			if err := func() error {
-				resource, err := datasource.CreateFromReader(ctx, forwardRead, table, itNum, importFileExt, numRowsCh, testingKnobs)
+				resource, err := datasource.CreateFromReader(ctx, fRW, table, itNum, importFileExt, numRowsCh, testingKnobs)
 				if err != nil {
 					return err
 				}
@@ -98,7 +99,7 @@ func exportTable(
 				return nil
 			}(); err != nil {
 				logger.Err(err).Msgf("error during data store write")
-				if closeReadErr := forwardRead.CloseWithError(err); closeReadErr != nil {
+				if closeReadErr := fRW.CloseWithError(err); closeReadErr != nil {
 					logger.Err(closeReadErr).Msgf("error closing write goroutine")
 				}
 				return err

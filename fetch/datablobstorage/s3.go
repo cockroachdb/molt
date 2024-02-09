@@ -100,6 +100,7 @@ func NewS3Store(
 	bucket string,
 	bucketPath string,
 ) *s3Store {
+	utils.RedactedQueryParams = map[string]struct{}{utils.AWSSecretAccessKey: {}}
 	return &s3Store{
 		bucket:     bucket,
 		bucketPath: bucketPath,
@@ -135,6 +136,8 @@ func (s *s3Store) CreateFromReader(
 		uploader = s3manager.NewUploader(s.session)
 	}
 
+	rows := <-numRows
+
 	if _, err := uploader.UploadWithContext(ctx, &s3manager.UploadInput{
 		Bucket: aws.String(bucketName),
 		Key:    aws.String(key),
@@ -143,7 +146,6 @@ func (s *s3Store) CreateFromReader(
 		return nil, err
 	}
 
-	rows := <-numRows
 	s.logger.Debug().Str("file", key).Int("rows", rows).Msgf("s3 file creation batch complete")
 	return &s3Resource{
 		session: s.session,

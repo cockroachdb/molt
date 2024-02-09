@@ -6,6 +6,7 @@ import (
 	"github.com/cockroachdb/cockroachdb-parser/pkg/sql/sem/tree"
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/cockroachdb/molt/rowiterator"
+	"github.com/cockroachdb/molt/utils"
 )
 
 func NewPGCopyTo(table dbtable.VerifiedTable) string {
@@ -25,7 +26,7 @@ func NewPGCopyTo(table dbtable.VerifiedTable) string {
 	return f.CloseAndGetString()
 }
 
-func ImportInto(table dbtable.VerifiedTable, locs []string, opts tree.KVOptions) string {
+func ImportInto(table dbtable.VerifiedTable, locs []string, opts tree.KVOptions) (string, string) {
 	importInto := &tree.Import{
 		Into:       true,
 		Table:      table.NewTableName(),
@@ -46,8 +47,16 @@ func ImportInto(table dbtable.VerifiedTable, locs []string, opts tree.KVOptions)
 		)
 	}
 	f := tree.NewFmtCtx(tree.FmtParsableNumerics)
+	// Skipping the error check since all the URL's created are
+	// safe formatted by us internally so there should be no parse
+	// errors. If it fails, redacted will just be "".
+
+	// TODO: Don't redact if using local store.
+	// Right now it will just always return err but we
+	// skip the error anyways
+	redacted, _ := redactImportQuery(importInto, locs)
 	f.FormatNode(importInto)
-	return f.CloseAndGetString()
+	return f.CloseAndGetString(), redacted
 }
 
 func CopyFrom(table dbtable.VerifiedTable) string {
@@ -64,4 +73,19 @@ func CopyFrom(table dbtable.VerifiedTable) string {
 	f.FormatNode(copyFrom)
 	// Temporary hack for v22.2- compat. Remove when we use 23.1 in CI.
 	return strings.ReplaceAll(f.CloseAndGetString(), "STDIN WITH (FORMAT CSV)", "STDIN CSV")
+}
+
+func redactImportQuery(orig *tree.Import, files []string) (string, error) {
+	stmt := *orig
+	stmt.Files = nil
+	for _, file := range files {
+		clean, err := utils.SanitizeExternalStorageURI(file, nil /* extraParams */)
+		if err != nil {
+			return "", err
+		}
+		stmt.Files = append(stmt.Files, tree.NewDString(clean))
+	}
+	// Don't log the IntoCols in case of sensitive column names.
+	stmt.IntoCols = nil
+	return tree.AsString(&stmt), nil
 }

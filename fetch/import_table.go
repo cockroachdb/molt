@@ -205,8 +205,8 @@ func importWithBisect(
 	for len(stack) > 0 {
 		curr := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
-		importQuery := dataquery.ImportInto(table, curr, kvOptions)
-		logger.Debug().Msgf("running import query: %q", importQuery)
+		importQuery, redactedQuery := dataquery.ImportInto(table, curr, kvOptions)
+		logger.Debug().Msgf("running import query: %q", redactedQuery)
 		_, err := conn.Exec(ctx, importQuery)
 
 		// If the import query returns an error, then we need to bisect.
