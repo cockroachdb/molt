@@ -149,19 +149,20 @@ func listFromContinuationPointGCP(
 			return nil, err
 		} else {
 			if utils.MatchesFileConvention(attrs.Name) {
+				numRows := 0
 				mdNumRows, ok := attrs.Metadata[numRowsKeyGCP]
 				if !ok {
 					gcpStore.logger.Error().Msgf("failed to find metadata for key %s", numRowsKeyGCP)
+				} else {
+					numRows, err = strconv.Atoi(mdNumRows)
+					if err != nil {
+						gcpStore.logger.Err(err).Msgf("failed to convert %s to integer", mdNumRows)
+					}
 				}
 
-				numRows, err := strconv.Atoi(mdNumRows)
-				if err != nil {
-					gcpStore.logger.Err(err).Msgf("failed to convert %s to integer", mdNumRows)
-				}
 				// Continue even if the integer conversion or metadata get fails because
 				// file is likely still fine, but metadata was not updated properly.
 				// Log to let user know.
-
 				resources = append(resources, &gcpResource{
 					store: gcpStore,
 					key:   attrs.Name,
