@@ -304,6 +304,52 @@ CREATE TABLE employees (
 				`CREATE TABLE employees (id INT4 NOT NULL, unique_id UUID NOT NULL, name VARCHAR NOT NULL, created_at TIMESTAMPTZ NOT NULL, updated_at DATE, is_hired BOOL, age INT2, salary DECIMAL, bonus FLOAT4, CONSTRAINT "primary" PRIMARY KEY (id, unique_id, created_at))`,
 			},
 		},
+		{
+			dialect: testutils.PostgresDialect,
+			desc:    "foreign key is ignored",
+			createTableStatements: []string{`
+CREATE TABLE department (
+    department_id SERIAL PRIMARY KEY,
+    department_name VARCHAR(50) NOT NULL
+);
+
+`,
+				`
+CREATE TABLE employee (
+    employee_id SERIAL PRIMARY KEY,
+    employee_name VARCHAR(50) NOT NULL,
+    department_id INT REFERENCES department(department_id) ON DELETE CASCADE
+);
+`},
+			tableFilter: utils.FilterConfig{TableFilter: `employee`},
+			expectedCreateTableStmts: []string{
+				`CREATE TABLE employee (employee_id INT4 NOT NULL PRIMARY KEY, employee_name VARCHAR NOT NULL, department_id INT4)`,
+			},
+		},
+		{
+			dialect: testutils.PostgresDialect,
+			desc:    "unique, check and 2nd index are ignored",
+			createTableStatements: []string{`
+CREATE TABLE employee (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL,
+    age INTEGER,
+    address VARCHAR(50) NOT NULL,
+    start_date DATE,
+    end_date DATE,
+    CONSTRAINT check_dates CHECK (start_date <= end_date),  -- Check Constraint
+    CONSTRAINT unique_constraint_name UNIQUE (start_date)  -- Secondary index
+);
+
+`,
+				`
+CREATE UNIQUE INDEX my_unique_idx ON employee(age);
+`},
+			tableFilter: utils.FilterConfig{TableFilter: `employee`},
+			expectedCreateTableStmts: []string{
+				`CREATE TABLE employee (id INT4 NOT NULL PRIMARY KEY, name VARCHAR NOT NULL, age INT4, address VARCHAR NOT NULL, start_date DATE, end_date DATE)`,
+			},
+		},
 	} {
 		t.Run(fmt.Sprintf("%s/%s", tc.dialect.String(), tc.desc), func(t *testing.T) {
 			var conns dbconn.OrderedConns
