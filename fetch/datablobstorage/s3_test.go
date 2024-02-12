@@ -2,6 +2,7 @@ package datablobstorage
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -9,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 )
 
@@ -73,36 +75,73 @@ func (m *mockS3Client) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput,
 }
 
 func TestListFromContinuationPointAWS(t *testing.T) {
-	rows := "10"
-	s3CLI := &mockS3Client{
-		listResp: &s3.ListObjectsV2Output{
-			Contents: []*s3.Object{
-				{Key: aws.String("part_00000001.tar.gz")},
-				{Key: aws.String("part_00000002.tar.gz")},
-				{Key: aws.String("part_00000003.tar.gz")},
-				{Key: aws.String("part_00000004.tar.gz")},
-				{Key: aws.String("part_00000005.tar.gz")},
-				{Key: aws.String("part_00000006.tar.gz")},
-				{Key: aws.String("part_00000007.tar.gz")},
-				{Key: aws.String("part_00000008.tar.gz")},
+	t.Run("number of rows is specified leads to correct number of resources", func(t *testing.T) {
+		var sb strings.Builder
+		rows := "10"
+		s3CLI := &mockS3Client{
+			listResp: &s3.ListObjectsV2Output{
+				Contents: []*s3.Object{
+					{Key: aws.String("part_00000001.tar.gz")},
+					{Key: aws.String("part_00000002.tar.gz")},
+					{Key: aws.String("part_00000003.tar.gz")},
+					{Key: aws.String("part_00000004.tar.gz")},
+					{Key: aws.String("part_00000005.tar.gz")},
+					{Key: aws.String("part_00000006.tar.gz")},
+					{Key: aws.String("part_00000007.tar.gz")},
+					{Key: aws.String("part_00000008.tar.gz")},
+				},
 			},
-		},
-		getResp: &s3.GetObjectOutput{
-			Metadata: map[string]*string{
-				numRowKeysAWS: &rows,
+			getResp: &s3.GetObjectOutput{
+				Metadata: map[string]*string{
+					numRowKeysAWS: &rows,
+				},
 			},
-		},
-		err: nil,
-	}
-	ctx := context.Background()
-	s3Store := s3Store{
-		bucket: "fetch-test",
-		creds: credentials.Value{
-			AccessKeyID:     "aaaa",
-			SecretAccessKey: "bbbb",
-		},
-	}
-	resources, err := listFromContinuationPointAWS(ctx, s3CLI, "part_00000004.tar.gz", "public.inventory", &s3Store)
-	require.NoError(t, err)
-	require.Len(t, resources, 5)
+			err: nil,
+		}
+		ctx := context.Background()
+		s3Store := s3Store{
+			bucket: "fetch-test",
+			creds: credentials.Value{
+				AccessKeyID:     "aaaa",
+				SecretAccessKey: "bbbb",
+			},
+			logger: zerolog.New(&sb),
+		}
+		resources, err := listFromContinuationPointAWS(ctx, s3CLI, "part_00000004.tar.gz", "public.inventory", &s3Store)
+		require.NoError(t, err)
+		require.Len(t, resources, 5)
+	})
+
+	t.Run("number of rows not specified leads to correct number of resources", func(t *testing.T) {
+		s3CLI := &mockS3Client{
+			listResp: &s3.ListObjectsV2Output{
+				Contents: []*s3.Object{
+					{Key: aws.String("part_00000001.tar.gz")},
+					{Key: aws.String("part_00000002.tar.gz")},
+					{Key: aws.String("part_00000003.tar.gz")},
+					{Key: aws.String("part_00000004.tar.gz")},
+					{Key: aws.String("part_00000005.tar.gz")},
+					{Key: aws.String("part_00000006.tar.gz")},
+					{Key: aws.String("part_00000007.tar.gz")},
+					{Key: aws.String("part_00000008.tar.gz")},
+				},
+			},
+			getResp: &s3.GetObjectOutput{
+				Metadata: map[string]*string{},
+			},
+			err: nil,
+		}
+		ctx := context.Background()
+		s3Store := s3Store{
+			bucket: "fetch-test",
+			creds: credentials.Value{
+				AccessKeyID:     "aaaa",
+				SecretAccessKey: "bbbb",
+			},
+			logger: zerolog.Logger{},
+		}
+		resources, err := listFromContinuationPointAWS(ctx, s3CLI, "part_00000004.tar.gz", "public.inventory", &s3Store)
+		require.NoError(t, err)
+		require.Len(t, resources, 5)
+	})
 }

@@ -214,16 +214,17 @@ func listFromContinuationPointAWS(
 				return err
 			}
 
+			numRows := 0
 			mdNumRows, ok := objResp.Metadata[numRowKeysAWS]
 			if !ok {
-				mdNumRows = aws.String("")
 				s3Store.logger.Error().Msgf("failed to find metadata for key %s", numRowKeysAWS)
+			} else {
+				numRows, err = strconv.Atoi(*mdNumRows)
+				if err != nil {
+					s3Store.logger.Err(err).Msgf("failed to convert %s to integer", *mdNumRows)
+				}
 			}
 
-			numRows, err := strconv.Atoi(*mdNumRows)
-			if err != nil {
-				s3Store.logger.Err(err).Msgf("failed to convert %s to integer", *mdNumRows)
-			}
 			// Continue even if the integer conversion or metadata get fails because
 			// file is likely still fine, but metadata was not updated properly.
 			// Log to let user know.
