@@ -43,13 +43,10 @@ type Config struct {
 	// The target table handling configs.
 	Truncate bool
 
+	CreateNewSchema bool
+
 	Compression    compression.Flag
 	ExportSettings dataexport.Settings
-}
-
-type SchemaCreationConfig struct {
-	TableFilter  string
-	SchemaFilter string
 }
 
 func Fetch(
@@ -118,10 +115,12 @@ func Fetch(
 			Str("table", tbl.SafeString()).
 			Msgf("ignoring table as it is missing a definition on the source")
 	}
-	for _, tbl := range dbTables.MissingTables {
-		logger.Warn().
-			Str("table", tbl.SafeString()).
-			Msgf("ignoring table as it is missing a definition on the target")
+	if !cfg.CreateNewSchema {
+		for _, tbl := range dbTables.MissingTables {
+			logger.Warn().
+				Str("table", tbl.SafeString()).
+				Msgf("ignoring table as it is missing a definition on the target")
+		}
 	}
 	for _, tbl := range dbTables.Verified {
 		logger.Info().

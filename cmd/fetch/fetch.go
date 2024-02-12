@@ -96,13 +96,11 @@ func Command() *cobra.Command {
 			cmdutil.RunMetricsServer(logger)
 			cmdutil.RunPprofServer(logger)
 
-			//TODO(janexing): remove once finished the implementation.
-			if tableHandlingMode == DropOnTargetAndRecreate {
-				return errors.New("drop-on-target-and-recreate feature not implemented yet")
-			}
-
-			if tableHandlingMode == TruncateIfExists {
+			switch tableHandlingMode {
+			case TruncateIfExists:
 				cfg.Truncate = true
+			case DropOnTargetAndRecreate:
+				cfg.CreateNewSchema = true
 			}
 
 			isCopyMode := cfg.Live || directCRDBCopy

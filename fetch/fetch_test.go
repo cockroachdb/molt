@@ -93,6 +93,7 @@ func TestDataDriven(t *testing.T) {
 						passedInDir := ""
 						cleanup := false
 						continuationToken := ""
+						dropAndRecreateSchema := false
 
 						for _, cmd := range d.CmdArgs {
 							switch cmd.Key {
@@ -114,6 +115,9 @@ func TestDataDriven(t *testing.T) {
 								cleanup = true
 							case "continuation-token":
 								continuationToken = cmd.Vals[0]
+							case "drop-and-recreate-schema":
+								dropAndRecreateSchema = true
+								truncate = false
 							default:
 								t.Errorf("unknown key %s", cmd.Key)
 							}
@@ -158,8 +162,9 @@ func TestDataDriven(t *testing.T) {
 						err = Fetch(
 							ctx,
 							Config{
-								Live:     live,
-								Truncate: truncate,
+								Live:            live,
+								Truncate:        truncate,
+								CreateNewSchema: dropAndRecreateSchema,
 								ExportSettings: dataexport.Settings{
 									RowBatchSize: 2,
 								},
