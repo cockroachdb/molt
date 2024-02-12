@@ -10,6 +10,7 @@ import (
 
 	"github.com/cockroachdb/datadriven"
 	"github.com/cockroachdb/errors"
+	"github.com/cockroachdb/molt/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,6 +19,7 @@ func TestDataDriven(t *testing.T) {
 		driverDialect := filepath.Base(filepath.Dir(path))
 
 		require.NoError(t, Setup(driverDialect))
+		t.Logf("finished setup")
 		require.NoError(t, ConfirmContainersRunning(t, driverDialect))
 		t.Logf("containers are all up")
 
@@ -62,20 +64,9 @@ func TestDataDriven(t *testing.T) {
 					t.Fatalf("expect at least 2 args for %q command", d.Cmd)
 				}
 
-				srcPath := d.CmdArgs[0].String()
-				dstPath := d.CmdArgs[1].String()
-				tableFilter := d.CmdArgs[2].String()
-
-				var toRunCmd string
-				switch d.Cmd {
-				case "fetch":
-					// TODO(janexing): enable more options.
-					toRunCmd = fmt.Sprintf(`go run .. fetch --source '%s' --target '%s' --table-filter '%s' --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9005' --test-only`, srcPath, dstPath, tableFilter)
-				case "verify":
-					toRunCmd = fmt.Sprintf(`go run .. verify --source '%s' --target '%s' --table-filter '%s' --test-only`, srcPath, dstPath, tableFilter)
-				}
+				toRunCmd := fmt.Sprintf(`go run .. %s --test-only %s`, d.Cmd, testutils.GetCmdArgsStr(d.CmdArgs))
+				t.Logf("running %q", toRunCmd)
 				cmd := exec.Command("/bin/sh", "-c", toRunCmd)
-				t.Logf("%s table %q from %q to %q", d.Cmd, tableFilter, srcPath, dstPath)
 
 				var stdout strings.Builder
 				var stderr strings.Builder
