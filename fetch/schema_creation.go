@@ -4,12 +4,33 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/cockroachdb/cockroachdb-parser/pkg/sql/parser"
 	"github.com/cockroachdb/cockroachdb-parser/pkg/sql/sem/tree"
+	crdbtypes "github.com/cockroachdb/cockroachdb-parser/pkg/sql/types"
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/dbconn"
+	"github.com/cockroachdb/molt/utils"
 	"github.com/lib/pq/oid"
 	"github.com/rs/zerolog"
 )
+
+type columnsWithType []columnWithType
+
+func (cs columnsWithType) CRDBCreateTableStmt() (string, error) {
+	tName, err := parser.ParseQualifiedTableName(cs[0].tableName)
+	if err != nil {
+		return "", err
+	}
+	res := tree.CreateTable{
+		Table: *tName,
+	}
+	for _, col := range cs {
+		res.Defs = append(res.Defs, col.CRDBColDef())
+	}
+
+	createTableStr := res.String()
+	return createTableStr, nil
+}
 
 type columnWithType struct {
 	schemaName   string
@@ -19,6 +40,20 @@ type columnWithType struct {
 	typeOid      oid.Oid
 	notNullable  bool
 	isPrimaryKey bool
+}
+
+func (t *columnWithType) CRDBColDef() *tree.ColumnTableDef {
+	res := &tree.ColumnTableDef{
+		Name: tree.Name(t.columnName),
+		Type: crdbtypes.OidToType[t.typeOid],
+	}
+	if !t.notNullable {
+		res.Nullable.Nullability = parser.NULL
+	}
+	if t.isPrimaryKey {
+		res.PrimaryKey.IsPrimaryKey = true
+	}
+	return res
 }
 
 func (t *columnWithType) Name() string {
@@ -31,12 +66,8 @@ func (t *columnWithType) String() string {
 }
 
 func GetColumnTypes(
-	ctx context.Context,
-	logger zerolog.Logger,
-	conn dbconn.Conn,
-	tableName tree.Name,
-	schemaName tree.Name,
-) ([]columnWithType, error) {
+	ctx context.Context, logger zerolog.Logger, conn dbconn.Conn, table utils.MissingTable,
+) (columnsWithType, error) {
 	const (
 		pgQuery = `SELECT
     c.relnamespace::regnamespace::text as schema_name,
@@ -74,11 +105,11 @@ ORDER BY
 	)
 
 	res := make([]columnWithType, 0)
-	logger.Info().Msgf("getting column types for table: %s.%s", schemaName, tableName)
+	logger.Info().Msgf("getting column types for table: %s", table.String())
 
 	switch conn := conn.(type) {
 	case *dbconn.PGConn:
-		rows, err := conn.Query(ctx, pgQuery, tableName, schemaName)
+		rows, err := conn.Query(ctx, pgQuery, table.Table, table.Schema)
 		if err != nil {
 			return nil, err
 		}
@@ -90,7 +121,7 @@ ORDER BY
 			logger.Debug().Msgf("collect column:%s", newCol.String())
 			res = append(res, newCol)
 		}
-		logger.Info().Msgf("finished getting column types for table: %s.%s", schemaName, tableName)
+		logger.Info().Msgf("finished getting column types for table: %s", table.String())
 	// TODO(janexing): support mysql.
 	default:
 		return nil, errors.New("not supported conn type")
