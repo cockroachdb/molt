@@ -95,6 +95,7 @@ func TestDataDriven(t *testing.T) {
 						cleanup := false
 						continuationToken := ""
 						flushRows := 0
+						dropAndRecreateSchema := false
 
 						for _, cmd := range d.CmdArgs {
 							switch cmd.Key {
@@ -116,6 +117,9 @@ func TestDataDriven(t *testing.T) {
 								cleanup = true
 							case "continuation-token":
 								continuationToken = cmd.Vals[0]
+							case "drop-and-recreate-schema":
+								dropAndRecreateSchema = true
+								truncate = false
 							case "flush-rows":
 								flushRowsAtoi, err := strconv.Atoi(cmd.Vals[0])
 								require.NoError(t, err)
@@ -164,8 +168,9 @@ func TestDataDriven(t *testing.T) {
 						err = Fetch(
 							ctx,
 							Config{
-								Live:     live,
-								Truncate: truncate,
+								Live:            live,
+								Truncate:        truncate,
+								CreateNewSchema: dropAndRecreateSchema,
 								ExportSettings: dataexport.Settings{
 									RowBatchSize: 2,
 								},
