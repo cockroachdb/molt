@@ -1,0 +1,177 @@
+exec silent
+psql 'postgres://postgres@localhost:5432/defaultdb' -c "DROP TABLE IF EXISTS tbl1; CREATE TABLE tbl1 (id INT PRIMARY KEY, t TEXT);"
+----
+
+exec silent
+docker cp ../.github/e2esampledata/sampledata.csv  github-postgresql-1:/tmp/pg_data
+----
+
+exec silent
+psql 'postgres://postgres@localhost:5432/defaultdb' -c "COPY tbl1 (id, t) FROM 'sampledata.csv' CSV HEADER;"
+----
+
+exec
+psql 'postgres://postgres@localhost:5432/defaultdb' -c "SELECT * FROM tbl1"
+----
+id |               t                
+----+--------------------------------
+  1 | aaa
+  2 | bb b
+  3 | ééé
+  4 | \U0001fae1\U0001fae1\U0001fae1
+  5 | 卢卡斯
+  6 | Лукас
+  7 | ルカス
+(7 rows)
+
+fetch --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'tbl1' --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9115' --table-handling 'drop-on-target-and-recreate'  --cleanup=true 
+----
+{"level":"info","message":"default compression to GZIP"}
+{"level":"info","message":"checking database details"}
+{"level":"info","message":"creating schema for tables: [public.tbl1]"}
+{"level":"info","message":"dropping table with \"DROP TABLE IF EXISTS tbl1\""}
+{"level":"info","message":"finished dropping table with \"DROP TABLE IF EXISTS tbl1\""}
+{"level":"info","message":"getting column types for table: public.tbl1"}
+{"level":"info","message":"collect column:schema:\"public\", table:\"tbl1\", column:\"id\", type:\"integer\", typeoid: 23, nullable:true, pk:true\n"}
+{"level":"info","message":"collect column:schema:\"public\", table:\"tbl1\", column:\"t\", type:\"text\", typeoid: 25, nullable:false, pk:false\n"}
+{"level":"info","message":"finished getting column types for table: public.tbl1"}
+{"level":"info","message":"creating new table with \"CREATE TABLE tbl1 (id INT4 NOT NULL PRIMARY KEY, t STRING)\""}
+{"level":"info","message":"finished creating new table with \"CREATE TABLE tbl1 (id INT4 NOT NULL PRIMARY KEY, t STRING)\""}
+{"level":"info","message":"after recreating table, dbTables: {[[public.tbl1 public.tbl1]] [] []}"}
+{"level":"info","message":"verifying common tables"}
+{"level":"info","message":"establishing snapshot"}
+{"level":"info","type":"summary","num_tables":1,"cdc_cursor":"0/19E3610","message":"starting fetch"}
+{"level":"info","message":"data extraction phase starting"}
+{"level":"info","type":"summary","num_rows":7,"export_duration_ms":1000,"export_duration":"000h 00m 01s","message":"data extraction from source complete"}
+{"level":"info","message":"starting data import on target"}
+{"level":"info","message":"imported 7 rows for batch for files 1 to 1"}
+{"level":"info","type":"summary","net_duration_ms":1000,"net_duration":"000h 00m 01s","import_duration_ms":1000,"import_duration":"000h 00m 01s","export_duration_ms":1000,"export_duration":"000h 00m 01s","num_rows":7,"cdc_cursor":"0/19E3610","message":"data import on target for table complete"}
+{"level":"info","message":"cleaning up resources created during fetch run"}
+{"level":"info","type":"summary","fetch_id":"0000000000","num_tables":1,"tables":["public.tbl1"],"cdc_cursor":"0/19E3610","net_duration_ms":1000,"net_duration":"000h 00m 01s","message":"fetch complete"}
+{"level":"info","message":"http server intentionally shut down"}
+
+verify --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'tbl1'
+----
+{"level":"info","message":"verification in progress"}
+{"level":"info","message":"starting verify on public.tbl1, shard 1/1"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"tbl1","num_truth_rows":7,"num_success":7,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.tbl1 (shard 1/1)"}
+{"level":"info","net_duration_ms":1000,"net_duration":"000h 00m 01s","message":"verification complete"}
+
+exec
+psql 'postgres://root@localhost:26257/defaultdb?sslmode=disable' -c "SELECT * FROM tbl1"
+----
+id |               t                
+----+--------------------------------
+  1 | aaa
+  2 | bb b
+  3 | ééé
+  4 | \U0001fae1\U0001fae1\U0001fae1
+  5 | 卢卡斯
+  6 | Лукас
+  7 | ルカス
+(7 rows)
+
+fetch --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'tbl1' --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9115' --table-handling 'drop-on-target-and-recreate'  --cleanup=true 
+----
+{"level":"info","message":"default compression to GZIP"}
+{"level":"info","message":"checking database details"}
+{"level":"info","source_table":"public.tbl1","target_table":"public.tbl1","message":"found matching table"}
+{"level":"info","message":"creating schema for tables: [public.tbl1]"}
+{"level":"info","message":"dropping table with \"DROP TABLE IF EXISTS tbl1\""}
+{"level":"info","message":"finished dropping table with \"DROP TABLE IF EXISTS tbl1\""}
+{"level":"info","message":"getting column types for table: public.tbl1"}
+{"level":"info","message":"collect column:schema:\"public\", table:\"tbl1\", column:\"id\", type:\"integer\", typeoid: 23, nullable:true, pk:true\n"}
+{"level":"info","message":"collect column:schema:\"public\", table:\"tbl1\", column:\"t\", type:\"text\", typeoid: 25, nullable:false, pk:false\n"}
+{"level":"info","message":"finished getting column types for table: public.tbl1"}
+{"level":"info","message":"creating new table with \"CREATE TABLE tbl1 (id INT4 NOT NULL PRIMARY KEY, t STRING)\""}
+{"level":"info","message":"finished creating new table with \"CREATE TABLE tbl1 (id INT4 NOT NULL PRIMARY KEY, t STRING)\""}
+{"level":"info","message":"after recreating table, dbTables: {[[public.tbl1 public.tbl1]] [] []}"}
+{"level":"info","message":"verifying common tables"}
+{"level":"info","message":"establishing snapshot"}
+{"level":"info","type":"summary","num_tables":1,"cdc_cursor":"0/19E3610","message":"starting fetch"}
+{"level":"info","message":"data extraction phase starting"}
+{"level":"info","type":"summary","num_rows":7,"export_duration_ms":1000,"export_duration":"000h 00m 01s","message":"data extraction from source complete"}
+{"level":"info","message":"starting data import on target"}
+{"level":"info","message":"imported 7 rows for batch for files 1 to 1"}
+{"level":"info","type":"summary","net_duration_ms":1000,"net_duration":"000h 00m 01s","import_duration_ms":1000,"import_duration":"000h 00m 01s","export_duration_ms":1000,"export_duration":"000h 00m 01s","num_rows":7,"cdc_cursor":"0/19E3610","message":"data import on target for table complete"}
+{"level":"info","message":"cleaning up resources created during fetch run"}
+{"level":"info","type":"summary","fetch_id":"0000000000","num_tables":1,"tables":["public.tbl1"],"cdc_cursor":"0/19E3610","net_duration_ms":1000,"net_duration":"000h 00m 01s","message":"fetch complete"}
+{"level":"info","message":"http server intentionally shut down"}
+
+exec silent
+psql 'postgres://root@localhost:26257/defaultdb?sslmode=disable' -c "DROP TABLE tbl1"
+----
+
+
+exec silent
+psql 'postgres://postgres@localhost:5432/defaultdb' -c "DROP TABLE IF EXISTS employee1; CREATE TABLE employee1 (id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE NOT NULL, age INTEGER, address VARCHAR(300) NOT NULL, start_date DATE, end_date DATE, CONSTRAINT check_dates CHECK (start_date <= end_date), CONSTRAINT unique_constraint_name UNIQUE (start_date));"
+----
+
+exec silent
+docker cp ../.github/e2esampledata/employee1_data.csv  github-postgresql-1:/tmp/pg_data
+----
+
+exec silent
+psql 'postgres://postgres@localhost:5432/defaultdb' -c "COPY employee1 (name, age, address, start_date, end_date) FROM 'employee1_data.csv' CSV HEADER;"
+----
+
+exec
+psql 'postgres://postgres@localhost:5432/defaultdb?sslmode=disable' -c "SELECT * FROM employee1 LIMIT 5 ORDER BY id"
+----
+id |      name       | age |                      address                      | start_date |  end_date  
+----+-----------------+-----+---------------------------------------------------+------------+------------
+  1 | Timothy Delgado |  28 | 3185 Spears Ville Suite 997 Mccallhaven, MI 90823 | 2015-12-10 | 2016-03-15
+  2 | Charles Zamora  |  36 | 123 Leah Extension Apt. 682 Robertmouth, MD 68034 | 2021-01-08 | 2021-12-30
+  3 | Wendy Allen     |  63 | 4156 Darrell Ramp Forbesborough, MN 77571         | 2015-07-22 | 
+  4 | John Garcia     |  38 | 8955 Smith Loop Lake Deborahmouth, HI 45336       | 2020-02-27 | 2020-07-19
+  5 | Scott Simpson   |  52 | 80478 Davis Light Apt. 971 Sotoshire, ID 86429    | 2020-11-10 | 2021-02-26
+(5 rows)
+
+fetch --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'employee1' --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9115' --table-handling 'drop-on-target-and-recreate'  --cleanup=true 
+----
+{"level":"info","message":"default compression to GZIP"}
+{"level":"info","message":"checking database details"}
+{"level":"info","message":"creating schema for tables: [public.employee1]"}
+{"level":"info","message":"dropping table with \"DROP TABLE IF EXISTS employee1\""}
+{"level":"info","message":"finished dropping table with \"DROP TABLE IF EXISTS employee1\""}
+{"level":"info","message":"getting column types for table: public.employee1"}
+{"level":"info","message":"collect column:schema:\"public\", table:\"employee1\", column:\"id\", type:\"integer\", typeoid: 23, nullable:true, pk:true\n"}
+{"level":"info","message":"collect column:schema:\"public\", table:\"employee1\", column:\"name\", type:\"character varying(50)\", typeoid: 1043, nullable:true, pk:false\n"}
+{"level":"info","message":"collect column:schema:\"public\", table:\"employee1\", column:\"age\", type:\"integer\", typeoid: 23, nullable:false, pk:false\n"}
+{"level":"info","message":"collect column:schema:\"public\", table:\"employee1\", column:\"address\", type:\"character varying(300)\", typeoid: 1043, nullable:true, pk:false\n"}
+{"level":"info","message":"collect column:schema:\"public\", table:\"employee1\", column:\"start_date\", type:\"date\", typeoid: 1082, nullable:false, pk:false\n"}
+{"level":"info","message":"collect column:schema:\"public\", table:\"employee1\", column:\"end_date\", type:\"date\", typeoid: 1082, nullable:false, pk:false\n"}
+{"level":"info","message":"finished getting column types for table: public.employee1"}
+{"level":"info","message":"creating new table with \"CREATE TABLE employee1 (id INT4 NOT NULL PRIMARY KEY, name VARCHAR NOT NULL, age INT4, address VARCHAR NOT NULL, start_date DATE, end_date DATE)\""}
+{"level":"info","message":"finished creating new table with \"CREATE TABLE employee1 (id INT4 NOT NULL PRIMARY KEY, name VARCHAR NOT NULL, age INT4, address VARCHAR NOT NULL, start_date DATE, end_date DATE)\""}
+{"level":"info","message":"after recreating table, dbTables: {[[public.employee1 public.employee1]] [] []}"}
+{"level":"info","message":"verifying common tables"}
+{"level":"info","message":"establishing snapshot"}
+{"level":"info","type":"summary","num_tables":1,"cdc_cursor":"0/19E3610","message":"starting fetch"}
+{"level":"info","message":"data extraction phase starting"}
+{"level":"info","type":"summary","num_rows":100,"export_duration_ms":1000,"export_duration":"000h 00m 01s","message":"data extraction from source complete"}
+{"level":"info","message":"starting data import on target"}
+{"level":"info","message":"imported 100 rows for batch for files 1 to 1"}
+{"level":"info","type":"summary","net_duration_ms":1000,"net_duration":"000h 00m 01s","import_duration_ms":1000,"import_duration":"000h 00m 01s","export_duration_ms":1000,"export_duration":"000h 00m 01s","num_rows":100,"cdc_cursor":"0/19E3610","message":"data import on target for table complete"}
+{"level":"info","message":"cleaning up resources created during fetch run"}
+{"level":"info","type":"summary","fetch_id":"0000000000","num_tables":1,"tables":["public.employee1"],"cdc_cursor":"0/19E3610","net_duration_ms":1000,"net_duration":"000h 00m 01s","message":"fetch complete"}
+{"level":"info","message":"http server intentionally shut down"}
+
+verify --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'employee1'
+----
+{"level":"info","message":"verification in progress"}
+{"level":"info","message":"starting verify on public.employee1, shard 1/1"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"employee1","num_truth_rows":100,"num_success":100,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.employee1 (shard 1/1)"}
+{"level":"info","net_duration_ms":1000,"net_duration":"000h 00m 01s","message":"verification complete"}
+
+exec
+psql 'postgres://root@localhost:26257/defaultdb?sslmode=disable' -c "SELECT * FROM employee1 LIMIT 5"
+----
+id |      name       | age |                      address                      | start_date |  end_date  
+----+-----------------+-----+---------------------------------------------------+------------+------------
+  1 | Timothy Delgado |  28 | 3185 Spears Ville Suite 997 Mccallhaven, MI 90823 | 2015-12-10 | 2016-03-15
+  2 | Charles Zamora  |  36 | 123 Leah Extension Apt. 682 Robertmouth, MD 68034 | 2021-01-08 | 2021-12-30
+  3 | Wendy Allen     |  63 | 4156 Darrell Ramp Forbesborough, MN 77571         | 2015-07-22 | 
+  4 | John Garcia     |  38 | 8955 Smith Loop Lake Deborahmouth, HI 45336       | 2020-02-27 | 2020-07-19
+  5 | Scott Simpson   |  52 | 80478 Davis Light Apt. 971 Sotoshire, ID 86429    | 2020-11-10 | 2021-02-26
+(5 rows)
