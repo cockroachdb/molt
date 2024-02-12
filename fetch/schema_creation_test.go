@@ -198,7 +198,7 @@ CREATE TABLE employees (
 			res := make(map[string]map[string]columnWithType)
 
 			for _, missingTable := range missingTables {
-				newCols, err := GetColumnTypes(ctx, logger, conns[0], missingTable)
+				newCols, err := GetColumnTypes(ctx, logger, conns[0], missingTable.DBTable)
 				require.NoError(t, err)
 				res[missingTable.String()] = make(map[string]columnWithType)
 				for _, c := range newCols {
@@ -382,7 +382,7 @@ CREATE UNIQUE INDEX my_unique_idx ON employee(age);
 			require.Equal(t, len(tc.expectedCreateTableStmts), len(missingTables))
 
 			for i, missingTable := range missingTables {
-				actualCreateTableStmt, err := GetCreateTableStmt(ctx, logger, conns[0], missingTable)
+				actualCreateTableStmt, err := GetCreateTableStmt(ctx, logger, conns[0], missingTable.DBTable)
 				require.NoError(t, err)
 				require.Equal(t, tc.expectedCreateTableStmts[i], actualCreateTableStmt)
 			}

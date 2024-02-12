@@ -9,7 +9,7 @@ import (
 	crdbtypes "github.com/cockroachdb/cockroachdb-parser/pkg/sql/types"
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/dbconn"
-	"github.com/cockroachdb/molt/utils"
+	"github.com/cockroachdb/molt/dbtable"
 	"github.com/lib/pq/oid"
 	"github.com/rs/zerolog"
 )
@@ -94,7 +94,7 @@ func (t *columnWithType) String() string {
 }
 
 func GetColumnTypes(
-	ctx context.Context, logger zerolog.Logger, conn dbconn.Conn, table utils.MissingTable,
+	ctx context.Context, logger zerolog.Logger, conn dbconn.Conn, table dbtable.DBTable,
 ) (columnsWithType, error) {
 	const (
 		pgQuery = `SELECT
@@ -156,4 +156,31 @@ ORDER BY
 	}
 
 	return res, nil
+}
+
+func GetDropTableStmt(table dbtable.DBTable) (string, error) {
+	tName, err := parser.ParseQualifiedTableName(table.Table.String())
+	if err != nil {
+		return "", err
+	}
+	res := tree.DropTable{
+		Names:    tree.TableNames{*tName},
+		IfExists: true,
+	}
+
+	return res.String(), nil
+}
+
+func GetCreateTableStmt(
+	ctx context.Context, logger zerolog.Logger, conn dbconn.Conn, table dbtable.DBTable,
+) (string, error) {
+	newCols, err := GetColumnTypes(ctx, logger, conn, table)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed get columns for target table: %s", table.String())
+	}
+	createTableStmt, err := newCols.CRDBCreateTableStmt()
+	if err != nil {
+		return "", err
+	}
+	return createTableStmt, nil
 }
