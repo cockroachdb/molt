@@ -49,6 +49,20 @@ type Config struct {
 	ExportSettings dataexport.Settings
 }
 
+func GetCreateTableStmt(
+	ctx context.Context, logger zerolog.Logger, conn dbconn.Conn, table utils.MissingTable,
+) (string, error) {
+	newCols, err := GetColumnTypes(ctx, logger, conn, table)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed get columns for target table: %s", table.String())
+	}
+	createTableStmt, err := newCols.CRDBCreateTableStmt()
+	if err != nil {
+		return "", err
+	}
+	return createTableStmt, nil
+}
+
 func Fetch(
 	ctx context.Context,
 	cfg Config,

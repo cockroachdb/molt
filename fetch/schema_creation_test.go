@@ -31,7 +31,7 @@ func TestGetColumnTypes(t *testing.T) {
 	const dbName = "get_column_types"
 
 	// TODO(janexing): add crdb and mysql.
-	for _, tc := range []testcase{
+	for idx, tc := range []testcase{
 		{
 			dialect: testutils.PostgresDialect,
 			desc:    "single pk",
@@ -101,13 +101,13 @@ CREATE TABLE employees (
 			var err error
 			switch tc.dialect {
 			case testutils.PostgresDialect:
-				conns[0], err = dbconn.TestOnlyCleanDatabase(ctx, "source", testutils.PGConnStr(), dbName)
+				conns[0], err = dbconn.TestOnlyCleanDatabase(ctx, "source", testutils.PGConnStr(), fmt.Sprintf("%s-%d", dbName, idx))
 				require.NoError(t, err)
 			default:
 				t.Fatalf("unsupported dialect: %s", tc.dialect.String())
 			}
 
-			conns[1], err = dbconn.TestOnlyCleanDatabase(ctx, "target", testutils.CRDBConnStr(), dbName)
+			conns[1], err = dbconn.TestOnlyCleanDatabase(ctx, "target", testutils.CRDBConnStr(), fmt.Sprintf("%s-%d", dbName, idx))
 			require.NoError(t, err)
 
 			// Check the 2 dbs are up.
@@ -132,7 +132,7 @@ CREATE TABLE employees (
 			res := make(map[string]map[string]columnWithType)
 
 			for _, missingTable := range missingTables {
-				newCols, err := GetColumnTypes(ctx, logger, conns[0], missingTable.Table, missingTable.Schema)
+				newCols, err := GetColumnTypes(ctx, logger, conns[0], missingTable)
 				require.NoError(t, err)
 				res[missingTable.String()] = make(map[string]columnWithType)
 				for _, c := range newCols {
@@ -179,4 +179,82 @@ func checkIfColInfoEqual(actual, expected columnWithType) error {
 		return errors.AssertionFailedf("[%s] expected isPrimaryKey: %t, but got: %t", actual.Name(), expected.isPrimaryKey, actual.isPrimaryKey)
 	}
 	return nil
+}
+
+func TestCreateTableStatement(t *testing.T) {
+	ctx := context.Background()
+	logger := zerolog.New(os.Stderr)
+
+	type testcase struct {
+		dialect                  testutils.Dialect
+		desc                     string
+		createTableStatements    []string
+		tableFilter              utils.FilterConfig
+		expectedCreateTableStmts []string
+	}
+
+	const dbName = "create_new_schema"
+	for idx, tc := range []testcase{
+		{
+			dialect: testutils.PostgresDialect,
+			desc:    "single pk",
+			createTableStatements: []string{`
+CREATE TABLE employees (
+    id INT PRIMARY KEY,
+    unique_id UUID NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    created_at TIMESTAMPTZ,
+    updated_at DATE,
+    is_hired BOOLEAN,
+    age SMALLINT CHECK (age > 18),
+    salary NUMERIC(8, 2),
+    bonus REAL unique
+);
+`},
+			tableFilter: utils.FilterConfig{TableFilter: `employees`},
+			expectedCreateTableStmts: []string{
+				`CREATE TABLE employees (id INT4 NOT NULL PRIMARY KEY, unique_id UUID NOT NULL, name VARCHAR NOT NULL, created_at TIMESTAMPTZ, updated_at DATE, is_hired BOOL, age INT2, salary DECIMAL, bonus FLOAT4)`,
+			},
+		},
+	} {
+		t.Run(fmt.Sprintf("%s/%s", tc.dialect.String(), tc.desc), func(t *testing.T) {
+			var conns dbconn.OrderedConns
+			var err error
+			switch tc.dialect {
+			case testutils.PostgresDialect:
+				conns[0], err = dbconn.TestOnlyCleanDatabase(ctx, "source", testutils.PGConnStr(), fmt.Sprintf("%s-%d", dbName, idx))
+				require.NoError(t, err)
+			default:
+				t.Fatalf("unsupported dialect: %s", tc.dialect.String())
+			}
+
+			conns[1], err = dbconn.TestOnlyCleanDatabase(ctx, "target", testutils.CRDBConnStr(), fmt.Sprintf("%s-%d", dbName, idx))
+			require.NoError(t, err)
+
+			// Check the 2 dbs are up.
+			for _, c := range conns {
+				_, err := testutils.ExecConnQuery(ctx, "SELECT 1", c)
+				require.NoError(t, err)
+			}
+
+			for _, stmt := range tc.createTableStatements {
+				_, err = testutils.ExecConnQuery(ctx, stmt, conns[0])
+				require.NoError(t, err)
+			}
+
+			missingTables, err := getFilteredMissingTables(ctx, conns, tc.tableFilter)
+			require.NoError(t, err)
+
+			require.Equal(t, len(tc.expectedCreateTableStmts), len(missingTables))
+
+			for i, missingTable := range missingTables {
+				actualCreateTableStmt, err := GetCreateTableStmt(ctx, logger, conns[0], missingTable)
+				require.NoError(t, err)
+				require.Equal(t, tc.expectedCreateTableStmts[i], actualCreateTableStmt)
+			}
+
+			t.Logf("test passed!")
+		})
+	}
+
 }
