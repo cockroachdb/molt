@@ -24,8 +24,34 @@ func (cs columnsWithType) CRDBCreateTableStmt() (string, error) {
 	res := tree.CreateTable{
 		Table: *tName,
 	}
+
+	pkList := columnsWithType{}
 	for _, col := range cs {
-		res.Defs = append(res.Defs, col.CRDBColDef())
+		if col.isPrimaryKey {
+			pkList = append(pkList, col)
+		}
+	}
+
+	// If there is only one pk, we simply need to park this particular column as
+	// pk. If there are more than one pks, we need to create a pk constraint
+	// that group all the selected columns, thus result in different syntax.
+	includePkForEachCol := len(pkList) <= 1
+	for _, col := range cs {
+		res.Defs = append(res.Defs, col.CRDBColDef(includePkForEachCol))
+	}
+
+	if !includePkForEachCol {
+		pkColNode := tree.IndexElemList{}
+		for _, pk := range pkList {
+			pkColNode = append(pkColNode, tree.IndexElem{Column: tree.Name(pk.columnName)})
+		}
+		res.Defs = append(res.Defs, &tree.UniqueConstraintTableDef{
+			PrimaryKey: true,
+			IndexTableDef: tree.IndexTableDef{
+				Name:    "primary",
+				Columns: pkColNode,
+			},
+		})
 	}
 
 	createTableStr := res.String()
@@ -42,7 +68,7 @@ type columnWithType struct {
 	isPrimaryKey bool
 }
 
-func (t *columnWithType) CRDBColDef() *tree.ColumnTableDef {
+func (t *columnWithType) CRDBColDef(includePk bool) *tree.ColumnTableDef {
 	res := &tree.ColumnTableDef{
 		Name: tree.Name(t.columnName),
 		Type: crdbtypes.OidToType[t.typeOid],
@@ -50,7 +76,7 @@ func (t *columnWithType) CRDBColDef() *tree.ColumnTableDef {
 	if !t.notNullable {
 		res.Nullable.Nullability = parser.NULL
 	}
-	if t.isPrimaryKey {
+	if t.isPrimaryKey && includePk {
 		res.PrimaryKey.IsPrimaryKey = true
 	}
 	return res
