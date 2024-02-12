@@ -48,6 +48,7 @@ fetch postgres://postgres@localhost:5432/defaultdb postgres://root@localhost:262
 {"level":"info","message":"data extraction phase starting"}
 {"level":"info","type":"summary","num_rows":7,"export_duration_ms":1000,"export_duration":"000h 00m 01s","message":"data extraction from source complete"}
 {"level":"info","message":"starting data import on target"}
+{"level":"info","message":"imported 7 rows for batch for files 1 to 1"}
 {"level":"info","type":"summary","net_duration_ms":1000,"net_duration":"000h 00m 01s","import_duration_ms":1000,"import_duration":"000h 00m 01s","export_duration_ms":1000,"export_duration":"000h 00m 01s","num_rows":7,"cdc_cursor":"0/19E3610","message":"data import on target for table complete"}
 {"level":"info","type":"summary","fetch_id":"0000000000","num_tables":1,"tables":["public.tbl1"],"cdc_cursor":"0/19E3610","net_duration_ms":1000,"net_duration":"000h 00m 01s","message":"fetch complete"}
 
