@@ -77,3 +77,17 @@ type MissingTable struct {
 type ExtraneousTable struct {
 	dbtable.DBTable
 }
+
+func (r *Result) AllTableFromSource() []dbtable.DBTable {
+	var res []dbtable.DBTable
+
+	for _, vTs := range r.Verified {
+		res = append(res, vTs[0])
+	}
+
+	for _, mT := range r.MissingTables {
+		res = append(res, mT.DBTable)
+	}
+
+	return res
+}

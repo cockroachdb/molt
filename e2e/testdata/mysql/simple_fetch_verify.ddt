@@ -37,7 +37,7 @@ id | t
 ----+---
 (0 rows)
 
-fetch mysql://user:password@0.0.0.0:3306/defaultdb postgres://root@localhost:26257/defaultdb?sslmode=disable tbl1
+fetch --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'tbl1' --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9005'
 ----
 {"level":"info","message":"default compression to GZIP"}
 {"level":"info","message":"checking database details"}
@@ -52,7 +52,7 @@ fetch mysql://user:password@0.0.0.0:3306/defaultdb postgres://root@localhost:262
 {"level":"info","type":"summary","net_duration_ms":1000,"net_duration":"000h 00m 01s","import_duration_ms":1000,"import_duration":"000h 00m 01s","export_duration_ms":1000,"export_duration":"000h 00m 01s","num_rows":7,"cdc_cursor":"0/19E3610","message":"data import on target for table complete"}
 {"level":"info","type":"summary","fetch_id":"0000000000","num_tables":1,"tables":["public.tbl1"],"cdc_cursor":"0/19E3610","net_duration_ms":1000,"net_duration":"000h 00m 01s","message":"fetch complete"}
 
-verify mysql://user:password@0.0.0.0:3306/defaultdb postgres://root@localhost:26257/defaultdb?sslmode=disable tbl1
+verify --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'tbl1'
 ----
 {"level":"info","message":"verification in progress"}
 {"level":"info","message":"starting verify on public.tbl1, shard 1/1"}

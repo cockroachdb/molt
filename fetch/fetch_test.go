@@ -162,9 +162,9 @@ func TestDataDriven(t *testing.T) {
 						err = Fetch(
 							ctx,
 							Config{
-								Live:            live,
-								Truncate:        truncate,
-								CreateNewSchema: dropAndRecreateSchema,
+								Live:                     live,
+								Truncate:                 truncate,
+								DropAndRecreateNewSchema: dropAndRecreateSchema,
 								ExportSettings: dataexport.Settings{
 									RowBatchSize: 2,
 								},

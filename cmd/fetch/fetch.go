@@ -100,7 +100,7 @@ func Command() *cobra.Command {
 			case TruncateIfExists:
 				cfg.Truncate = true
 			case DropOnTargetAndRecreate:
-				cfg.CreateNewSchema = true
+				cfg.DropAndRecreateNewSchema = true
 			}
 
 			isCopyMode := cfg.Live || directCRDBCopy
