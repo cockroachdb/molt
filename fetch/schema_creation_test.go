@@ -94,6 +94,72 @@ CREATE TABLE employees (
 				},
 			},
 		},
+		{
+			dialect: testutils.PostgresDialect,
+			desc:    "multiple pks",
+			createTableStatements: []string{`
+CREATE TABLE employees (
+    id INT NOT NULL,
+    unique_id UUID NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    created_at TIMESTAMPTZ,
+    updated_at DATE,
+    is_hired BOOLEAN,
+    age SMALLINT CHECK (age > 18),
+    salary NUMERIC(8, 2),
+    bonus REAL unique,
+    CONSTRAINT "primary" PRIMARY KEY (id, unique_id, created_at)
+);
+`},
+			tableFilter: utils.FilterConfig{TableFilter: `employees`},
+			expectedColumnTypes: map[string]map[string]columnWithType{
+				"public.employees": {
+					"id": {
+						dataType:     "integer",
+						typeOid:      oid.T_int4,
+						notNullable:  true,
+						isPrimaryKey: true,
+					},
+					"name": {
+						dataType:    "character varying(50)",
+						typeOid:     oid.T_varchar,
+						notNullable: true,
+					},
+					"created_at": {
+						dataType:     "timestamp with time zone",
+						typeOid:      oid.T_timestamptz,
+						isPrimaryKey: true,
+						notNullable:  true,
+					},
+					"is_hired": {
+						dataType: "boolean",
+						typeOid:  oid.T_bool,
+					},
+					"salary": {
+						dataType: "numeric(8,2)",
+						typeOid:  oid.T_numeric,
+					},
+					"bonus": {
+						dataType: "real",
+						typeOid:  oid.T_float4,
+					},
+					"unique_id": {
+						dataType:     "uuid",
+						typeOid:      oid.T_uuid,
+						notNullable:  true,
+						isPrimaryKey: true,
+					},
+					"updated_at": {
+						dataType: "date",
+						typeOid:  oid.T_date,
+					},
+					"age": {
+						dataType: "smallint",
+						typeOid:  oid.T_int2,
+					},
+				},
+			},
+		},
 	} {
 
 		t.Run(fmt.Sprintf("%s/%s", tc.dialect.String(), tc.desc), func(t *testing.T) {
@@ -214,6 +280,28 @@ CREATE TABLE employees (
 			tableFilter: utils.FilterConfig{TableFilter: `employees`},
 			expectedCreateTableStmts: []string{
 				`CREATE TABLE employees (id INT4 NOT NULL PRIMARY KEY, unique_id UUID NOT NULL, name VARCHAR NOT NULL, created_at TIMESTAMPTZ, updated_at DATE, is_hired BOOL, age INT2, salary DECIMAL, bonus FLOAT4)`,
+			},
+		},
+		{
+			dialect: testutils.PostgresDialect,
+			desc:    "multiple pks",
+			createTableStatements: []string{`
+CREATE TABLE employees (
+    id INT NOT NULL,
+    unique_id UUID NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    created_at TIMESTAMPTZ,
+    updated_at DATE,
+    is_hired BOOLEAN,
+    age SMALLINT CHECK (age > 18),
+    salary NUMERIC(8, 2),
+    bonus REAL unique,
+    CONSTRAINT "primary" PRIMARY KEY (id, unique_id, created_at)
+);
+`},
+			tableFilter: utils.FilterConfig{TableFilter: `employees`},
+			expectedCreateTableStmts: []string{
+				`CREATE TABLE employees (id INT4 NOT NULL, unique_id UUID NOT NULL, name VARCHAR NOT NULL, created_at TIMESTAMPTZ NOT NULL, updated_at DATE, is_hired BOOL, age INT2, salary DECIMAL, bonus FLOAT4, CONSTRAINT "primary" PRIMARY KEY (id, unique_id, created_at))`,
 			},
 		},
 	} {
