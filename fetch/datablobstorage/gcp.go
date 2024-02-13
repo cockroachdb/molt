@@ -113,7 +113,7 @@ func (s *gcpStore) CreateFromReader(
 		return nil, err
 	}
 
-	s.logger.Debug().Str("file", key).Int("rows", rows).Msgf("gcp file creation complete complete")
+	s.logger.Debug().Str("file", key).Int("rows", rows).Msgf("gcp file creation complete")
 	return &gcpResource{
 		store: s,
 		key:   key,

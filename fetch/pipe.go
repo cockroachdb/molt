@@ -8,14 +8,14 @@ import (
 
 // See: https://cockroachlabs.atlassian.net/browse/CC-27139 for more details.
 // This pipe implementation is needed to ensure that with our csv_pipe
-// implementation, the multiple threads handling the reads and writes
-// don't deadlock due to another IO operation from a channel read.
+// logic, writes from the csv_pipe call to p.csvWriter.Write(record) to
+// not cause a deadlock due to a full buffer. We needed to add a channel read for numRows
+// before reads on the io.Reader happen which meant that if there is a buffer
+// that reaches its size, there would be a deadlock on writing as it is waiting for the
+// opposite end of the pipe to be drained. This implementation of pipe uses a bytes.buffer
+// to grow to accomodate the growing size which will prevent the write deadlock.
 // The code in pipe.go is adapted from
 // https://github.com/golang/net/blob/5a444b4f2fe893ea00f0376da46aa5376c3f3e28/http2/pipe.go
-// which provides a read and write backed by a sync.cond to
-// wake readers when there is data being written. This should
-// prevent either the read or write ends of the pipe to be
-// deadlocked/goparked.
 
 type Pipe struct {
 	b   *bytes.Buffer
