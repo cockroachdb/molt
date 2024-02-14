@@ -8,7 +8,7 @@ import (
 
 // See: https://cockroachlabs.atlassian.net/browse/CC-27139 for more details.
 // This pipe implementation is needed to ensure that with our csv_pipe
-// logic, writes from the csv_pipe call to p.csvWriter.Write(record) to
+// logic, writes from the csv_pipe call to p.csvWriter.Write(record) do
 // not cause a deadlock due to a full buffer. We needed to add a channel read for numRows
 // before reads on the io.Reader happen which meant that if there is a buffer
 // that reaches its size, there would be a deadlock on writing as it is waiting for the

@@ -52,8 +52,12 @@ func exportTable(
 
 	cancellableCtx, cancelFunc := context.WithCancel(ctx)
 	defer cancelFunc()
-	buf := new(bytes.Buffer)
-	sqlRW := NewPipe(buf)
+	// We use the standard io.Pipe here because during data
+	// export since if we use a standard bytes.Buffer it will grow
+	// to the size of the data export and cause an OOMKill.
+	// Use the default size of 4096 created by bufio so that
+	// the memory usage on export remains constant.
+	sqlRead, sqlWrite := io.Pipe()
 	// Run the COPY TO, which feeds into the pipe, concurrently.
 	copyWG, _ := errgroup.WithContext(ctx)
 	copyWG.Go(func() error {
@@ -63,10 +67,10 @@ func exportTable(
 		}
 		return errors.CombineErrors(
 			func() error {
-				if err := sqlSrcConn.Export(cancellableCtx, sqlRW, table); err != nil {
-					return errors.CombineErrors(err, sqlRW.CloseWithError(err))
+				if err := sqlSrcConn.Export(cancellableCtx, sqlWrite, table); err != nil {
+					return errors.CombineErrors(err, sqlWrite.CloseWithError(err))
 				}
-				return sqlRW.Close()
+				return sqlWrite.Close()
 			}(),
 			sqlSrcConn.Close(ctx),
 		)
@@ -76,7 +80,7 @@ func exportTable(
 	resourceWG.SetLimit(1)
 	itNum := 0
 	// Errors must be buffered, as pipe can exit without taking the error channel.
-	pipe := newCSVPipe(sqlRW, logger, cfg.FlushSize, cfg.FlushRows, func(numRowsCh chan int) (io.WriteCloser, error) {
+	pipe := newCSVPipe(sqlRead, logger, cfg.FlushSize, cfg.FlushRows, func(numRowsCh chan int) (io.WriteCloser, error) {
 		if err := resourceWG.Wait(); err != nil {
 			// We need to check if the last iteration saw any error when creating
 			// resource from reader. If so, just exit the current iteration.
