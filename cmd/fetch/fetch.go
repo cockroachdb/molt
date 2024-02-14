@@ -94,6 +94,7 @@ func Command() *cobra.Command {
 				return err
 			}
 			cmdutil.RunMetricsServer(logger)
+			cmdutil.RunPprofServer(logger)
 
 			//TODO(janexing): remove once finished the implementation.
 			if tableHandlingMode == DropOnTargetAndRecreate {
@@ -323,6 +324,7 @@ func Command() *cobra.Command {
 	cmdutil.RegisterDBConnFlags(cmd)
 	cmdutil.RegisterNameFilterFlags(cmd)
 	cmdutil.RegisterMetricsFlags(cmd)
+	cmdutil.RegisterPprofFlags(cmd)
 
 	cmd.PersistentFlags().Var(
 		enumflag.NewWithoutDefault(&tableHandlingMode, "string", TableHandlingOptionStringRepresentations, enumflag.EnumCaseInsensitive),
