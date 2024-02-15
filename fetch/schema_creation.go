@@ -16,6 +16,8 @@ import (
 
 type columnsWithType []columnWithType
 
+// CRDBCreateTableStmt returns a create table statement string with columnsWithType
+// as the column clause.
 func (cs columnsWithType) CRDBCreateTableStmt() (string, error) {
 	tName, err := parser.ParseQualifiedTableName(cs[0].tableName)
 	if err != nil {
