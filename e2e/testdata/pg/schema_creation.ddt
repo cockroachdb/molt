@@ -1,27 +1,27 @@
 exec silent
-psql 'postgres://postgres@localhost:5432/defaultdb' -c "DROP TABLE IF EXISTS tbl1; CREATE TABLE tbl1 (id INT PRIMARY KEY, t TEXT);"
+psql 'postgres://postgres@localhost:5432/defaultdb' -c "DROP TABLE IF EXISTS tbl1; DROP TYPE IF EXISTS my_enum_type CASCADE; CREATE TYPE my_enum_type AS ENUM ('v1', 'v2', 'v3');  CREATE TABLE tbl1 (id INT PRIMARY KEY, t TEXT, enumcol my_enum_type);"
 ----
 
 exec silent
-docker cp ../.github/e2esampledata/sampledata.csv  github-postgresql-1:/tmp/pg_data
+docker cp ../.github/e2esampledata/sampleenum.csv  github-postgresql-1:/tmp/pg_data
 ----
 
 exec silent
-psql 'postgres://postgres@localhost:5432/defaultdb' -c "COPY tbl1 (id, t) FROM 'sampledata.csv' CSV HEADER;"
+psql 'postgres://postgres@localhost:5432/defaultdb' -c "COPY tbl1 (id, t, enumcol) FROM 'sampleenum.csv' CSV HEADER;"
 ----
 
 exec
 psql 'postgres://postgres@localhost:5432/defaultdb' -c "SELECT * FROM tbl1"
 ----
-id |               t                
-----+--------------------------------
-  1 | aaa
-  2 | bb b
-  3 | ééé
-  4 | \U0001fae1\U0001fae1\U0001fae1
-  5 | 卢卡斯
-  6 | Лукас
-  7 | ルカス
+id |               t                | enumcol 
+----+--------------------------------+---------
+  1 | aaa                            | v1
+  2 | bb b                           | v2
+  3 | ééé                            | v3
+  4 | \U0001fae1\U0001fae1\U0001fae1 | v1
+  5 | 卢卡斯                         | v2
+  6 | Лукас                          | v2
+  7 | ルカス                         | v2
 (7 rows)
 
 fetch --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'tbl1' --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9115' --table-handling 'drop-on-target-and-recreate'  --cleanup=true 
@@ -30,13 +30,10 @@ fetch --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres
 {"level":"info","message":"checking database details"}
 {"level":"info","message":"creating schema for tables: [public.tbl1]"}
 {"level":"info","message":"dropping table with \"DROP TABLE IF EXISTS tbl1\""}
-{"level":"info","message":"finished dropping table with \"DROP TABLE IF EXISTS tbl1\""}
 {"level":"info","message":"getting column types for table: public.tbl1"}
-{"level":"info","message":"collect column:schema:\"public\", table:\"tbl1\", column:\"id\", type:\"integer\", typeoid: 23, nullable:true, pk:true\n"}
-{"level":"info","message":"collect column:schema:\"public\", table:\"tbl1\", column:\"t\", type:\"text\", typeoid: 25, nullable:false, pk:false\n"}
 {"level":"info","message":"finished getting column types for table: public.tbl1"}
-{"level":"info","message":"creating new table with \"CREATE TABLE tbl1 (id INT4 NOT NULL PRIMARY KEY, t STRING)\""}
-{"level":"info","message":"finished creating new table with \"CREATE TABLE tbl1 (id INT4 NOT NULL PRIMARY KEY, t STRING)\""}
+{"level":"info","message":"the original schema contains enum type \"my_enum_type\". A tentative enum type will be created as \"CREATE TYPE IF NOT EXISTS my_enum_type AS ENUM ('v1', 'v2', 'v3');\""}
+{"level":"info","message":"creating new table with \" CREATE TYPE IF NOT EXISTS my_enum_type AS ENUM ('v1', 'v2', 'v3'); CREATE TABLE tbl1 (id INT4 NOT NULL PRIMARY KEY, t STRING, enumcol my_enum_type)\""}
 {"level":"info","message":"after recreating table, dbTables: {[[public.tbl1 public.tbl1]] [] []}"}
 {"level":"info","message":"verifying common tables"}
 {"level":"info","message":"establishing snapshot"}
@@ -60,15 +57,15 @@ verify --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgre
 exec
 psql 'postgres://root@localhost:26257/defaultdb?sslmode=disable' -c "SELECT * FROM tbl1"
 ----
-id |               t                
-----+--------------------------------
-  1 | aaa
-  2 | bb b
-  3 | ééé
-  4 | \U0001fae1\U0001fae1\U0001fae1
-  5 | 卢卡斯
-  6 | Лукас
-  7 | ルカス
+id |               t                | enumcol 
+----+--------------------------------+---------
+  1 | aaa                            | v1
+  2 | bb b                           | v2
+  3 | ééé                            | v3
+  4 | \U0001fae1\U0001fae1\U0001fae1 | v1
+  5 | 卢卡斯                         | v2
+  6 | Лукас                          | v2
+  7 | ルカス                         | v2
 (7 rows)
 
 fetch --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'tbl1' --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9115' --table-handling 'drop-on-target-and-recreate'  --cleanup=true 
@@ -78,13 +75,10 @@ fetch --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres
 {"level":"info","source_table":"public.tbl1","target_table":"public.tbl1","message":"found matching table"}
 {"level":"info","message":"creating schema for tables: [public.tbl1]"}
 {"level":"info","message":"dropping table with \"DROP TABLE IF EXISTS tbl1\""}
-{"level":"info","message":"finished dropping table with \"DROP TABLE IF EXISTS tbl1\""}
 {"level":"info","message":"getting column types for table: public.tbl1"}
-{"level":"info","message":"collect column:schema:\"public\", table:\"tbl1\", column:\"id\", type:\"integer\", typeoid: 23, nullable:true, pk:true\n"}
-{"level":"info","message":"collect column:schema:\"public\", table:\"tbl1\", column:\"t\", type:\"text\", typeoid: 25, nullable:false, pk:false\n"}
 {"level":"info","message":"finished getting column types for table: public.tbl1"}
-{"level":"info","message":"creating new table with \"CREATE TABLE tbl1 (id INT4 NOT NULL PRIMARY KEY, t STRING)\""}
-{"level":"info","message":"finished creating new table with \"CREATE TABLE tbl1 (id INT4 NOT NULL PRIMARY KEY, t STRING)\""}
+{"level":"info","message":"the original schema contains enum type \"my_enum_type\". A tentative enum type will be created as \"CREATE TYPE IF NOT EXISTS my_enum_type AS ENUM ('v1', 'v2', 'v3');\""}
+{"level":"info","message":"creating new table with \" CREATE TYPE IF NOT EXISTS my_enum_type AS ENUM ('v1', 'v2', 'v3'); CREATE TABLE tbl1 (id INT4 NOT NULL PRIMARY KEY, t STRING, enumcol my_enum_type)\""}
 {"level":"info","message":"after recreating table, dbTables: {[[public.tbl1 public.tbl1]] [] []}"}
 {"level":"info","message":"verifying common tables"}
 {"level":"info","message":"establishing snapshot"}
@@ -116,7 +110,7 @@ psql 'postgres://postgres@localhost:5432/defaultdb' -c "COPY employee1 (name, ag
 ----
 
 exec
-psql 'postgres://postgres@localhost:5432/defaultdb?sslmode=disable' -c "SELECT * FROM employee1 LIMIT 5 ORDER BY id"
+psql 'postgres://postgres@localhost:5432/defaultdb?sslmode=disable' -c "SELECT * FROM employee1 ORDER BY id LIMIT 5"
 ----
 id |      name       | age |                      address                      | start_date |  end_date  
 ----+-----------------+-----+---------------------------------------------------+------------+------------
@@ -133,17 +127,9 @@ fetch --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres
 {"level":"info","message":"checking database details"}
 {"level":"info","message":"creating schema for tables: [public.employee1]"}
 {"level":"info","message":"dropping table with \"DROP TABLE IF EXISTS employee1\""}
-{"level":"info","message":"finished dropping table with \"DROP TABLE IF EXISTS employee1\""}
 {"level":"info","message":"getting column types for table: public.employee1"}
-{"level":"info","message":"collect column:schema:\"public\", table:\"employee1\", column:\"id\", type:\"integer\", typeoid: 23, nullable:true, pk:true\n"}
-{"level":"info","message":"collect column:schema:\"public\", table:\"employee1\", column:\"name\", type:\"character varying(50)\", typeoid: 1043, nullable:true, pk:false\n"}
-{"level":"info","message":"collect column:schema:\"public\", table:\"employee1\", column:\"age\", type:\"integer\", typeoid: 23, nullable:false, pk:false\n"}
-{"level":"info","message":"collect column:schema:\"public\", table:\"employee1\", column:\"address\", type:\"character varying(300)\", typeoid: 1043, nullable:true, pk:false\n"}
-{"level":"info","message":"collect column:schema:\"public\", table:\"employee1\", column:\"start_date\", type:\"date\", typeoid: 1082, nullable:false, pk:false\n"}
-{"level":"info","message":"collect column:schema:\"public\", table:\"employee1\", column:\"end_date\", type:\"date\", typeoid: 1082, nullable:false, pk:false\n"}
 {"level":"info","message":"finished getting column types for table: public.employee1"}
 {"level":"info","message":"creating new table with \"CREATE TABLE employee1 (id INT4 NOT NULL PRIMARY KEY, name VARCHAR NOT NULL, age INT4, address VARCHAR NOT NULL, start_date DATE, end_date DATE)\""}
-{"level":"info","message":"finished creating new table with \"CREATE TABLE employee1 (id INT4 NOT NULL PRIMARY KEY, name VARCHAR NOT NULL, age INT4, address VARCHAR NOT NULL, start_date DATE, end_date DATE)\""}
 {"level":"info","message":"after recreating table, dbTables: {[[public.employee1 public.employee1]] [] []}"}
 {"level":"info","message":"verifying common tables"}
 {"level":"info","message":"establishing snapshot"}
