@@ -296,31 +296,47 @@ func fetchTable(
 	// In the case that exception log is nil or fetch id is empty,
 	// this means that we want to export the table because it means
 	// we want export + copy mode.
-	if exceptionLog == nil || cfg.FetchID == "" {
-		er, err := exportTable(ctx, cfg, logger, sqlSrc, blobStore, table.VerifiedTable, testingKnobs)
-		if err != nil {
-			return err
-		}
-		e = er
-	} else {
-		if exceptionLog.FileName == "" {
-			logger.Warn().Msgf("skipping table %s because no file name is present in the exception log", table.SafeString())
-			return errors.Newf("table %s not imported because no file name is present in the exception log", table.SafeString())
-		}
-		logger.Warn().Msgf("skipping export for table %s due to running in import-copy only mode", table.SafeString())
+	resourceCh := make(chan datablobstorage.Resource)
+	summaryLogger := moltlogger.GetSummaryLogger(logger)
+	var exportDuration time.Duration
+	exportWG, _ := errgroup.WithContext(ctx)
+	exportWG.Go(func() error {
+		defer close(resourceCh)
+		if exceptionLog == nil || cfg.FetchID == "" {
+			er, err := exportTable(ctx, cfg, logger, sqlSrc, blobStore, table.VerifiedTable, testingKnobs, resourceCh)
+			if err != nil {
+				return err
+			}
+			e = er
+		} else {
+			if exceptionLog.FileName == "" {
+				logger.Warn().Msgf("skipping table %s because no file name is present in the exception log", table.SafeString())
+				return errors.Newf("table %s not imported because no file name is present in the exception log", table.SafeString())
+			}
+			logger.Warn().Msgf("skipping export for table %s due to running in import-copy only mode", table.SafeString())
 
-		// TODO: future PR needs to add number of rows estimation. and populate exportResult.NumRows
-		// TODO: need to figure out start and end time too.
-		rsc, err := blobStore.ListFromContinuationPoint(ctx, table.VerifiedTable, exceptionLog.FileName)
-		if err != nil {
-			return err
-		}
-		e.Resources = rsc
+			// TODO: future PR needs to add number of rows estimation. and populate exportResult.NumRows
+			// TODO: need to figure out start and end time too.
+			rsc, err := blobStore.ListFromContinuationPoint(ctx, table.VerifiedTable, exceptionLog.FileName)
+			if err != nil {
+				return err
+			}
+			e.Resources = rsc
 
-		if len(e.Resources) == 0 {
-			return errors.Newf("exported resources for table %s is empty, please make sure you did not accidentally delete from the intermediate store", table.SafeString())
+			if len(e.Resources) == 0 {
+				return errors.Newf("exported resources for table %s is empty, please make sure you did not accidentally delete from the intermediate store", table.SafeString())
+			}
 		}
-	}
+		// TODO: consider if we want to skip this portion since we don't export anything....
+		exportDuration = utils.MaybeFormatDurationForTest(cfg.TestOnly, e.EndTime.Sub(e.StartTime))
+		summaryLogger.Info().
+			Int("num_rows", e.NumRows).
+			Dur("export_duration_ms", exportDuration).
+			Str("export_duration", utils.FormatDurationToTimeString(exportDuration)).
+			Msgf("data extraction from source complete")
+		fetchmetrics.TableExportDuration.WithLabelValues(table.SafeString()).Set(float64(exportDuration.Milliseconds()))
+		return nil
+	})
 
 	// We actually need to skip the cleanup for something that has an error
 	// On a continuation run we can cleanup so long as it's successful.
@@ -344,77 +360,94 @@ func fetchTable(
 		}()
 	}
 
-	// TODO: consider if we want to skip this portion since we don't export anything....
-	exportDuration := utils.MaybeFormatDurationForTest(cfg.TestOnly, e.EndTime.Sub(e.StartTime))
-	summaryLogger := moltlogger.GetSummaryLogger(logger)
+	importWG, _ := errgroup.WithContext(ctx)
+	var importDuration time.Duration
+	var netDuration time.Duration
+	var cdcCursor string
+	exitCh := make(chan error, 1)
+	importWG.Go(func() error {
+		if blobStore.CanBeTarget() {
+			targetConn, err := conns[1].Clone(ctx)
+			if err != nil {
+				return err
+			}
+			if err := func() error {
+				logger.Info().
+					Msgf("starting data import on target")
+
+				if !cfg.Live {
+					go func() {
+						err := reportImportTableProgress(ctx,
+							targetConn,
+							logger,
+							table.VerifiedTable,
+							time.Now(),
+							false /*testing*/)
+						if err != nil {
+							logger.Err(err).Msg("failed to report import table progress")
+						}
+					}()
+					for {
+						rs, ok := <-resourceCh
+						if !ok {
+							select {
+							// If there was an error on the exportSide, stop importing.
+							case e := <-exitCh:
+								return e
+							default:
+								return nil
+							}
+						}
+						r, err := importTable(ctx, cfg, targetConn, logger, table.VerifiedTable, []datablobstorage.Resource{rs}, testingKnobs)
+						if err != nil {
+							return err
+						}
+						fetchmetrics.ImportedRows.WithLabelValues(table.SafeString()).Add(float64(rs.Rows()))
+						importDuration = utils.MaybeFormatDurationForTest(cfg.TestOnly, r.EndTime.Sub(r.StartTime))
+
+					}
+				} else {
+					r, err := Copy(ctx, targetConn, logger, table.VerifiedTable, e.Resources)
+					if err != nil {
+						return err
+					}
+					importDuration = utils.MaybeFormatDurationForTest(cfg.TestOnly, r.EndTime.Sub(r.StartTime))
+
+				}
+				return nil
+			}(); err != nil {
+				return errors.CombineErrors(err, targetConn.Close(ctx))
+			}
+			if err := targetConn.Close(ctx); err != nil {
+				return err
+			}
+			netDuration = utils.MaybeFormatDurationForTest(cfg.TestOnly, time.Since(tableStartTime))
+			cdcCursor = utils.MaybeFormatCDCCursor(cfg.TestOnly, sqlSrc.CDCCursor())
+		}
+		return nil
+	})
+
+	if err := exportWG.Wait(); err != nil {
+		fmt.Println("writin to exitCh")
+		exitCh <- err
+	}
+	err := importWG.Wait()
+	if err != nil {
+		return err
+	}
+
 	summaryLogger.Info().
-		Int("num_rows", e.NumRows).
+		Dur("net_duration_ms", netDuration).
+		Str("net_duration", utils.FormatDurationToTimeString(netDuration)).
+		Dur("import_duration_ms", importDuration).
+		Str("import_duration", utils.FormatDurationToTimeString(importDuration)).
 		Dur("export_duration_ms", exportDuration).
 		Str("export_duration", utils.FormatDurationToTimeString(exportDuration)).
-		Msgf("data extraction from source complete")
-	fetchmetrics.TableExportDuration.WithLabelValues(table.SafeString()).Set(float64(exportDuration.Milliseconds()))
-
-	if blobStore.CanBeTarget() {
-		targetConn, err := conns[1].Clone(ctx)
-		if err != nil {
-			return err
-		}
-		var importDuration time.Duration
-		if err := func() error {
-			logger.Info().
-				Msgf("starting data import on target")
-
-			if !cfg.Live {
-				go func() {
-					err := reportImportTableProgress(ctx,
-						targetConn,
-						logger,
-						table.VerifiedTable,
-						time.Now(),
-						false /*testing*/)
-					if err != nil {
-						logger.Err(err).Msg("failed to report import table progress")
-					}
-				}()
-
-				r, err := importTable(ctx, cfg, targetConn, logger, table.VerifiedTable, e.Resources, testingKnobs)
-				if err != nil {
-					return err
-				}
-				fetchmetrics.ImportedRows.WithLabelValues(table.SafeString()).Add(float64(e.NumRows))
-				importDuration = utils.MaybeFormatDurationForTest(cfg.TestOnly, r.EndTime.Sub(r.StartTime))
-			} else {
-				r, err := Copy(ctx, targetConn, logger, table.VerifiedTable, e.Resources)
-				if err != nil {
-					return err
-				}
-				importDuration = utils.MaybeFormatDurationForTest(cfg.TestOnly, r.EndTime.Sub(r.StartTime))
-			}
-			return nil
-		}(); err != nil {
-			return errors.CombineErrors(err, targetConn.Close(ctx))
-		}
-		if err := targetConn.Close(ctx); err != nil {
-			return err
-		}
-
-		netDuration := utils.MaybeFormatDurationForTest(cfg.TestOnly, time.Since(tableStartTime))
-		cdcCursor := utils.MaybeFormatCDCCursor(cfg.TestOnly, sqlSrc.CDCCursor())
-		summaryLogger.Info().
-			Dur("net_duration_ms", netDuration).
-			Str("net_duration", utils.FormatDurationToTimeString(netDuration)).
-			Dur("import_duration_ms", importDuration).
-			Str("import_duration", utils.FormatDurationToTimeString(importDuration)).
-			Dur("export_duration_ms", exportDuration).
-			Str("export_duration", utils.FormatDurationToTimeString(exportDuration)).
-			Int("num_rows", e.NumRows).
-			Str("cdc_cursor", cdcCursor).
-			Msgf("data import on target for table complete")
-		fetchmetrics.TableImportDuration.WithLabelValues(table.SafeString()).Set(float64(importDuration.Milliseconds()))
-		fetchmetrics.TableOverallDuration.WithLabelValues(table.SafeString()).Set(float64(netDuration.Milliseconds()))
-
-		return nil
-	}
+		Int("num_rows", e.NumRows).
+		Str("cdc_cursor", cdcCursor).
+		Msgf("data import on target for table complete")
+	fetchmetrics.TableImportDuration.WithLabelValues(table.SafeString()).Set(float64(importDuration.Milliseconds()))
+	fetchmetrics.TableOverallDuration.WithLabelValues(table.SafeString()).Set(float64(netDuration.Milliseconds()))
 	return nil
 }
 

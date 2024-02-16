@@ -220,6 +220,7 @@ func TestFailedWriteToStore(t *testing.T) {
 								dataSrc,
 								verifiedTable,
 								tb.FetchTestingKnobs,
+								make(chan datablobstorage.Resource),
 							)
 
 							if tc.noError {
