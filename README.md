@@ -150,8 +150,8 @@ to migrate live data without taking your database offline.
 It currently supports the following:
 
 - Pulling a table, uploading CSVs to S3/GCP/local machine (`--listen-addr` must be set) and running IMPORT on Cockroach for you.
-- Pulling a table, uploading CSVs to S3/GCP/local machine and running COPY TO on Cockroach from that CSV.
-- Pulling a table and running COPY TO directly onto the CRDB table without an intermediate store.
+- Pulling a table, uploading CSVs to S3/GCP/local machine and running COPY FROM on Cockroach from that CSV.
+- Pulling a table and running COPY FROM directly onto the CRDB table without an intermediate store.
 
 By default, data is imported using `IMPORT INTO`. You can use `--live` if you
 need target data to be queriable during loading, which uses `COPY FROM` instead.
@@ -209,7 +209,7 @@ molt fetch \
   --direct-copy
 ```
 
-Storing CSVs locally before running COPY TO:
+Storing CSVs locally before running COPY FROM:
 
 ```sh
 molt fetch \
