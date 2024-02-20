@@ -246,6 +246,7 @@ molt fetch \
 ```
 
 ### Edge case
+
 #### MacOS + CockroachDB as source within Docker container
 
 If you encounter an error similar to the following, please contact the support team.
@@ -257,6 +258,7 @@ ERROR: AS OF SYSTEM TIME: cannot specify timestamp in the future (1701836988.000
 This error is due to the fact that with MacOS as the runtime OS, Docker may have indeterministic time drift from the host machine.[[1](https://github.com/cockroachdb/molt/issues/93)] Because we run a `SELECT ... AS OF SYSTEM TIME` query to iterate content from the target table, time drift can cause a `cannot specify timestamp in the future` error when using `molt fetch` to export data from a CockroachDB cluster within a container.
 
 Example to reproduce the time drift:
+
 ```bash
 #!/bin/bash
 
@@ -286,7 +288,6 @@ echo
 
 done
 ```
-
 
 ## Local Setup
 
@@ -318,3 +319,14 @@ CREATE DATABASE defaultdb;
 
 - Run the tests: `go test ./...`.
   - Data-driven tests can be run with `-rewrite`, e.g. `go test ./verification -rewrite`.
+
+## Releases
+
+All releases before v0.0.6 were published directly to Github release artifacts. Look at the `Assets` section of each release link for the binaries. From v0.0.6 onward, `molt` is published to the GCS bucket. The version manifest contains links to all binaries for all versions.
+
+[Release versions (v0.0.6 and after)](https://molt.cockroachdb.com/molt/cli/versions.html)
+[Release v0.0.5](https://github.com/cockroachdb/molt/releases/tag/v0.0.5)
+[Release v0.0.4](https://github.com/cockroachdb/molt/releases/tag/v0.0.4)
+[Release v0.0.3](https://github.com/cockroachdb/molt/releases/tag/v0.0.3)
+[Release v0.0.2](https://github.com/cockroachdb/molt/releases/tag/v0.0.2)
+[Release v0.0.1](https://github.com/cockroachdb/molt/releases/tag/v0.0.1)
