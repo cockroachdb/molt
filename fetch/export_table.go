@@ -40,6 +40,7 @@ func exportTable(
 	datasource datablobstorage.Store,
 	table dbtable.VerifiedTable,
 	testingKnobs testutils.FetchTestingKnobs,
+	resourceCh chan datablobstorage.Resource,
 ) (exportResult, error) {
 	importFileExt := "csv"
 	if cfg.Compression == compression.GZIP {
@@ -99,6 +100,7 @@ func exportTable(
 				if err != nil {
 					return err
 				}
+				resourceCh <- resource
 				ret.Resources = append(ret.Resources, resource)
 				return nil
 			}(); err != nil {
