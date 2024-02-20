@@ -137,6 +137,7 @@ func importTable(
 	table dbtable.VerifiedTable,
 	resources []datablobstorage.Resource,
 	testingKnobs testutils.FetchTestingKnobs,
+	isLocal bool,
 ) (importResult, error) {
 	ret := importResult{
 		StartTime: time.Now(),
@@ -162,6 +163,14 @@ func importTable(
 		})
 	}
 
+	// In local mode, we skip the header row which would contain the number of rows.
+	if isLocal {
+		kvOptions = append(kvOptions, tree.KVOption{
+			Key:   "skip",
+			Value: tree.NewStrVal("1"),
+		})
+	}
+
 	for i := 0; i < len(locs); i += batchSize {
 		end := i + batchSize
 		// necessary to prevent going over len
@@ -178,9 +187,8 @@ func importTable(
 			return ret, errors.Wrap(pgErr, "error importing data")
 		}
 
-		// TODO (rluu): need to increment the metrics counter here for num rows imported
-		// once we accomplish this for all aws, gcp, local.
 		logger.Info().Msgf("imported %d rows for batch for files %d to %d", totalRows, i+1, end)
+		fetchmetrics.ImportedRows.WithLabelValues(table.SafeString()).Add(float64(totalRows))
 	}
 	ret.EndTime = time.Now()
 	return ret, nil

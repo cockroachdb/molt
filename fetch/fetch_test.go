@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -93,6 +94,7 @@ func TestDataDriven(t *testing.T) {
 						passedInDir := ""
 						cleanup := false
 						continuationToken := ""
+						flushRows := 0
 
 						for _, cmd := range d.CmdArgs {
 							switch cmd.Key {
@@ -114,6 +116,10 @@ func TestDataDriven(t *testing.T) {
 								cleanup = true
 							case "continuation-token":
 								continuationToken = cmd.Vals[0]
+							case "flush-rows":
+								flushRowsAtoi, err := strconv.Atoi(cmd.Vals[0])
+								require.NoError(t, err)
+								flushRows = flushRowsAtoi
 							default:
 								t.Errorf("unknown key %s", cmd.Key)
 							}
@@ -167,6 +173,7 @@ func TestDataDriven(t *testing.T) {
 								FetchID:           fetchId,
 								Cleanup:           cleanup,
 								ContinuationToken: continuationToken,
+								FlushRows:         flushRows,
 							},
 							logger,
 							conns,

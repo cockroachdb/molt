@@ -59,7 +59,7 @@ func ImportInto(table dbtable.VerifiedTable, locs []string, opts tree.KVOptions)
 	return f.CloseAndGetString(), redacted
 }
 
-func CopyFrom(table dbtable.VerifiedTable) string {
+func CopyFrom(table dbtable.VerifiedTable, skipHeader bool) string {
 	copyFrom := &tree.CopyFrom{
 		Table:   table.MakeTableName(),
 		Columns: table.Columns,
@@ -67,6 +67,8 @@ func CopyFrom(table dbtable.VerifiedTable) string {
 		Options: tree.CopyOptions{
 			CopyFormat: tree.CopyFormatCSV,
 			HasFormat:  true,
+			Header:     skipHeader,
+			HasHeader:  skipHeader,
 		},
 	}
 	f := tree.NewFmtCtx(tree.FmtParsableNumerics)

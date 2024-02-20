@@ -74,3 +74,31 @@ id	t
 6	Лукас
 7	ルカス
 tag: SELECT 7
+
+# To test that we can handle multiple batches without hanging.
+fetch direct flush-rows=1
+----
+
+query all
+SELECT * FROM tbl1
+----
+[source]:
+id	t
+1	aaa
+2	bb b
+3	ééé
+4	🫡🫡🫡
+5	娜娜
+6	Лукас
+7	ルカス
+tag: SELECT 7
+[target]:
+id	t
+1	aaa
+2	bb b
+3	ééé
+4	🫡🫡🫡
+5	娜娜
+6	Лукас
+7	ルカス
+tag: SELECT 7

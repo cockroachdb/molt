@@ -364,6 +364,10 @@ func fetchTable(
 			logger.Info().
 				Msgf("starting data import on target")
 
+			isLocal := false
+			if len(e.Resources) > 0 {
+				isLocal = e.Resources[0].IsLocal()
+			}
 			if !cfg.Live {
 				go func() {
 					err := reportImportTableProgress(ctx,
@@ -377,14 +381,13 @@ func fetchTable(
 					}
 				}()
 
-				r, err := importTable(ctx, cfg, targetConn, logger, table.VerifiedTable, e.Resources, testingKnobs)
+				r, err := importTable(ctx, cfg, targetConn, logger, table.VerifiedTable, e.Resources, testingKnobs, isLocal)
 				if err != nil {
 					return err
 				}
-				fetchmetrics.ImportedRows.WithLabelValues(table.SafeString()).Add(float64(e.NumRows))
 				importDuration = utils.MaybeFormatDurationForTest(cfg.TestOnly, r.EndTime.Sub(r.StartTime))
 			} else {
-				r, err := Copy(ctx, targetConn, logger, table.VerifiedTable, e.Resources)
+				r, err := Copy(ctx, targetConn, logger, table.VerifiedTable, e.Resources, isLocal)
 				if err != nil {
 					return err
 				}
