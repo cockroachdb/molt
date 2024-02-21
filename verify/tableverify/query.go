@@ -186,15 +186,20 @@ func getPrimaryKey(
 		rows, err := conn.Query(
 			ctx,
 			`
-select
-    a.attname as column_name
-from
-    pg_class t
-    join pg_attribute a on a.attrelid = t.oid
-    join pg_index ix    on t.oid = ix.indrelid AND a.attnum = ANY(ix.indkey)
-    join pg_class i     on i.oid = ix.indexrelid  
-where
-    t.oid = $1 AND indisprimary;
+SELECT
+    a.attname AS column_name
+FROM
+    pg_index i
+JOIN
+    pg_attribute a ON a.attrelid = i.indrelid
+AND
+    a.attnum = ANY(i.indkey)
+WHERE
+    i.indrelid = $1
+AND
+    i.indisprimary
+ORDER BY
+    array_position(i.indkey, a.attnum);
 `,
 			table.OID,
 		)
