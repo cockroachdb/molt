@@ -3,6 +3,7 @@ package fetch
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -55,8 +56,6 @@ func Command() *cobra.Command {
 	}
 
 	var (
-		s3Bucket                string
-		gcpBucket               string
 		bucketPath              string
 		localPath               string
 		localPathListenAddr     string
@@ -135,15 +134,27 @@ func Command() *cobra.Command {
 				datastorePayload = &datablobstorage.DirectCopyPayload{
 					TargetConnForCopy: conns[1].(*dbconn.PGConn).Conn,
 				}
-			case gcpBucket != "":
-				datastorePayload = &datablobstorage.GCPPayload{
-					GCPBucket:  gcpBucket,
-					BucketPath: bucketPath,
+			case bucketPath != "":
+				u, err := url.Parse(bucketPath)
+				if err != nil {
+					return err
 				}
-			case s3Bucket != "":
-				datastorePayload = &datablobstorage.S3Payload{
-					S3Bucket:   s3Bucket,
-					BucketPath: bucketPath,
+				// Trim the leading "/" that url.Parse returns
+				// in u.Path as that will cause issues.
+				path := strings.TrimPrefix(u.Path, "/")
+				switch u.Scheme {
+				case "s3", "S3":
+					datastorePayload = &datablobstorage.S3Payload{
+						S3Bucket:   u.Host,
+						BucketPath: path,
+					}
+				case "gs", "GS":
+					datastorePayload = &datablobstorage.GCPPayload{
+						GCPBucket:  u.Host,
+						BucketPath: path,
+					}
+				default:
+					return errors.Newf("unsupported datasource scheme: %s", u.Scheme)
 				}
 			case localPath != "":
 				datastorePayload = &datablobstorage.LocalPathPayload{
@@ -152,7 +163,7 @@ func Command() *cobra.Command {
 					LocalPathCRDBAccessAddr: localPathCRDBAccessAddr,
 				}
 			default:
-				return errors.AssertionFailedf("data source must be configured (--s3-bucket, --gcp-bucket, --direct-copy, --local-path)")
+				return errors.AssertionFailedf("data source must be configured (--bucket-path, --direct-copy, --local-path)")
 			}
 
 			src, err := datablobstorage.GenerateDatastore(ctx, datastorePayload, logger, false /* testFailedWriteToBucket */)
@@ -222,22 +233,10 @@ func Command() *cobra.Command {
 		"Number of tables to move at a time.",
 	)
 	cmd.PersistentFlags().StringVar(
-		&s3Bucket,
-		"s3-bucket",
-		"",
-		"Name of the S3 bucket.",
-	)
-	cmd.PersistentFlags().StringVar(
-		&gcpBucket,
-		"gcp-bucket",
-		"",
-		"Name of the GCP bucket.",
-	)
-	cmd.PersistentFlags().StringVar(
 		&bucketPath,
 		"bucket-path",
 		"",
-		"Path within the bucket where intermediate files are written (e.g., bucket-name/folder-name).",
+		"Path of the s3/gcp bucket where intermediate files are written (e.g., s3://bucket/path, or gs://bucket/path).",
 	)
 	cmd.PersistentFlags().StringVar(
 		&localPath,
@@ -257,7 +256,7 @@ func Command() *cobra.Command {
 		"",
 		"Address of data that CockroachDB can access to import from a local store (defaults to local-path-listen-addr).",
 	)
-	cmd.MarkFlagsMutuallyExclusive("s3-bucket", "gcp-bucket", "local-path")
+	cmd.MarkFlagsMutuallyExclusive("bucket-path", "local-path")
 
 	// The test-only is for internal use only and is hidden from the usage or help prompt.
 	const testOnlyFlagStr = "test-only"
