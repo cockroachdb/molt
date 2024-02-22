@@ -119,7 +119,7 @@ func (t *columnWithType) String() string {
 }
 
 func GetColumnTypes(
-	ctx context.Context, logger zerolog.Logger, conn dbconn.Conn, table dbtable.DBTable, testOnly bool,
+	ctx context.Context, logger zerolog.Logger, conn dbconn.Conn, table dbtable.DBTable, skipUnsupportedTypeErr bool,
 ) (columnsWithType, error) {
 	const (
 		pgQuery = `SELECT
@@ -249,7 +249,7 @@ ORDER BY
 			}
 			logger.Debug().Msgf("collect column:%s", newCol.String())
 			pgOid, err := mysqlconv.DataTypeToOID(newCol.dataType, newCol.columnType)
-			if err != nil && !testOnly {
+			if err != nil && !skipUnsupportedTypeErr {
 				return nil, err
 			}
 			newCol.typeOid = pgOid
@@ -285,9 +285,9 @@ func GetDropTableStmt(table dbtable.DBTable) (string, error) {
 }
 
 func GetCreateTableStmt(
-	ctx context.Context, logger zerolog.Logger, conn dbconn.Conn, table dbtable.DBTable, testOnly bool,
+	ctx context.Context, logger zerolog.Logger, conn dbconn.Conn, table dbtable.DBTable,
 ) (string, error) {
-	newCols, err := GetColumnTypes(ctx, logger, conn, table, testOnly)
+	newCols, err := GetColumnTypes(ctx, logger, conn, table, false /* skipUnsupportedTypeErr */)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed get columns for target table: %s", table.String())
 	}

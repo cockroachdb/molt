@@ -527,7 +527,7 @@ CREATE TABLE test_table_multi_pk (
 			res := make(map[string]map[string]columnWithType)
 
 			for _, missingTable := range missingTables {
-				newCols, err := GetColumnTypes(ctx, logger, conns[0], missingTable.DBTable, true /* testOnly */)
+				newCols, err := GetColumnTypes(ctx, logger, conns[0], missingTable.DBTable, true /* skipUnsupportedTypeErr */)
 				require.NoError(t, err)
 				res[missingTable.String()] = make(map[string]columnWithType)
 				for _, c := range newCols {
@@ -599,6 +599,7 @@ func TestCreateTableStatement(t *testing.T) {
 		createTableStatements    []string
 		tableFilter              utils.FilterConfig
 		expectedCreateTableStmts []string
+		expectedErr              string
 	}
 
 	const dbName = "create_new_schema"
@@ -607,18 +608,18 @@ func TestCreateTableStatement(t *testing.T) {
 			dialect: testutils.PostgresDialect,
 			desc:    "single pk",
 			createTableStatements: []string{`
-		CREATE TABLE employees (
-		   id INT PRIMARY KEY,
-		   unique_id UUID NOT NULL,
-		   name VARCHAR(50) NOT NULL,
-		   created_at TIMESTAMPTZ,
-		   updated_at DATE,
-		   is_hired BOOLEAN,
-		   age SMALLINT CHECK (age > 18),
-		   salary NUMERIC(8, 2),
-		   bonus REAL unique
-		);
-		`},
+				CREATE TABLE employees (
+				   id INT PRIMARY KEY,
+				   unique_id UUID NOT NULL,
+				   name VARCHAR(50) NOT NULL,
+				   created_at TIMESTAMPTZ,
+				   updated_at DATE,
+				   is_hired BOOLEAN,
+				   age SMALLINT CHECK (age > 18),
+				   salary NUMERIC(8, 2),
+				   bonus REAL unique
+				);
+				`},
 			tableFilter: utils.FilterConfig{TableFilter: `employees`},
 			expectedCreateTableStmts: []string{
 				`CREATE TABLE employees (id INT4 NOT NULL PRIMARY KEY, unique_id UUID NOT NULL, name VARCHAR NOT NULL, created_at TIMESTAMPTZ, updated_at DATE, is_hired BOOL, age INT2, salary DECIMAL, bonus FLOAT4)`,
@@ -628,19 +629,19 @@ func TestCreateTableStatement(t *testing.T) {
 			dialect: testutils.PostgresDialect,
 			desc:    "multiple pks",
 			createTableStatements: []string{`
-		CREATE TABLE employees (
-		   id INT NOT NULL,
-		   unique_id UUID NOT NULL,
-		   name VARCHAR(50) NOT NULL,
-		   created_at TIMESTAMPTZ,
-		   updated_at DATE,
-		   is_hired BOOLEAN,
-		   age SMALLINT CHECK (age > 18),
-		   salary NUMERIC(8, 2),
-		   bonus REAL unique,
-		   CONSTRAINT "primary" PRIMARY KEY (id, unique_id, created_at)
-		);
-		`},
+				CREATE TABLE employees (
+				   id INT NOT NULL,
+				   unique_id UUID NOT NULL,
+				   name VARCHAR(50) NOT NULL,
+				   created_at TIMESTAMPTZ,
+				   updated_at DATE,
+				   is_hired BOOLEAN,
+				   age SMALLINT CHECK (age > 18),
+				   salary NUMERIC(8, 2),
+				   bonus REAL unique,
+				   CONSTRAINT "primary" PRIMARY KEY (id, unique_id, created_at)
+				);
+				`},
 			tableFilter: utils.FilterConfig{TableFilter: `employees`},
 			expectedCreateTableStmts: []string{
 				`CREATE TABLE employees (id INT4 NOT NULL, unique_id UUID NOT NULL, name VARCHAR NOT NULL, created_at TIMESTAMPTZ NOT NULL, updated_at DATE, is_hired BOOL, age INT2, salary DECIMAL, bonus FLOAT4, CONSTRAINT "primary" PRIMARY KEY (id, unique_id, created_at))`,
@@ -650,19 +651,19 @@ func TestCreateTableStatement(t *testing.T) {
 			dialect: testutils.PostgresDialect,
 			desc:    "foreign key is ignored",
 			createTableStatements: []string{`
-		CREATE TABLE department (
-		   department_id SERIAL PRIMARY KEY,
-		   department_name VARCHAR(50) NOT NULL
-		);
+				CREATE TABLE department (
+				   department_id SERIAL PRIMARY KEY,
+				   department_name VARCHAR(50) NOT NULL
+				);
 		
-		`,
+				`,
 				`
-		CREATE TABLE employee (
-		   employee_id SERIAL PRIMARY KEY,
-		   employee_name VARCHAR(50) NOT NULL,
-		   department_id INT REFERENCES department(department_id) ON DELETE CASCADE
-		);
-		`},
+				CREATE TABLE employee (
+				   employee_id SERIAL PRIMARY KEY,
+				   employee_name VARCHAR(50) NOT NULL,
+				   department_id INT REFERENCES department(department_id) ON DELETE CASCADE
+				);
+				`},
 			tableFilter: utils.FilterConfig{TableFilter: `employee`},
 			expectedCreateTableStmts: []string{
 				`CREATE TABLE employee (employee_id INT4 NOT NULL PRIMARY KEY, employee_name VARCHAR NOT NULL, department_id INT4)`,
@@ -672,21 +673,21 @@ func TestCreateTableStatement(t *testing.T) {
 			dialect: testutils.PostgresDialect,
 			desc:    "unique, check and 2nd index are ignored",
 			createTableStatements: []string{`
-		CREATE TABLE employee (
-		   id SERIAL PRIMARY KEY,
-		   name VARCHAR(50) UNIQUE NOT NULL,
-		   age INTEGER,
-		   address VARCHAR(50) NOT NULL,
-		   start_date DATE,
-		   end_date DATE,
-		   CONSTRAINT check_dates CHECK (start_date <= end_date),  -- Check Constraint
-		   CONSTRAINT unique_constraint_name UNIQUE (start_date)  -- Secondary index
-		);
+				CREATE TABLE employee (
+				   id SERIAL PRIMARY KEY,
+				   name VARCHAR(50) UNIQUE NOT NULL,
+				   age INTEGER,
+				   address VARCHAR(50) NOT NULL,
+				   start_date DATE,
+				   end_date DATE,
+				   CONSTRAINT check_dates CHECK (start_date <= end_date),  -- Check Constraint
+				   CONSTRAINT unique_constraint_name UNIQUE (start_date)  -- Secondary index
+				);
 		
-		`,
+				`,
 				`
-		CREATE UNIQUE INDEX my_unique_idx ON employee(age);
-		`},
+				CREATE UNIQUE INDEX my_unique_idx ON employee(age);
+				`},
 			tableFilter: utils.FilterConfig{TableFilter: `employee`},
 			expectedCreateTableStmts: []string{
 				`CREATE TABLE employee (id INT4 NOT NULL PRIMARY KEY, name VARCHAR NOT NULL, age INT4, address VARCHAR NOT NULL, start_date DATE, end_date DATE)`,
@@ -696,18 +697,97 @@ func TestCreateTableStatement(t *testing.T) {
 			dialect: testutils.PostgresDialect,
 			desc:    "enum column",
 			createTableStatements: []string{`
-CREATE TYPE my_enum_type AS ENUM ('value1', 'value2', 'value3');
-`, `
-CREATE TABLE enum_table (
-    id INT NOT NULL PRIMARY KEY,
-    enum_column my_enum_type,
-    other_column1 TEXT
-);
-`,
+		CREATE TYPE my_enum_type AS ENUM ('value1', 'value2', 'value3');
+		`, `
+		CREATE TABLE enum_table (
+		   id INT NOT NULL PRIMARY KEY,
+		   enum_column my_enum_type,
+		   other_column1 TEXT
+		);
+		`,
 			},
 			tableFilter: utils.FilterConfig{TableFilter: `enum_table`},
 			expectedCreateTableStmts: []string{
 				` CREATE TYPE IF NOT EXISTS my_enum_type AS ENUM ('value1', 'value2', 'value3'); CREATE TABLE enum_table (id INT4 NOT NULL PRIMARY KEY, enum_column my_enum_type, other_column1 STRING)`},
+		},
+		{
+			dialect: testutils.MySQLDialect,
+			desc:    "single pk",
+			createTableStatements: []string{`
+CREATE TABLE test_table (
+    integer_col INT PRIMARY KEY,
+    smallint_col SMALLINT,
+    bigint_col BIGINT NOT NULL,
+    decimal_col DECIMAL(10,2),
+    float_col FLOAT,
+    double_col DOUBLE,
+    bit_col BIT NOT NULL,
+    date_col DATE,
+    datetime_col DATETIME,
+    timestamp_col TIMESTAMP,
+    time_col TIME NOT NULL,
+    char_col CHAR(10),
+    varchar_col VARCHAR(255),
+    binary_col BINARY(10) UNIQUE,
+    varbinary_col VARBINARY(255),
+    blob_col BLOB,
+    text_col TEXT NOT NULL,
+    mediumtext_col MEDIUMTEXT,
+    longtext_col LONGTEXT,
+    json_col JSON,
+    enum_col ENUM('value1', 'value2', 'value3')
+);
+`,
+			},
+			tableFilter: utils.FilterConfig{TableFilter: `test_table`},
+			expectedCreateTableStmts: []string{
+				` CREATE TYPE IF NOT EXISTS create_new_schema_test_table_enum_col_enum AS ENUM ('value1','value2','value3') CREATE TABLE test_table (integer_col INT4 NOT NULL PRIMARY KEY, smallint_col INT2, bigint_col INT8 NOT NULL, decimal_col DECIMAL, float_col FLOAT4, double_col FLOAT8, bit_col VARBIT NOT NULL, date_col DATE, datetime_col TIMESTAMP, timestamp_col TIMESTAMPTZ, time_col TIME NOT NULL, char_col VARCHAR, varchar_col VARCHAR, binary_col BYTES, varbinary_col BYTES, blob_col STRING, text_col STRING NOT NULL, mediumtext_col STRING, longtext_col STRING, json_col JSONB, enum_col create_new_schema_test_table_enum_col_enum)`},
+		},
+		{
+			dialect: testutils.MySQLDialect,
+			desc:    "multiple pk",
+			createTableStatements: []string{`
+CREATE TABLE test_table_multi_pk (
+    integer_col INT,
+    smallint_col SMALLINT,
+    bigint_col BIGINT,
+    decimal_col DECIMAL(10,2) CHECK (decimal_col <= 10),
+    float_col FLOAT UNIQUE,
+    double_col DOUBLE,
+    bit_col BIT,
+    date_col DATE,
+    datetime_col DATETIME,
+    timestamp_col TIMESTAMP,
+    time_col TIME,
+    char_col CHAR(10),
+    varchar_col VARCHAR(255),
+    binary_col BINARY(10),
+    varbinary_col VARBINARY(255),
+    blob_col BLOB,
+    text_col TEXT,
+    mediumtext_col MEDIUMTEXT,
+    longtext_col LONGTEXT,
+    json_col JSON,
+    enum_col ENUM('value1', 'value2', 'value3'),
+    PRIMARY KEY (integer_col, smallint_col)
+);
+`,
+			},
+			tableFilter: utils.FilterConfig{TableFilter: `test_table_multi_pk`},
+			expectedCreateTableStmts: []string{
+				` CREATE TYPE IF NOT EXISTS create_new_schema_test_table_multi_pk_enum_col_enum AS ENUM ('value1','value2','value3') CREATE TABLE test_table_multi_pk (integer_col INT4 NOT NULL, smallint_col INT2 NOT NULL, bigint_col INT8, decimal_col DECIMAL, float_col FLOAT4, double_col FLOAT8, bit_col VARBIT, date_col DATE, datetime_col TIMESTAMP, timestamp_col TIMESTAMPTZ, time_col TIME, char_col VARCHAR, varchar_col VARCHAR, binary_col BYTES, varbinary_col BYTES, blob_col STRING, text_col STRING, mediumtext_col STRING, longtext_col STRING, json_col JSONB, enum_col create_new_schema_test_table_multi_pk_enum_col_enum, CONSTRAINT "primary" PRIMARY KEY (integer_col, smallint_col))`},
+		}, {
+			dialect: testutils.MySQLDialect,
+			desc:    "unsupported type",
+			createTableStatements: []string{`
+CREATE TABLE test_table_set_col (
+    integer_col INT PRIMARY KEY,
+    set_col SET('value1', 'value2', 'value3')
+);
+`,
+			},
+			tableFilter: utils.FilterConfig{TableFilter: `test_table_set_col`},
+			expectedErr: "set not yet handled",
 		},
 	} {
 		t.Run(fmt.Sprintf("%s/%s", tc.dialect.String(), tc.desc), func(t *testing.T) {
@@ -716,6 +796,9 @@ CREATE TABLE enum_table (
 			switch tc.dialect {
 			case testutils.PostgresDialect:
 				conns[0], err = dbconn.TestOnlyCleanDatabase(ctx, "source", testutils.PGConnStr(), fmt.Sprintf("%s-%d", dbName, idx))
+				require.NoError(t, err)
+			case testutils.MySQLDialect:
+				conns[0], err = dbconn.TestOnlyCleanDatabase(ctx, "source", testutils.MySQLConnStr(), dbName)
 				require.NoError(t, err)
 			default:
 				t.Fatalf("unsupported dialect: %s", tc.dialect.String())
@@ -738,12 +821,18 @@ CREATE TABLE enum_table (
 			missingTables, err := getFilteredMissingTables(ctx, conns, tc.tableFilter)
 			require.NoError(t, err)
 
-			require.Equal(t, len(tc.expectedCreateTableStmts), len(missingTables))
+			if tc.expectedErr == "" {
+				require.Equal(t, len(tc.expectedCreateTableStmts), len(missingTables))
+			}
 
 			for i, missingTable := range missingTables {
-				actualCreateTableStmt, err := GetCreateTableStmt(ctx, logger, conns[0], missingTable.DBTable, true /* testOnly */)
-				require.NoError(t, err)
-				require.Equal(t, tc.expectedCreateTableStmts[i], actualCreateTableStmt)
+				actualCreateTableStmt, err := GetCreateTableStmt(ctx, logger, conns[0], missingTable.DBTable)
+				if tc.expectedErr != "" {
+					require.ErrorContains(t, err, tc.expectedErr)
+				} else {
+					require.NoError(t, err)
+					require.Equal(t, tc.expectedCreateTableStmts[i], actualCreateTableStmt)
+				}
 			}
 
 			t.Logf("test passed!")
