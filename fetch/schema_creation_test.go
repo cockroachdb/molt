@@ -198,6 +198,68 @@ CREATE TABLE enum_table (
 				},
 			},
 		},
+		{
+			dialect: testutils.MySQLDialect,
+			desc:    "single pk",
+			createTableStatements: []string{`
+		CREATE TABLE employees (
+		   id INT PRIMARY KEY,
+		   unique_id UUID NOT NULL,
+		   name VARCHAR(50) NOT NULL,
+		   created_at TIMESTAMPTZ,
+		   updated_at DATE,
+		   is_hired BOOLEAN,
+		   age SMALLINT CHECK (age > 18),
+		   salary NUMERIC(8, 2),
+		   bonus REAL unique
+		);
+		`},
+			tableFilter: utils.FilterConfig{TableFilter: `employees`},
+			expectedColumnTypes: map[string]map[string]columnWithType{
+				"public.employees": {
+					"id": {
+						dataType:     "integer",
+						typeOid:      oid.T_int4,
+						notNullable:  true,
+						isPrimaryKey: true,
+					},
+					"name": {
+						dataType:    "character varying(50)",
+						typeOid:     oid.T_varchar,
+						notNullable: true,
+					},
+					"created_at": {
+						dataType: "timestamp with time zone",
+						typeOid:  oid.T_timestamptz,
+					},
+					"is_hired": {
+						dataType: "boolean",
+						typeOid:  oid.T_bool,
+					},
+					"salary": {
+						dataType: "numeric(8,2)",
+						typeOid:  oid.T_numeric,
+					},
+					"bonus": {
+						dataType: "real",
+						typeOid:  oid.T_float4,
+					},
+					"unique_id": {
+						dataType:    "uuid",
+						typeOid:     oid.T_uuid,
+						notNullable: true,
+					},
+					"updated_at": {
+						dataType: "date",
+						typeOid:  oid.T_date,
+					},
+					"age": {
+						dataType: "smallint",
+						typeOid:  oid.T_int2,
+					},
+				},
+			},
+		},
 	} {
 
 		t.Run(fmt.Sprintf("%s/%s", tc.dialect.String(), tc.desc), func(t *testing.T) {
