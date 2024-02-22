@@ -1,6 +1,8 @@
 package datablobstorage
 
 import (
+	"bufio"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
@@ -9,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -111,15 +114,37 @@ func (l *localStore) CreateFromReader(
 		return nil, err
 	}
 	buf := make([]byte, 1024*1024)
+	rows := <-numRows
+
+	if fileExt == "tar.gz" {
+		// Need to create a GZIP writer so we can write GZIP data
+		// to the file for the header.
+		gf := gzip.NewWriter(f)
+		fw := bufio.NewWriter(gf)
+		if _, err := fw.WriteString(fmt.Sprintf("%d\n", rows)); err != nil {
+			return nil, err
+		}
+		if err := fw.Flush(); err != nil {
+			return nil, err
+		}
+		if err := gf.Close(); err != nil {
+			return nil, err
+		}
+	} else {
+		if _, err := f.WriteString(fmt.Sprintf("%d\n", rows)); err != nil {
+			return nil, err
+		}
+	}
+
 	for {
 		n, err := r.Read(buf)
 		if testingKnobs.FailedWriteToBucket.FailedAfterReadFromPipe {
 			return nil, errors.New(LocalWriterMockErrMsg)
 		}
+
 		if err != nil {
 			if err == io.EOF {
 				logger.Debug().Msgf("wrote file")
-				rows := <-numRows
 				return &localResource{path: p, store: l, rows: rows}, nil
 			}
 			return nil, err
@@ -143,14 +168,54 @@ func (l *localStore) ListFromContinuationPoint(
 	for _, f := range files {
 		if f.Name() >= fileName && utils.MatchesFileConvention(f.Name()) {
 			p := path.Join(baseDir, f.Name())
+			numRows, err := readFirstLine(p)
+			if err != nil {
+				l.logger.Err(err).Msg("failed to detect number of rows")
+			}
+
+			numRowsInt, err := strconv.Atoi(numRows)
+			if err != nil {
+				l.logger.Err(err).Msgf("failed to convert string %s to integer", numRows)
+			}
+
 			resources = append(resources, &localResource{
 				path:  p,
 				store: l,
+				rows:  numRowsInt,
 			})
 		}
 
 	}
 	return resources, nil
+}
+
+func readFirstLine(filePath string) (string, error) {
+	var reader io.Reader
+	f, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	reader = f
+
+	// We need a gzip reader if we have a gzip extension.
+	if filepath.Ext(filePath) == ".gz" {
+		gr, err := gzip.NewReader(f)
+		if err != nil {
+			return "", err
+		}
+		defer gr.Close()
+		reader = gr
+	}
+
+	scanner := bufio.NewScanner(reader)
+	if !scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			return "", nil
+		}
+		return "", fmt.Errorf("empty file")
+	}
+	return scanner.Text(), nil
 }
 
 func (l *localStore) DefaultFlushBatchSize() int {
@@ -215,6 +280,10 @@ func (l *localResource) Rows() int {
 func (l *localResource) MarkForCleanup(ctx context.Context) error {
 	l.store.logger.Debug().Msgf("removing %s", l.path)
 	return os.Remove(l.path)
+}
+
+func (l *localResource) IsLocal() bool {
+	return true
 }
 
 const LocalWriterMockErrMsg = "forced error for local path storage"

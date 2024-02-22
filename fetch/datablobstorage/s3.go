@@ -64,6 +64,10 @@ func (s *s3Resource) Rows() int {
 	return s.rows
 }
 
+func (s *s3Resource) IsLocal() bool {
+	return false
+}
+
 func (s *s3Resource) MarkForCleanup(ctx context.Context) error {
 	s.store.batchDelete.Lock()
 	defer s.store.batchDelete.Unlock()

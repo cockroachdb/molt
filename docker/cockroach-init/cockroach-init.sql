@@ -9,3 +9,5 @@ CREATE TABLE employees (
 	salary DECIMAL(8,2),
 	bonus FLOAT4
 );
+
+CREATE TABLE tbl1(id INT PRIMARY KEY, t TEXT);

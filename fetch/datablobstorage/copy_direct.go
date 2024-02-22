@@ -32,6 +32,11 @@ func (c *copyCRDBDirect) CreateFromReader(
 	numRows chan int,
 	testingKnobs testutils.FetchTestingKnobs,
 ) (Resource, error) {
+	// Drain the channel so we don't block.
+	go func() {
+		<-numRows
+	}()
+
 	conn, err := pgx.ConnectConfig(ctx, c.target.Config())
 	if err != nil {
 		return nil, err
@@ -41,7 +46,7 @@ func (c *copyCRDBDirect) CreateFromReader(
 	}
 
 	c.logger.Debug().Int("batch", iteration).Msgf("csv batch starting")
-	if _, err := conn.PgConn().CopyFrom(ctx, r, dataquery.CopyFrom(table)); err != nil {
+	if _, err := conn.PgConn().CopyFrom(ctx, r, dataquery.CopyFrom(table, false /*skipHeader*/)); err != nil {
 		pgErr := status.MaybeReportException(ctx, c.logger, conn, table.Name, err, "" /* fileName */, status.StageDataLoad)
 		return nil, errors.CombineErrors(pgErr, conn.Close(ctx))
 	}

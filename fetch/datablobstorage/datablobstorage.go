@@ -41,6 +41,7 @@ type Resource interface {
 	ImportURL() (string, error)
 	MarkForCleanup(ctx context.Context) error
 	Reader(ctx context.Context) (io.ReadCloser, error)
+	IsLocal() bool
 }
 
 func getKeyAndPrefix(fileName, bucketPath string, table dbtable.VerifiedTable) (string, string) {

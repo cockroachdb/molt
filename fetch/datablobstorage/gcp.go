@@ -220,3 +220,7 @@ func (r *gcpResource) Reader(ctx context.Context) (io.ReadCloser, error) {
 func (r *gcpResource) MarkForCleanup(ctx context.Context) error {
 	return r.store.client.Bucket(r.store.bucket).Object(r.key).Delete(ctx)
 }
+
+func (r *gcpResource) IsLocal() bool {
+	return false
+}

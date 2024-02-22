@@ -33,3 +33,7 @@ BEGIN
         i := i + 1;
     END LOOP;
 END $$;
+
+CREATE TABLE tbl1(id INT PRIMARY KEY, t TEXT);
+
+INSERT INTO tbl1 VALUES (1, 'aaa'), (2, 'bb b'), (3, 'ééé'), (4, '🫡🫡🫡'), (5, '娜娜'), (6, 'Лукас'), (7, 'ルカス');
