@@ -197,6 +197,19 @@ type gcpResource struct {
 }
 
 func (r *gcpResource) ImportURL() (string, error) {
+	// If we do not have the GOOGLE_APPLICATION_CREDENTIALS env var
+	// set, or do not have the gcloud/application_default_credentials.json file
+	// in a well known directory, then we authed using the GCE machine itself
+	// which will generate an oauth token using the service account that is
+	// active meaning we need to use AUTH=implicit as store.creds.JSON is nil.
+	if r.store.creds.JSON == nil {
+		return fmt.Sprintf(
+			"gs://%s/%s?AUTH=implicit",
+			r.store.bucket,
+			r.key,
+		), nil
+	}
+
 	return fmt.Sprintf(
 		"gs://%s/%s?CREDENTIALS=%s",
 		r.store.bucket,
