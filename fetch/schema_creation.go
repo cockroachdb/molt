@@ -190,6 +190,12 @@ ORDER BY
     t1.table_name,
     t2.ordinal_position;
 `
+		mysqlQuery = `
+SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_KEY
+FROM information_schema.COLUMNS
+WHERE TABLE_SCHEMA = $1 
+  AND TABLE_NAME = $2; 
+`
 	)
 
 	res := make([]columnWithType, 0)
@@ -211,6 +217,16 @@ ORDER BY
 		}
 		logger.Info().Msgf("finished getting column types for table: %s", table.String())
 	// TODO(janexing): support mysql.
+	case *dbconn.MySQLConn:
+		rows, err := conn.Query(mysqlQuery, table.Table, table.Schema)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			newCol := columnWithType{}
+			if err := rows.Scan(&newCol.schemaName, &newCol.tableName, &newCol.columnName, &newCol.dataType, &newCol.notNullable, )
+		}
+
 	default:
 		return nil, errors.New("not supported conn type")
 	}
