@@ -117,7 +117,7 @@ jobs:
           echo "$EOF" >> $GITHUB_OUTPUT
       - name: Log out the git short log
         run: |
-          echo ${{steps.extract.outputs.shortlog}}
+          echo "${{steps.extract.outputs.shortlog}}"
       - name: Login to JIRA
         uses: atlassian/gajira-login@master
         env:
@@ -130,8 +130,8 @@ jobs:
         with:
           project: DOC
           issuetype: Docs
-          summary: MOLT Fetch/Verify (${{steps.extract.outputs.release_date}}) release ${{steps.extract.outputs.tag}}
-          description: ${{steps.extract.outputs.shortlog}}
+          summary: MOLT Fetch/Verify ("${{steps.extract.outputs.release_date}}") release "${{steps.extract.outputs.tag}}"
+          description: "${{steps.extract.outputs.shortlog}}"
           # 10310 is product area - Migrations. 10175 is doc type - release notes. Assignee is Ryan Kuo.
           fields: '{"customfield_10310": {"id": "11464"}, "assignee": {"id": "5d815e4401e2cb0c301faf7e"}, "customfield_10175": {"id": "11432"}}'
       - name: Log created issue
