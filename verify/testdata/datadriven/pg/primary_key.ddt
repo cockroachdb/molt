@@ -1,0 +1,39 @@
+# No PRIMARY KEY.
+
+exec source
+CREATE TABLE t_bad (i1 INT4 NOT NULL, i2 INT4 NOT NULL, t TEXT NOT NULL, CONSTRAINT pkey PRIMARY KEY (i2, i1))
+----
+[pg] CREATE TABLE
+
+exec target
+CREATE TABLE t_bad (i1 INT4 NOT NULL, i2 INT4 NOT NULL, t TEXT NOT NULL, CONSTRAINT pkey PRIMARY KEY (i1, i2))
+----
+[crdb] CREATE TABLE
+
+verify
+----
+{"level":"warn","type":"data","table_schema":"public","table_name":"t_bad","mismatch_info":"PRIMARY KEY does not match source of truth (columns and types must match)","message":"mismatching table definition"}
+
+exec all
+DROP TABLE t_bad;
+----
+[pg] DROP TABLE
+[crdb] DROP TABLE
+
+
+exec all
+CREATE TABLE t_good (i1 INT4 NOT NULL, i2 INT4 NOT NULL, t TEXT NOT NULL, CONSTRAINT pkey PRIMARY KEY (i2, i1))
+----
+[pg] CREATE TABLE
+[crdb] CREATE TABLE
+
+verify
+----
+{"level":"info","message":"starting verify on public.t_good, shard 1/1"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"t_good","num_truth_rows":0,"num_success":0,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.t_good (shard 1/1)"}
+
+exec all
+DROP TABLE t_good;
+----
+[pg] DROP TABLE
+[crdb] DROP TABLE
