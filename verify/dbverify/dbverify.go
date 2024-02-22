@@ -44,7 +44,7 @@ func Verify(ctx context.Context, conns dbconn.OrderedConns) (utils.Result, error
 		case *dbconn.MySQLConn:
 			rows, err := conn.QueryContext(
 				ctx,
-				`SELECT table_name FROM information_schema.tables
+				`SELECT table_schema, table_name FROM information_schema.tables
 WHERE table_schema = database() AND table_type = "BASE TABLE"
 ORDER BY table_name`,
 			)
@@ -54,13 +54,14 @@ ORDER BY table_name`,
 
 			for rows.Next() {
 				var tn string
-				if err := rows.Scan(&tn); err != nil {
+				var ts string
+				if err := rows.Scan(&ts, &tn); err != nil {
 					return utils.Result{}, errors.Wrap(err, "error decoding tables metadata")
 				}
 				// Fake the public schema for now.
 				tm := dbtable.DBTable{
 					Name: dbtable.Name{
-						Schema: "public",
+						Schema: tree.Name(ts),
 						Table:  tree.Name(tn),
 					},
 				}
