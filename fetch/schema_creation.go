@@ -71,7 +71,7 @@ type columnWithType struct {
 	columnName    string
 	dataType      string
 	typeOid       oid.Oid
-	notNullable   bool
+	nullable      bool
 	isPrimaryKey  bool
 	udtName       string
 	udtDefinition string
@@ -97,7 +97,7 @@ func (t *columnWithType) CRDBColDef(includePk bool) (*tree.ColumnTableDef, error
 		Name: tree.Name(t.columnName),
 		Type: colType,
 	}
-	if !t.notNullable {
+	if t.nullable {
 		res.Nullable.Nullability = parser.NULL
 	}
 	if t.isPrimaryKey && includePk {
@@ -112,7 +112,7 @@ func (t *columnWithType) Name() string {
 
 func (t *columnWithType) String() string {
 	return fmt.Sprintf("schema:%q, table:%q, column:%q, type:%q, typeoid: %d, nullable:%t, pk:%t\n",
-		t.schemaName, t.tableName, t.columnName, t.dataType, t.typeOid, t.notNullable, t.isPrimaryKey)
+		t.schemaName, t.tableName, t.columnName, t.dataType, t.typeOid, t.nullable, t.isPrimaryKey)
 }
 
 func GetColumnTypes(
@@ -125,7 +125,7 @@ func GetColumnTypes(
     t1.column_name,
     t1.data_type,
     t1.type_oid,
-    t1.not_nullable,
+    t1.nullable,
     t1.is_primary_key,
     COALESCE(t2.udt_name, '') AS enum_type,
     COALESCE(t2.udt_def, '') AS enum_type_definition
@@ -136,7 +136,7 @@ FROM (
         a.attname AS column_name,
         format_type(a.atttypid, a.atttypmod) AS data_type,
         a.atttypid AS type_oid,
-        a.attnotnull AS not_nullable,
+        NOT a.attnotnull AS nullable,
         CASE
             WHEN a.attname IN (
                 SELECT column_name
@@ -203,7 +203,7 @@ ORDER BY
 		}
 		for rows.Next() {
 			newCol := columnWithType{}
-			if err := rows.Scan(&newCol.schemaName, &newCol.tableName, &newCol.columnName, &newCol.dataType, &newCol.typeOid, &newCol.notNullable, &newCol.isPrimaryKey, &newCol.udtName, &newCol.udtDefinition); err != nil {
+			if err := rows.Scan(&newCol.schemaName, &newCol.tableName, &newCol.columnName, &newCol.dataType, &newCol.typeOid, &newCol.nullable, &newCol.isPrimaryKey, &newCol.udtName, &newCol.udtDefinition); err != nil {
 				return nil, errors.Wrap(err, "failed to scan query result to a columnWithType object")
 			}
 			logger.Debug().Msgf("collect column:%s", newCol.String())

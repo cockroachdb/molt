@@ -54,42 +54,45 @@ func TestGetColumnTypes(t *testing.T) {
 					"id": {
 						dataType:     "integer",
 						typeOid:      oid.T_int4,
-						notNullable:  true,
 						isPrimaryKey: true,
 					},
 					"name": {
-						dataType:    "character varying(50)",
-						typeOid:     oid.T_varchar,
-						notNullable: true,
+						dataType: "character varying(50)",
+						typeOid:  oid.T_varchar,
 					},
 					"created_at": {
 						dataType: "timestamp with time zone",
 						typeOid:  oid.T_timestamptz,
+						nullable: true,
 					},
 					"is_hired": {
 						dataType: "boolean",
 						typeOid:  oid.T_bool,
+						nullable: true,
 					},
 					"salary": {
 						dataType: "numeric(8,2)",
 						typeOid:  oid.T_numeric,
+						nullable: true,
 					},
 					"bonus": {
 						dataType: "real",
 						typeOid:  oid.T_float4,
+						nullable: true,
 					},
 					"unique_id": {
-						dataType:    "uuid",
-						typeOid:     oid.T_uuid,
-						notNullable: true,
+						dataType: "uuid",
+						typeOid:  oid.T_uuid,
 					},
 					"updated_at": {
 						dataType: "date",
 						typeOid:  oid.T_date,
+						nullable: true,
 					},
 					"age": {
 						dataType: "smallint",
 						typeOid:  oid.T_int2,
+						nullable: true,
 					},
 				},
 			},
@@ -117,45 +120,46 @@ func TestGetColumnTypes(t *testing.T) {
 					"id": {
 						dataType:     "integer",
 						typeOid:      oid.T_int4,
-						notNullable:  true,
 						isPrimaryKey: true,
 					},
 					"name": {
-						dataType:    "character varying(50)",
-						typeOid:     oid.T_varchar,
-						notNullable: true,
+						dataType: "character varying(50)",
+						typeOid:  oid.T_varchar,
 					},
 					"created_at": {
 						dataType:     "timestamp with time zone",
 						typeOid:      oid.T_timestamptz,
 						isPrimaryKey: true,
-						notNullable:  true,
 					},
 					"is_hired": {
 						dataType: "boolean",
 						typeOid:  oid.T_bool,
+						nullable: true,
 					},
 					"salary": {
 						dataType: "numeric(8,2)",
 						typeOid:  oid.T_numeric,
+						nullable: true,
 					},
 					"bonus": {
 						dataType: "real",
 						typeOid:  oid.T_float4,
+						nullable: true,
 					},
 					"unique_id": {
 						dataType:     "uuid",
 						typeOid:      oid.T_uuid,
-						notNullable:  true,
 						isPrimaryKey: true,
 					},
 					"updated_at": {
 						dataType: "date",
 						typeOid:  oid.T_date,
+						nullable: true,
 					},
 					"age": {
 						dataType: "smallint",
 						typeOid:  oid.T_int2,
+						nullable: true,
 					},
 				},
 			},
@@ -178,16 +182,17 @@ CREATE TABLE enum_table (
 					"id": {
 						dataType:     "integer",
 						typeOid:      oid.T_int4,
-						notNullable:  true,
 						isPrimaryKey: true,
 					},
 					"enum_column": {
 						dataType:      "my_enum_type",
+						nullable:      true,
 						udtName:       "my_enum_type",
 						udtDefinition: "CREATE TYPE IF NOT EXISTS my_enum_type AS ENUM ('value1', 'value2', 'value3');",
 					},
 					"other_column1": {
 						dataType: "text",
+						nullable: true,
 						typeOid:  oid.T_text,
 					},
 				},
@@ -268,8 +273,8 @@ func checkIfColInfoEqual(actual, expected columnWithType) error {
 	if actual.dataType != expected.dataType {
 		return errors.AssertionFailedf("[%s] expected datatype: %s, but got: %s", actual.Name(), expected.dataType, actual.dataType)
 	}
-	if actual.notNullable != expected.notNullable {
-		return errors.AssertionFailedf("[%s] expected notNullable: %t, but got: %t", actual.Name(), expected.notNullable, actual.notNullable)
+	if actual.nullable != expected.nullable {
+		return errors.AssertionFailedf("[%s] expected nullable: %t, but got: %t", actual.Name(), expected.nullable, actual.nullable)
 	}
 	if actual.isPrimaryKey != expected.isPrimaryKey {
 		return errors.AssertionFailedf("[%s] expected isPrimaryKey: %t, but got: %t", actual.Name(), expected.isPrimaryKey, actual.isPrimaryKey)
