@@ -1,0 +1,34 @@
+convert oid=1083
+TIME('02:12:22')
+----
+*tree.DTime:'02:12:22';
+
+convert oid=1083
+TIME('02:12:22:0001')
+----
+*tree.DTime:'02:12:22';
+
+convert oid=1083
+TIME('-838:59:59')
+----
+*tree.DInterval:'-838:59:59';
+
+convert oid=1083
+TIME('-12:59:59')
+----
+*tree.DInterval:'-12:59:59';
+
+convert oid=1083
+TIME('00:11:12')
+----
+*tree.DTime:'00:11:12';
+
+convert oid=1083
+TIME('121312');
+----
+*tree.DTime:'12:13:12';
+
+convert oid=1083
+TIME('25:12:22')
+----
+*tree.DInterval:'25:12:22';

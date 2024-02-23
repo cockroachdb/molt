@@ -1,0 +1,34 @@
+convert
+b'11110000011'
+----
+error: no oid provided
+
+convert oid=1560
+b'11110000011'
+----
+*tree.DBitArray:B'11110000011';
+
+convert oid=1560
+b'111111111110000011'
+----
+*tree.DBitArray:B'111111111110000011';
+
+convert oid=1560
+b'1'
+----
+*tree.DBitArray:B'1';
+
+convert oid=1560
+b'0'
+----
+*tree.DBitArray:B'0';
+
+convert oid=1565
+b'11110000011'
+----
+unknown oid: 1565
+
+convert oid=18
+b'11110000011'
+----
+scan row dynamic types error: value type OID 18 not yet translatable
