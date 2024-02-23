@@ -1,0 +1,14 @@
+convert
+'1'::bit
+----
+*tree.DBitArray: B'1'
+
+convert
+'10001'::bit(4)
+----
+*tree.DBitArray: B'1000'
+
+convert
+'10001'::bit(5)
+----
+*tree.DBitArray: B'10001'
