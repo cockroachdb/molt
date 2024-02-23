@@ -51,7 +51,8 @@ WHERE table_schema = database() AND table_name = ? ORDER BY ORDINAL_POSITION`,
 					var dt string
 					var cn string
 					require.NoError(t, rows.Scan(&cn, &dt, &ct))
-					oid := DataTypeToOID(dt, ct)
+					oid, err := DataTypeToOID(dt, ct)
+					require.NoError(t, err)
 					str := fmt.Sprintf("(non-standard) %d", oid)
 					if typ, ok := types.OidToType[oid]; ok {
 						str = typ.String()
