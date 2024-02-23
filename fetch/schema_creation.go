@@ -101,7 +101,7 @@ func (t *columnWithType) CRDBColDef(includePk bool) (*tree.ColumnTableDef, error
 		Type: colType,
 	}
 	if t.nullable {
-		res.Nullable.Nullability = parser.NULL
+		res.Nullable.Nullability = tree.SilentNull
 	}
 	if t.isPrimaryKey && includePk {
 		res.PrimaryKey.IsPrimaryKey = true
@@ -195,27 +195,31 @@ ORDER BY
     t2.ordinal_position;
 `
 		mysqlQuery = `SELECT 
-    TABLE_SCHEMA, 
-    TABLE_NAME, 
-    COLUMN_NAME, 
-    DATA_TYPE,
-    COLUMN_TYPE, 
+    c.TABLE_SCHEMA, 
+    c.TABLE_NAME, 
+    c.COLUMN_NAME, 
+    c.DATA_TYPE,
+    c.COLUMN_TYPE, 
     CASE 
-        WHEN IS_NULLABLE = 'YES' THEN 'TRUE'
+        WHEN c.IS_NULLABLE = 'YES' THEN 'TRUE'
         ELSE 'FALSE' 
     END AS NULLABLE,
     CASE 
-        WHEN COLUMN_KEY = 'PRI' THEN 'TRUE'
+        WHEN c.COLUMN_KEY = 'PRI' THEN 'TRUE'
         ELSE 'FALSE'
     END AS IS_PRIMARY_KEY
-FROM information_schema.COLUMNS 
+FROM 
+    information_schema.COLUMNS c
+JOIN 
+    information_schema.TABLES t ON c.TABLE_SCHEMA = t.TABLE_SCHEMA AND c.TABLE_NAME = t.TABLE_NAME
 WHERE 
-    TABLE_SCHEMA = '%s' 
-    AND TABLE_NAME = '%s'
+    c.TABLE_SCHEMA = DATABASE() 
+    AND t.TABLE_TYPE = 'BASE TABLE'
+    AND c.TABLE_NAME = '%s'
 ORDER BY 
-    TABLE_SCHEMA, 
-    TABLE_NAME,  
-    ORDINAL_POSITION;
+    c.TABLE_SCHEMA, 
+    c.TABLE_NAME,  
+    c.ORDINAL_POSITION;
 `
 	)
 
@@ -237,7 +241,7 @@ ORDER BY
 			res = append(res, newCol)
 		}
 	case *dbconn.MySQLConn:
-		q := fmt.Sprintf(mysqlQuery, table.Schema, table.Table)
+		q := fmt.Sprintf(mysqlQuery, table.Table)
 		rows, err := conn.Query(q)
 		if err != nil {
 			return nil, err
@@ -305,7 +309,7 @@ func GetCreateTableStmt(
 	}
 
 	if res != "" {
-		return strings.Join([]string{res, createTableStmt}, " "), nil
+		return strings.Join([]string{res, createTableStmt}, "; "), nil
 	}
 	return createTableStmt, nil
 }

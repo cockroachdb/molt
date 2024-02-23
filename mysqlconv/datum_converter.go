@@ -1,8 +1,6 @@
 package mysqlconv
 
 import (
-	"encoding/binary"
-	"strconv"
 	"strings"
 	"time"
 
@@ -72,20 +70,7 @@ func ConvertRowValue(typMap *pgtype.Map, val []byte, typOID oid.Oid) (tree.Datum
 	case pgtype.NumericOID:
 		return tree.ParseDDecimal(string(val))
 	case pgtype.BitOID, pgtype.VarbitOID:
-		// val in this case is a []uint8.
-		// For example:
-		// b'1000001' -> {65}
-		// b'11110000011' -> {7, 131}
-		// b'111111111110000011' -> {3, 255, 131}
-		// We need to convert it into a bit array first.
-		paddedVal := []byte{0, 0, 0, 0, 0, 0, 0, 0}
-		// Pad to the front to make it a byte slice of fixed length 8.
-		for p := 1; p < len(val)+1; p++ {
-			paddedVal[8-p] = val[len(val)-p]
-		}
-		theUint := binary.BigEndian.Uint64(paddedVal)
-		bitArrStr := strconv.FormatUint(theUint, 2)
-		return tree.ParseDBitArray(bitArrStr)
+		return tree.ParseDBitArray(string(val))
 	case oid.T_anyenum:
 		return tree.NewDString(string(val)), nil
 	}
