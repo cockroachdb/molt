@@ -158,7 +158,7 @@ func Fetch(
 				}
 				logger.Info().Msgf("creating new table with %q", createTableStmt)
 				if _, err := targetConn.Exec(ctx, createTableStmt); err != nil {
-					return errors.Wrapf(err, "failed to create new schema %q on the target connection", t)
+					return errors.Wrapf(err, "failed to create new schema %q on the target connection with %q", t, createTableStmt)
 				}
 				logger.Debug().Msgf("finished creating new table with %q", createTableStmt)
 			}

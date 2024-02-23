@@ -228,7 +228,7 @@ CREATE TABLE test_table (
 		`},
 			tableFilter: utils.FilterConfig{TableFilter: `test_table`},
 			expectedColumnTypes: map[string]map[string]columnWithType{
-				"get_column_types.test_table": {
+				"public.test_table": {
 					"integer_col": {
 						dataType:     "int",
 						isPrimaryKey: true,
@@ -371,7 +371,7 @@ CREATE TABLE test_table_multi_pk (
 		`},
 			tableFilter: utils.FilterConfig{TableFilter: `test_table_multi_pk`},
 			expectedColumnTypes: map[string]map[string]columnWithType{
-				"get_column_types.test_table_multi_pk": {
+				"public.test_table_multi_pk": {
 					"integer_col": {
 						dataType:     "int",
 						isPrimaryKey: true,
@@ -735,13 +735,13 @@ CREATE TABLE test_table (
     mediumtext_col MEDIUMTEXT,
     longtext_col LONGTEXT,
     json_col JSON,
-    enum_col ENUM('value1', 'value2', 'value3')
+    enum_col ENUM('value1', 'value2', 'value3') DEFAULT 'value2'
 );
 `,
 			},
 			tableFilter: utils.FilterConfig{TableFilter: `test_table`},
 			expectedCreateTableStmts: []string{
-				` CREATE TYPE IF NOT EXISTS create_new_schema_test_table_enum_col_enum AS ENUM ('value1','value2','value3') CREATE TABLE test_table (integer_col INT4 NOT NULL PRIMARY KEY, smallint_col INT2, bigint_col INT8 NOT NULL, decimal_col DECIMAL, float_col FLOAT4, double_col FLOAT8, bit_col VARBIT NOT NULL, date_col DATE, datetime_col TIMESTAMP, timestamp_col TIMESTAMPTZ, time_col TIME NOT NULL, char_col VARCHAR, varchar_col VARCHAR, binary_col BYTES, varbinary_col BYTES, blob_col STRING, text_col STRING NOT NULL, mediumtext_col STRING, longtext_col STRING, json_col JSONB, enum_col create_new_schema_test_table_enum_col_enum)`},
+				` CREATE TYPE IF NOT EXISTS create_new_schema_test_table_enum_col_enum AS ENUM ('value1','value2','value3'); CREATE TABLE test_table (integer_col INT4 NOT NULL PRIMARY KEY, smallint_col INT2, bigint_col INT8 NOT NULL, decimal_col DECIMAL, float_col FLOAT4, double_col FLOAT8, bit_col VARBIT NOT NULL, date_col DATE, datetime_col TIMESTAMP, timestamp_col TIMESTAMPTZ, time_col TIME NOT NULL, char_col VARCHAR, varchar_col VARCHAR, binary_col BYTES, varbinary_col BYTES, blob_col STRING, text_col STRING NOT NULL, mediumtext_col STRING, longtext_col STRING, json_col JSONB, enum_col create_new_schema_test_table_enum_col_enum)`},
 		},
 		{
 			dialect: testutils.MySQLDialect,
@@ -775,7 +775,7 @@ CREATE TABLE test_table_multi_pk (
 			},
 			tableFilter: utils.FilterConfig{TableFilter: `test_table_multi_pk`},
 			expectedCreateTableStmts: []string{
-				` CREATE TYPE IF NOT EXISTS create_new_schema_test_table_multi_pk_enum_col_enum AS ENUM ('value1','value2','value3') CREATE TABLE test_table_multi_pk (integer_col INT4 NOT NULL, smallint_col INT2 NOT NULL, bigint_col INT8, decimal_col DECIMAL, float_col FLOAT4, double_col FLOAT8, bit_col VARBIT, date_col DATE, datetime_col TIMESTAMP, timestamp_col TIMESTAMPTZ, time_col TIME, char_col VARCHAR, varchar_col VARCHAR, binary_col BYTES, varbinary_col BYTES, blob_col STRING, text_col STRING, mediumtext_col STRING, longtext_col STRING, json_col JSONB, enum_col create_new_schema_test_table_multi_pk_enum_col_enum, CONSTRAINT "primary" PRIMARY KEY (integer_col, smallint_col))`},
+				` CREATE TYPE IF NOT EXISTS create_new_schema_test_table_multi_pk_enum_col_enum AS ENUM ('value1','value2','value3'); CREATE TABLE test_table_multi_pk (integer_col INT4 NOT NULL, smallint_col INT2 NOT NULL, bigint_col INT8, decimal_col DECIMAL, float_col FLOAT4, double_col FLOAT8, bit_col VARBIT, date_col DATE, datetime_col TIMESTAMP, timestamp_col TIMESTAMPTZ, time_col TIME, char_col VARCHAR, varchar_col VARCHAR, binary_col BYTES, varbinary_col BYTES, blob_col STRING, text_col STRING, mediumtext_col STRING, longtext_col STRING, json_col JSONB, enum_col create_new_schema_test_table_multi_pk_enum_col_enum, CONSTRAINT "primary" PRIMARY KEY (integer_col, smallint_col))`},
 		}, {
 			dialect: testutils.MySQLDialect,
 			desc:    "unsupported type",
