@@ -3,6 +3,7 @@ package fetch
 import (
 	"context"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/cockroachdb/cockroachdb-parser/pkg/util/uuid"
 	"github.com/cockroachdb/datadriven"
+	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/compression"
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
@@ -94,8 +96,10 @@ func TestDataDriven(t *testing.T) {
 						passedInDir := ""
 						cleanup := false
 						continuationToken := ""
+						overrideFile := ""
 						flushRows := 0
 						dropAndRecreateSchema := false
+						createFiles := []string{}
 
 						for _, cmd := range d.CmdArgs {
 							switch cmd.Key {
@@ -120,10 +124,14 @@ func TestDataDriven(t *testing.T) {
 							case "drop-and-recreate-schema":
 								dropAndRecreateSchema = true
 								truncate = false
+							case "override-file":
+								overrideFile = cmd.Vals[0]
 							case "flush-rows":
 								flushRowsAtoi, err := strconv.Atoi(cmd.Vals[0])
 								require.NoError(t, err)
 								flushRows = flushRowsAtoi
+							case "create-files":
+								createFiles = strings.Split(cmd.Vals[0], ",")
 							default:
 								t.Errorf("unknown key %s", cmd.Key)
 							}
@@ -136,6 +144,13 @@ func TestDataDriven(t *testing.T) {
 							dir = createDir
 						} else {
 							dir = passedInDir
+						}
+
+						// Create mock files with invalid data.
+						if len(createFiles) > 0 {
+							for _, file := range createFiles {
+								require.NoError(t, createAndWriteDummyData(dir, file))
+							}
 						}
 
 						var src datablobstorage.Store
@@ -174,11 +189,12 @@ func TestDataDriven(t *testing.T) {
 								ExportSettings: dataexport.Settings{
 									RowBatchSize: 2,
 								},
-								Compression:       compressionFlag,
-								FetchID:           fetchId,
-								Cleanup:           cleanup,
-								ContinuationToken: continuationToken,
-								FlushRows:         flushRows,
+								Compression:          compressionFlag,
+								FetchID:              fetchId,
+								Cleanup:              cleanup,
+								ContinuationToken:    continuationToken,
+								ContinuationFileName: overrideFile,
+								FlushRows:            flushRows,
 							},
 							logger,
 							conns,
@@ -188,7 +204,7 @@ func TestDataDriven(t *testing.T) {
 						)
 
 						// We want a more thorough cleanup if we want to cleanup dir.
-						// This makes it so that we ensure we ahve fresh
+						// This makes it so that we ensure we have a fresh environment.
 						defer func() {
 							if cleanup {
 								err := os.RemoveAll(dir)
@@ -214,6 +230,26 @@ func TestDataDriven(t *testing.T) {
 			})
 		})
 	}
+}
+
+func createAndWriteDummyData(dir, fileName string) (retErr error) {
+	f, err := os.Create(path.Join(dir, fileName))
+	defer func() {
+		err := f.Close()
+		if err != nil {
+			retErr = errors.Wrap(err, retErr.Error())
+		}
+	}()
+
+	if err != nil {
+		return err
+	}
+	_, err = f.WriteString("invalid\ndata")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func TestInitStatusEntry(t *testing.T) {
