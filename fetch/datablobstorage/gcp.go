@@ -20,11 +20,12 @@ import (
 const numRowsKeyGCP = "numRows"
 
 type gcpStore struct {
-	logger     zerolog.Logger
-	bucket     string
-	bucketPath string
-	client     *storage.Client
-	creds      *google.Credentials
+	logger        zerolog.Logger
+	bucket        string
+	bucketPath    string
+	client        *storage.Client
+	creds         *google.Credentials
+	useLocalInfra bool
 }
 
 func NewGCPStore(
@@ -33,14 +34,16 @@ func NewGCPStore(
 	creds *google.Credentials,
 	bucket string,
 	bucketPath string,
+	useLocalInfra bool,
 ) *gcpStore {
 	utils.RedactedQueryParams = map[string]struct{}{utils.GCPCredentials: {}}
 	return &gcpStore{
-		bucket:     bucket,
-		bucketPath: bucketPath,
-		client:     client,
-		logger:     logger,
-		creds:      creds,
+		bucket:        bucket,
+		bucketPath:    bucketPath,
+		client:        client,
+		logger:        logger,
+		creds:         creds,
+		useLocalInfra: useLocalInfra,
 	}
 }
 
@@ -197,19 +200,24 @@ type gcpResource struct {
 }
 
 func (r *gcpResource) ImportURL() (string, error) {
-	// If we do not have the GOOGLE_APPLICATION_CREDENTIALS env var
-	// set, or do not have the gcloud/application_default_credentials.json file
-	// in a well known directory, then we authed using the GCE machine itself
-	// which will generate an oauth token using the service account that is
-	// active meaning we need to use AUTH=implicit as store.creds.JSON is nil.
-	if r.store.creds.JSON == nil {
+	if r.store.useLocalInfra {
+		return fmt.Sprintf(
+			"http://fakegcs:4443/download/storage/v1/b/%s/o/%s",
+			r.store.bucket,
+			r.key,
+		), nil
+	} else if r.store.creds.JSON == nil {
+		// If we do not have the GOOGLE_APPLICATION_CREDENTIALS env var
+		// set, or do not have the gcloud/application_default_credentials.json file
+		// in a well known directory, then we authed using the GCE machine itself
+		// which will generate an oauth token using the service account that is
+		// active meaning we need to use AUTH=implicit as store.creds.JSON is nil.
 		return fmt.Sprintf(
 			"gs://%s/%s?AUTH=implicit",
 			r.store.bucket,
 			r.key,
 		), nil
 	}
-
 	return fmt.Sprintf(
 		"gs://%s/%s?CREDENTIALS=%s",
 		r.store.bucket,

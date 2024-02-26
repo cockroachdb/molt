@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"cloud.google.com/go/storage"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/cockroachdb/errors"
@@ -14,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/option"
 )
 
 type Store interface {
@@ -86,13 +88,11 @@ type DatastoreCreationPayload struct {
 	S3Pl         *S3Payload
 	LocalPathPl  *LocalPathPayload
 
-	logger zerolog.Logger
-
 	TestFailedWriteToBucket bool
 }
 
 func GenerateDatastore(
-	ctx context.Context, cfg any, logger zerolog.Logger, testFailedWriteToBucket bool,
+	ctx context.Context, cfg any, logger zerolog.Logger, testFailedWriteToBucket, testOnly bool,
 ) (Store, error) {
 	var src Store
 	var err error
@@ -111,20 +111,33 @@ func GenerateDatastore(
 			if err != nil {
 				return nil, err
 			}
-			gcpClient, err = storage.NewClient(ctx)
+			if testOnly {
+				gcpClient, err = storage.NewClient(ctx, option.WithEndpoint("http://localhost:4443/storage/v1/"))
+			} else {
+				gcpClient, err = storage.NewClient(ctx)
+			}
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to make new gcp client")
 			}
 		}
-		src = NewGCPStore(logger, gcpClient, creds, t.GCPBucket, t.BucketPath)
+		src = NewGCPStore(logger, gcpClient, creds, t.GCPBucket, t.BucketPath, testOnly)
 	case *S3Payload:
 		var sess *session.Session
 		var creds credentials.Value
 		var err error
 
-		if sess, err = session.NewSession(); err != nil {
+		if testOnly {
+			if sess, err = session.NewSession(&aws.Config{
+				Credentials:      credentials.NewStaticCredentials("test", "test", ""),
+				S3ForcePathStyle: aws.Bool(true),
+				Endpoint:         aws.String("http://s3.localhost.localstack.cloud:4566"),
+			}); err != nil {
+				return nil, err
+			}
+		} else if sess, err = session.NewSession(); err != nil {
 			return nil, err
 		}
+
 		if t.Region != "" {
 			sess.Config.Region = &t.Region
 		}
@@ -134,7 +147,7 @@ func GenerateDatastore(
 				return nil, err
 			}
 		}
-		src = NewS3Store(logger, sess, creds, t.S3Bucket, t.BucketPath)
+		src = NewS3Store(logger, sess, creds, t.S3Bucket, t.BucketPath, testOnly)
 	case *LocalPathPayload:
 		src, err = NewLocalStore(logger, t.LocalPath, t.LocalPathListenAddr, t.LocalPathCRDBAccessAddr)
 		if err != nil {
@@ -145,57 +158,4 @@ func GenerateDatastore(
 	}
 
 	return src, err
-}
-
-func GenerateDatastoreNew(ctx context.Context, cfg DatastoreCreationPayload) (Store, error) {
-	var src Store
-	var err error
-	switch {
-	case cfg.DirectCopyPl != nil:
-		src = NewCopyCRDBDirect(cfg.logger, cfg.DirectCopyPl.TargetConnForCopy)
-	case cfg.GCPPl != nil:
-		var creds *google.Credentials
-		var err error
-		var emptyClient storage.Client
-		gcpClient := &emptyClient
-		// For this test, we don't need the real credentials or client.
-		if !cfg.TestFailedWriteToBucket {
-			creds, err = google.FindDefaultCredentials(ctx)
-			if err != nil {
-				return nil, err
-			}
-			gcpClient, err = storage.NewClient(ctx)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to make new gcp client")
-			}
-		}
-
-		src = NewGCPStore(cfg.logger, gcpClient, creds, cfg.GCPPl.GCPBucket, cfg.GCPPl.BucketPath)
-	case cfg.S3Pl != nil:
-		var sess *session.Session
-		var creds credentials.Value
-		var err error
-
-		if sess, err = session.NewSession(); err != nil {
-			return nil, err
-		}
-		if cfg.S3Pl.Region != "" {
-			sess.Config.Region = &cfg.S3Pl.Region
-		}
-		// For this test, we don't need the real credentials or client.
-		if !cfg.TestFailedWriteToBucket {
-			if creds, err = sess.Config.Credentials.Get(); err != nil {
-				return nil, err
-			}
-		}
-		src = NewS3Store(cfg.logger, sess, creds, cfg.S3Pl.S3Bucket, cfg.S3Pl.BucketPath)
-	case cfg.LocalPathPl != nil:
-		src, err = NewLocalStore(cfg.logger, cfg.LocalPathPl.LocalPath, cfg.LocalPathPl.LocalPathListenAddr, cfg.LocalPathPl.LocalPathCRDBAccessAddr)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, errors.AssertionFailedf("data source must be configured (--s3-bucket, --gcp-bucket, --direct-copy)")
-	}
-	return src, nil
 }

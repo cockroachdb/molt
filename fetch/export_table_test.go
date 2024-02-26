@@ -56,7 +56,7 @@ func genDataStore(
 		return nil, errors.Newf("unknown storage type: %s", storageType)
 	}
 
-	return datablobstorage.GenerateDatastore(ctx, datastorePayload, logger, true /* TestFailedWriteToBucket */)
+	return datablobstorage.GenerateDatastore(ctx, datastorePayload, logger, true /* TestFailedWriteToBucket */, true /* TestOnly */)
 }
 
 func TestFailedWriteToStore(t *testing.T) {

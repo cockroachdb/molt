@@ -1,4 +1,21 @@
 services:
+  # Used for local S3
+  localstack:
+    container_name: "localstack"
+    image: localstack/localstack
+    ports:
+      - "127.0.0.1:4566:4566"            # LocalStack Gateway
+      - "127.0.0.1:4510-4559:4510-4559"  # external services port range
+    environment:
+      # LocalStack configuration: https://docs.localstack.cloud/references/configuration/
+      - DEBUG=${DEBUG:-0}
+  # Used for local GCS
+  fakegcs:
+    container_name: "fakegcs"
+    image: fsouza/fake-gcs-server
+    ports:
+      - "4443:4443"
+    command: ["-scheme", "http"]
   cockroachdb:
     image: cockroachdb/cockroach:latest-v23.1
     network_mode: host
