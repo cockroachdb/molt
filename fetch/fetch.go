@@ -43,13 +43,10 @@ type Config struct {
 	// The target table handling configs.
 	Truncate bool
 
+	DropAndRecreateNewSchema bool
+
 	Compression    compression.Flag
 	ExportSettings dataexport.Settings
-}
-
-type SchemaCreationConfig struct {
-	TableFilter  string
-	SchemaFilter string
 }
 
 func Fetch(
@@ -118,16 +115,63 @@ func Fetch(
 			Str("table", tbl.SafeString()).
 			Msgf("ignoring table as it is missing a definition on the source")
 	}
-	for _, tbl := range dbTables.MissingTables {
-		logger.Warn().
-			Str("table", tbl.SafeString()).
-			Msgf("ignoring table as it is missing a definition on the target")
+
+	if !cfg.DropAndRecreateNewSchema {
+		for _, tbl := range dbTables.MissingTables {
+			logger.Warn().
+				Str("table", tbl.SafeString()).
+				Msgf("ignoring table as it is missing a definition on the target")
+		}
 	}
 	for _, tbl := range dbTables.Verified {
 		logger.Info().
 			Str("source_table", tbl[0].SafeString()).
 			Str("target_table", tbl[1].SafeString()).
 			Msgf("found matching table")
+	}
+
+	if cfg.DropAndRecreateNewSchema {
+		tablesToProcess := dbTables.AllTablesFromSource()
+		if len(tablesToProcess) == 0 {
+			logger.Info().Msgf("no tables to drop and recreate on the target")
+		} else {
+			logger.Info().Msgf("creating schema for tables: %s", tablesToProcess)
+			targetConn, ok := conns[1].(*dbconn.PGConn)
+			if !ok {
+				return errors.AssertionFailedf("the target connection is not a pg connection for CockroachDB")
+			}
+
+			for _, t := range tablesToProcess {
+				dropTableStmt, err := GetDropTableStmt(t)
+				if err != nil {
+					return err
+				}
+				logger.Info().Msgf("dropping table with %q", dropTableStmt)
+				if _, err := targetConn.Exec(ctx, dropTableStmt); err != nil {
+					return errors.Wrapf(err, "failed to create new schema %q on the target connection", t)
+				}
+				logger.Debug().Msgf("finished dropping table with %q", dropTableStmt)
+
+				createTableStmt, err := GetCreateTableStmt(ctx, logger, conns[0], t)
+				if err != nil {
+					return err
+				}
+				logger.Info().Msgf("creating new table with %q", createTableStmt)
+				if _, err := targetConn.Exec(ctx, createTableStmt); err != nil {
+					return errors.Wrapf(err, "failed to create new schema %q on the target connection", t)
+				}
+				logger.Debug().Msgf("finished creating new table with %q", createTableStmt)
+			}
+			// Redo the verify.
+			dbTables, err = dbverify.Verify(ctx, conns)
+			if err != nil {
+				return errors.Wrap(err, "failed to re-verify tables after schema creation")
+			}
+			if dbTables, err = utils.FilterResult(tableFilter, dbTables); err != nil {
+				return err
+			}
+			logger.Info().Msgf("after recreating table, dbTables: %s", dbTables)
+		}
 	}
 
 	logger.Info().Msgf("verifying common tables")
@@ -175,9 +219,6 @@ func Fetch(
 	if err != nil {
 		return err
 	}
-
-	// TODO(janexing): ingest the schema creation logic here. We create the schemas
-	// one by one, and exit if any of them errors out.
 
 	workCh := make(chan tableverify.Result)
 	g, _ := errgroup.WithContext(ctx)

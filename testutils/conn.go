@@ -13,6 +13,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+//go:generate go run golang.org/x/tools/cmd/stringer -type=Dialect
+type Dialect int
+
+const (
+	PostgresDialect Dialect = iota
+	MySQLDialect
+	CRDBSourceDialect
+)
+
 func PGConnStr() string {
 	pgInstanceURL := "postgres://postgres:postgres@127.0.0.1:5432/defaultdb"
 	if override, ok := os.LookupEnv("POSTGRES_URL"); ok {
