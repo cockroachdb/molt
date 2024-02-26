@@ -29,11 +29,10 @@ fetch --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres
 {"level":"info","message":"default compression to GZIP"}
 {"level":"info","message":"checking database details"}
 {"level":"info","message":"creating schema for tables: [public.tbl1]"}
-{"level":"info","message":"dropping table with \"DROP TABLE IF EXISTS tbl1\""}
 {"level":"info","message":"getting column types for table: public.tbl1"}
 {"level":"info","message":"finished getting column types for table: public.tbl1"}
 {"level":"info","message":"the original schema contains enum type \"my_enum_type\". A tentative enum type will be created as \"CREATE TYPE IF NOT EXISTS my_enum_type AS ENUM ('v1', 'v2', 'v3');\""}
-{"level":"info","message":"creating new table with \" CREATE TYPE IF NOT EXISTS my_enum_type AS ENUM ('v1', 'v2', 'v3'); CREATE TABLE tbl1 (id INT4 NOT NULL PRIMARY KEY, t STRING, enumcol my_enum_type)\""}
+{"level":"info","message":"creating new table with \" CREATE TYPE IF NOT EXISTS my_enum_type AS ENUM ('v1', 'v2', 'v3');; CREATE TABLE tbl1 (id INT4 NOT NULL PRIMARY KEY, t STRING, enumcol my_enum_type)\""}
 {"level":"info","message":"after recreating table, dbTables: {[[public.tbl1 public.tbl1]] [] []}"}
 {"level":"info","message":"verifying common tables"}
 {"level":"info","message":"establishing snapshot"}
@@ -74,11 +73,10 @@ fetch --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres
 {"level":"info","message":"checking database details"}
 {"level":"info","source_table":"public.tbl1","target_table":"public.tbl1","message":"found matching table"}
 {"level":"info","message":"creating schema for tables: [public.tbl1]"}
-{"level":"info","message":"dropping table with \"DROP TABLE IF EXISTS tbl1\""}
 {"level":"info","message":"getting column types for table: public.tbl1"}
 {"level":"info","message":"finished getting column types for table: public.tbl1"}
 {"level":"info","message":"the original schema contains enum type \"my_enum_type\". A tentative enum type will be created as \"CREATE TYPE IF NOT EXISTS my_enum_type AS ENUM ('v1', 'v2', 'v3');\""}
-{"level":"info","message":"creating new table with \" CREATE TYPE IF NOT EXISTS my_enum_type AS ENUM ('v1', 'v2', 'v3'); CREATE TABLE tbl1 (id INT4 NOT NULL PRIMARY KEY, t STRING, enumcol my_enum_type)\""}
+{"level":"info","message":"creating new table with \" CREATE TYPE IF NOT EXISTS my_enum_type AS ENUM ('v1', 'v2', 'v3');; CREATE TABLE tbl1 (id INT4 NOT NULL PRIMARY KEY, t STRING, enumcol my_enum_type)\""}
 {"level":"info","message":"after recreating table, dbTables: {[[public.tbl1 public.tbl1]] [] []}"}
 {"level":"info","message":"verifying common tables"}
 {"level":"info","message":"establishing snapshot"}
@@ -126,7 +124,6 @@ fetch --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres
 {"level":"info","message":"default compression to GZIP"}
 {"level":"info","message":"checking database details"}
 {"level":"info","message":"creating schema for tables: [public.employee1]"}
-{"level":"info","message":"dropping table with \"DROP TABLE IF EXISTS employee1\""}
 {"level":"info","message":"getting column types for table: public.employee1"}
 {"level":"info","message":"finished getting column types for table: public.employee1"}
 {"level":"info","message":"creating new table with \"CREATE TABLE employee1 (id INT4 NOT NULL PRIMARY KEY, name VARCHAR NOT NULL, age INT4, address VARCHAR NOT NULL, start_date DATE, end_date DATE)\""}
@@ -161,4 +158,3 @@ id |      name       | age |                      address                      |
   4 | John Garcia     |  38 | 8955 Smith Loop Lake Deborahmouth, HI 45336       | 2020-02-27 | 2020-07-19
   5 | Scott Simpson   |  52 | 80478 Davis Light Apt. 971 Sotoshire, ID 86429    | 2020-11-10 | 2021-02-26
 (5 rows)
-

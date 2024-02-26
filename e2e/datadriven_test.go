@@ -23,11 +23,11 @@ func TestDataDriven(t *testing.T) {
 		require.NoError(t, ConfirmContainersRunning(t, driverDialect))
 		t.Logf("containers are all up")
 
-		//defer func() {
-		//	t.Logf("tearing down containers")
-		//	require.NoError(t, TearDown())
-		//	t.Logf("all containers are terminated")
-		//}()
+		defer func() {
+			t.Logf("tearing down containers")
+			require.NoError(t, TearDown())
+			t.Logf("all containers are terminated")
+		}()
 
 		datadriven.RunTestAny(t, path, func(t testing.TB, d *datadriven.TestData) string {
 			// Remove common args.

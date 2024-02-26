@@ -3,7 +3,6 @@ package fetch
 import (
 	"context"
 	"fmt"
-	"github.com/cockroachdb/molt/mysqlconv"
 	"regexp"
 	"strings"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/dbtable"
+	"github.com/cockroachdb/molt/mysqlconv"
 	"github.com/lib/pq/oid"
 	"github.com/rs/zerolog"
 )
@@ -119,7 +119,11 @@ func (t *columnWithType) String() string {
 }
 
 func GetColumnTypes(
-	ctx context.Context, logger zerolog.Logger, conn dbconn.Conn, table dbtable.DBTable, skipUnsupportedTypeErr bool,
+	ctx context.Context,
+	logger zerolog.Logger,
+	conn dbconn.Conn,
+	table dbtable.DBTable,
+	skipUnsupportedTypeErr bool,
 ) (columnsWithType, error) {
 	const (
 		pgQuery = `SELECT
@@ -314,7 +318,9 @@ func GetCreateTableStmt(
 	return createTableStmt, nil
 }
 
-func convertMySQLEnum(newCol columnWithType) (createEnumStmt string, enumTypeName string, err error) {
+func convertMySQLEnum(
+	newCol columnWithType,
+) (createEnumStmt string, enumTypeName string, err error) {
 	if newCol.columnType == "" {
 		return "", "", errors.Newf("original type is enum but with empty column type definition")
 	}
