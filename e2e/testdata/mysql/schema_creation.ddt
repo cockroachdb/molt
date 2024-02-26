@@ -24,10 +24,9 @@ integer_col	smallint_col	bigint_col	decimal_col	float_col	double_col	bit_col	dat
 3	28	633851	812.25	128.83	592.02		2024-02-26	2024-02-25 16:57:40	2024-02-25 16:57:40	02:03:57	W5CRY0TO7H	X6APELNR42LKDL77DV8ACK7WKBENIK0	'b''PNHMAU'''\0\0\0\0\0\0\0	'b''VFGC2BYMCO'''	'b''GSLRJ72OTZUDZ'''	FK1M1GYAVG5M3CT3XECKN8L96R2GR0398PQUOW2FFUQGF2FPC7KY9QSE	9RSO16E5FR5ICW7CG1G66O35ZDWNZD8ET3BS2LPP17VVUKY6M0G79EJQO46E84GGTVCVYUUI5S2Q5J5AS167Y3ZO3EVFM270ND19BVL83TN43S51VAJFUB195XOLT36N7RT	H3586RZC1JBGEPB90ZRAG09IRKUINGKG0VAYTLPPBE9ULLPWR2F0PDS75Z8BSPC6GZ7Y7SXMNJH7TQLBAROZO93V99KKNKSM34I44AYBK1FSGI5EZ67RJ762DYV79G5OSQEPSI4DWGGRG9XWJ69CPRDQY5OL3WES9BBNJK33315VYC9BD7YOFWC86WANW8GWWWSB9UJVONIZ48YSPJ0CNQ	{"key": "value"}	value2
 4	50	195291	48.09	823.15	940.63	\0	2024-02-23	2024-02-02 08:50:02	2024-02-02 08:50:02	09:56:16	6BU2KQDLUC	6BI40OHPT4IDLVFYWRJ802RGIFD7QA7AN8P3RTBCERBB5YFDZ9TPELXNQ0P99ZBMHQ41FWB8OK8NF203FLCPA1H033X679JEUZQUJJV1RENBXP315NQJQRJI90Q1NDEOA5SS7QYAJIF1MW3NT6Y6T37MGJLK0WXP5T77H8WPFDL784DUFYHCVIICCL8VYQ7BYBBS04JC3ZQQNOZ9T3TLLZI6SEXECRY2PE9EWQKPDMN1X5DY5PTIFI5GYQCU6	'b''LMLIPK'''\0\0\0\0\0\0\0	'b''U7HEIU03'''	'b''Z70BPF91QRVRC1GNJSCOVNMFS2GY7Y5GMCOEXGTIA0BV4FZJ3Z7MGIWXSKQDXVGYYRP74A7U5PGMX6VSU6T7WMPYXMYLOMZS'''	P7PSPWLION0BULYOS072YJEKM5HXZED6P7BHU5H435GHD77FH3KP2GGHVHU4ON3BA2VLLWPD5H7Y7QFJ4AYFTLK1SGXQXERRA7V01WISHJ9VXG7ADR7SRU5HMSUU3UFNWG78RO5B7S5XI164UUE87U8B9JSBGUFNWEF02X16RKRV7D3QLV2J2BSZ8XKTZPUB0TOJ5YKFHSWOLPZTERYAQXDS8	95YUDYFELVJJ99K7GZYWIVRQM2Q1WQRYP2OBZ8MHLWDGUQ8M8MTZ7P9E3DHLEX8RE2AA5BFJIDWLFTLLPVK8B4ANVAQBOGL4VL3QGTJ9NIJLQGAIAM4695ZUK83ZR6BO8YV5ZI9UQJI8ANS4IDX1PWYL5JO6E84B1DTD41E322Y5CLFG4K3AQ7ATNZH8FY3NSHJV924GRRWDLEJ5O3KZAK9TFA9L0	71H6UVOE3BVLLKVKAX7BVG6DC0MKLNJRTCTPPI5FZOS8KDV5W8UH2Y63HLV2804LS12NXCDIQ4QM6ZFYD3BG6Q5OLKHPRPIWDQ1MJRL	{"key": "value"}	value2
 
-fetch --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'test_table' --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9115' --table-handling 'drop-on-target-and-recreate' --compression=none
+fetch --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'test_table' --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9115' --table-handling 'drop-on-target-and-recreate' --cleanup=true
 ----
 {"level":"info","message":"user set compression to None"}
-{"level":"error","error":"listen tcp 127.0.0.1:3030: bind: address already in use","message":"error exposing metrics endpoints"}
 {"level":"info","message":"checking database details"}
 {"level":"info","message":"creating schema for tables: [public.test_table]"}
 {"level":"info","message":"getting column types for table: public.test_table"}
@@ -48,7 +47,6 @@ fetch --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres
 
 verify --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'test_table'
 ----
-{"level":"error","error":"listen tcp 127.0.0.1:3030: bind: address already in use","message":"error exposing metrics endpoints"}
 {"level":"info","message":"verification in progress"}
 {"level":"info","message":"starting verify on public.test_table, shard 1/1"}
 {"level":"warn","type":"data","table_schema":"public","table_name":"test_table","source_values":{"float_col":"918.9"},"target_values":{"float_col":"918.9000244140625"},"primary_key":["0"],"message":"mismatching row value"}
