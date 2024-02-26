@@ -1,7 +1,9 @@
 services:
   cockroachdb:
     image: cockroachdb/cockroach:latest-v23.1
-    network_mode: host
+    ports:
+      - 26257:26257
+      - 8080:8080
     # It must not have storage on memory, otherwise external I/O would not be enabled.
     command: start-single-node --insecure
   cockroachdbtarget:
