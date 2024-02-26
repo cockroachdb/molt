@@ -1,0 +1,64 @@
+exec silent
+mysql -u user -p'password'  -h '0.0.0.0' -P 3306 --database=defaultdb --execute="DROP TABLE IF EXISTS floattable; CREATE TABLE floattable (id SERIAL PRIMARY KEY, floatcol float);"
+----
+
+exec silent
+docker exec -t github-mysql-1 mysql -u root -e 'GRANT FILE, SELECT on *.* to user;'
+----
+
+exec silent
+docker cp ../.github/e2esampledata/float.csv  github-mysql-1:/var/lib/mysql-files
+----
+
+exec silent
+mysql -u user -p'password'  -h '0.0.0.0' -P 3306 --database=defaultdb --execute="LOAD DATA INFILE '/var/lib/mysql-files/float.csv'  INTO TABLE floattable  FIELDS TERMINATED BY ','  ENCLOSED BY '\"' LINES TERMINATED BY '\n' IGNORE 1 ROWS;"
+----
+
+exec
+mysql -u user -p'password'  -h '0.0.0.0' -P 3306 --database=defaultdb --execute="SELECT * FROM floattable"
+----
+id	floatcol
+1	918.9
+2	918.9
+
+fetch --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'floattable' --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9115' --table-handling 'drop-on-target-and-recreate'  --cleanup=true
+----
+{"level":"info","message":"default compression to GZIP"}
+{"level":"error","error":"listen tcp 127.0.0.1:3030: bind: address already in use","message":"error exposing metrics endpoints"}
+{"level":"info","message":"checking database details"}
+{"level":"info","source_table":"public.floattable","target_table":"public.floattable","message":"found matching table"}
+{"level":"info","message":"creating schema for tables: [public.floattable]"}
+{"level":"info","message":"getting column types for table: public.floattable"}
+{"level":"info","message":"finished getting column types for table: public.floattable"}
+{"level":"info","message":"creating new table with \"CREATE TABLE floattable (id INT8 NOT NULL PRIMARY KEY, floatcol FLOAT4)\""}
+{"level":"info","message":"after recreating table, dbTables: {[[public.floattable public.floattable]] [] []}"}
+{"level":"info","message":"verifying common tables"}
+{"level":"info","message":"establishing snapshot"}
+{"level":"info","type":"summary","num_tables":1,"cdc_cursor":"0/19E3610","message":"starting fetch"}
+{"level":"info","message":"data extraction phase starting"}
+{"level":"info","type":"summary","num_rows":2,"export_duration_ms":1000,"export_duration":"000h 00m 01s","message":"data extraction from source complete"}
+{"level":"info","message":"starting data import on target"}
+{"level":"info","message":"imported 2 rows for batch for files 1 to 1"}
+{"level":"info","type":"summary","net_duration_ms":1000,"net_duration":"000h 00m 01s","import_duration_ms":1000,"import_duration":"000h 00m 01s","export_duration_ms":1000,"export_duration":"000h 00m 01s","num_rows":2,"cdc_cursor":"0/19E3610","message":"data import on target for table complete"}
+{"level":"info","message":"cleaning up resources created during fetch run"}
+{"level":"info","type":"summary","fetch_id":"0000000000","num_tables":1,"tables":["public.floattable"],"cdc_cursor":"0/19E3610","net_duration_ms":1000,"net_duration":"000h 00m 01s","message":"fetch complete"}
+{"level":"info","message":"http server intentionally shut down"}
+
+verify --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'floattable'
+----
+{"level":"error","error":"listen tcp 127.0.0.1:3030: bind: address already in use","message":"error exposing metrics endpoints"}
+{"level":"info","message":"verification in progress"}
+{"level":"info","message":"starting verify on public.floattable, shard 1/1"}
+{"level":"warn","type":"data","table_schema":"public","table_name":"floattable","source_values":{"floatcol":"918.9"},"target_values":{"floatcol":"918.9000244140625"},"primary_key":["1"],"message":"mismatching row value"}
+{"level":"warn","type":"data","table_schema":"public","table_name":"floattable","source_values":{"floatcol":"918.9"},"target_values":{"floatcol":"918.9000244140625"},"primary_key":["2"],"message":"mismatching row value"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"floattable","num_truth_rows":2,"num_success":0,"num_conditional_success":0,"num_missing":0,"num_mismatch":2,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.floattable (shard 1/1)"}
+{"level":"info","net_duration_ms":1000,"net_duration":"000h 00m 01s","message":"verification complete"}
+
+exec
+psql 'postgres://root@localhost:26257/defaultdb?sslmode=disable' -c "SELECT * FROM floattable"
+----
+id | floatcol 
+----+----------
+  1 |    918.9
+  2 |    918.9
+(2 rows)
