@@ -17,6 +17,7 @@ require (
 	github.com/jackc/pgx/v5 v5.5.1
 	github.com/jstemmer/go-junit-report v1.0.0
 	github.com/lib/pq v1.10.6
+	github.com/shopspring/decimal v1.3.1
 	github.com/pashagolub/pgxmock/v3 v3.3.0
 	github.com/pingcap/tidb v1.1.0-beta.0.20211124132551-4a1b2e9fe5b5
 	github.com/pingcap/tidb/parser v0.0.0-20211124132551-4a1b2e9fe5b5
