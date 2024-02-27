@@ -37,6 +37,7 @@ type s3Store struct {
 		sync.Mutex
 		batch []s3manager.BatchDeleteObject
 	}
+	useLocalInfra bool
 }
 
 type s3Resource struct {
@@ -47,6 +48,10 @@ type s3Resource struct {
 }
 
 func (s *s3Resource) ImportURL() (string, error) {
+	if s.store.useLocalInfra {
+		return fmt.Sprintf("http://localstack:4566/%s/%s", s.store.bucket, s.key), nil
+
+	}
 	return fmt.Sprintf(
 		"s3://%s/%s?AWS_ACCESS_KEY_ID=%s&AWS_SECRET_ACCESS_KEY=%s",
 		s.store.bucket,
@@ -109,14 +114,16 @@ func NewS3Store(
 	creds credentials.Value,
 	bucket string,
 	bucketPath string,
+	useLocalInfra bool,
 ) *s3Store {
 	utils.RedactedQueryParams = map[string]struct{}{utils.AWSSecretAccessKey: {}}
 	return &s3Store{
-		bucket:     bucket,
-		bucketPath: bucketPath,
-		session:    session,
-		logger:     logger,
-		creds:      creds,
+		bucket:        bucket,
+		bucketPath:    bucketPath,
+		session:       session,
+		logger:        logger,
+		creds:         creds,
+		useLocalInfra: useLocalInfra,
 	}
 }
 

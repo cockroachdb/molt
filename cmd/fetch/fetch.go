@@ -164,7 +164,7 @@ func Command() *cobra.Command {
 				return errors.AssertionFailedf("data source must be configured (--bucket-path, --direct-copy, --local-path)")
 			}
 
-			src, err := datablobstorage.GenerateDatastore(ctx, datastorePayload, logger, false /* testFailedWriteToBucket */)
+			src, err := datablobstorage.GenerateDatastore(ctx, datastorePayload, logger, false /* testFailedWriteToBucket */, cfg.TestOnly)
 			if err != nil {
 				return err
 			}
