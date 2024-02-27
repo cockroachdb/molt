@@ -215,9 +215,30 @@ func Fetch(
 	}
 	var stats statsMu
 
+	// If continuation file is passed in, it must conform to the file format.
+	if cfg.ContinuationFileName != "" && !utils.FileConventionRegex.Match([]byte(cfg.ContinuationFileName)) {
+		return errors.Newf("continuation file name %s doesn't match the format %s", cfg.ContinuationFileName, utils.FileConventionRegex.String())
+	}
+
 	exceptionLogMapping, err := getExceptionLogMapping(ctx, cfg, targetPgxConn)
-	if err != nil {
+	contTokenNotFoundErr := fmt.Sprintf("no exception logs that correspond to continuation-token of %s", cfg.ContinuationToken)
+
+	// In the case that we have no results for the passed in continuation token or
+	// fetch ID, we should error to let the user know it's invalid, instead of
+	// doing a fetch in an unknown state.
+	if err != nil && err == pgx.ErrNoRows {
+		return errors.New(contTokenNotFoundErr)
+	} else if err != nil {
 		return err
+	}
+
+	if IsImportCopyOnlyMode(cfg) && len(exceptionLogMapping) == 0 {
+		errMsg := fmt.Sprintf("no exception logs that correspond to fetch-id of %s", cfg.FetchID)
+		if cfg.ContinuationToken != "" {
+			errMsg = contTokenNotFoundErr
+		}
+
+		return errors.New(errMsg)
 	}
 
 	workCh := make(chan tableverify.Result)
@@ -510,7 +531,7 @@ func initStatusEntry(
 // TODO: handle the case where the file override happens.
 func getExceptionLogMapping(
 	ctx context.Context, cfg Config, targetPgxConn *pgx.Conn,
-) (map[string]*status.ExceptionLog, error) {
+) (excLogMap map[string]*status.ExceptionLog, retErr error) {
 	exceptionLogMapping := map[string]*status.ExceptionLog{}
 	if IsImportCopyOnlyMode(cfg) {
 		exceptionLogs := []*status.ExceptionLog{}

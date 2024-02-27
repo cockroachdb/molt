@@ -1,0 +1,244 @@
+# Testing for duplicate key errors.
+exec all
+CREATE TABLE tbl1(id INT PRIMARY KEY, t TEXT)
+----
+[source] CREATE TABLE
+[target] CREATE TABLE
+
+exec all
+CREATE TABLE tbl2(id INT PRIMARY KEY, t TEXT)
+----
+[source] CREATE TABLE
+[target] CREATE TABLE
+
+exec all
+INSERT INTO tbl1 VALUES (11, 'aaa'), (22, 'bb b'), (33, 'ééé'), (44, '🫡🫡🫡'), (55, '娜娜'), (66, 'Лукас'), (77, 'ルカス')
+----
+[source] INSERT 0 7
+[target] INSERT 0 7
+
+exec all
+INSERT INTO tbl2 VALUES (00, 'aaa'), (55, 'bb b'), (66, 'ééé'), (77, '🫡🫡🫡'), (88, '娜娜'), (1010, 'Лукас'), (1212, 'ルカス')
+----
+[source] INSERT 0 7
+[target] INSERT 0 7
+
+query all
+SELECT * FROM tbl1
+----
+[source]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+[target]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+
+query all
+SELECT * FROM tbl2
+----
+[source]:
+id	t
+0	aaa
+55	bb b
+66	ééé
+77	🫡🫡🫡
+88	娜娜
+1010	Лукас
+1212	ルカス
+tag: SELECT 7
+[target]:
+id	t
+0	aaa
+55	bb b
+66	ééé
+77	🫡🫡🫡
+88	娜娜
+1010	Лукас
+1212	ルカス
+tag: SELECT 7
+
+## Test that we can continue from data after file 1.
+# Force exception log.
+# Create multiple export files so we can continue from something other than part 1.
+fetch live notruncate expect-error suppress-error store-dir=continuation-test flush-rows=2
+----
+
+# Create new fetch that has an ID that we can control so we can control args passed in later.
+exec target
+INSERT INTO _molt_fetch_status (id, name, source_dialect) VALUES('d44762e5-6f70-43f8-8e15-58b4de10a007', 'dummy_run', 'PostgreSQL') RETURNING id
+----
+[target] INSERT 0 1
+
+# Make it so that the exception id is deterministic for future steps.
+exec target
+UPDATE _molt_fetch_exception SET fetch_id = 'd44762e5-6f70-43f8-8e15-58b4de10a007', file_name='part_00000002.csv' WHERE table_name LIKE 'tbl%'
+----
+[target] UPDATE 2
+
+# Ensure that the fetch_id stays consistent between test recordings.
+query target
+SELECT fetch_id, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception ORDER BY table_name DESC
+----
+[target]:
+fetch_id	table_name	message	sql_state	file_name	stage
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	tbl2	duplicate key value violates unique constraint "tbl2_pkey"; Key (id)=(0) already exists.	23505	part_00000002.csv	data_load
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) already exists.	23505	part_00000002.csv	data_load
+tag: SELECT 2
+
+# Clean up the target table and verify that it's cleaned.
+exec target
+TRUNCATE tbl1
+----
+[target] TRUNCATE
+
+exec target
+TRUNCATE tbl2
+----
+[target] TRUNCATE
+
+query all
+SELECT * FROM tbl1
+----
+[source]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+[target]:
+id	t
+tag: SELECT 0
+
+# Run fetch with continue and verify that it loads the data properly.
+fetch live notruncate store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007
+----
+
+# Verify that we get the partial data only after part 1's data (primary key 33 and after).
+query all
+SELECT * FROM tbl1
+----
+[source]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+[target]:
+id	t
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 5
+
+# Clean up the target table and verify that it's cleaned.
+exec target
+TRUNCATE tbl1
+----
+[target] TRUNCATE
+
+exec target
+TRUNCATE tbl2
+----
+[target] TRUNCATE
+
+# Make it so that the exception id is deterministic for future steps.
+exec target
+UPDATE _molt_fetch_exception SET id = 'ab4762e5-6f70-43f8-8e15-58b4de10a007' WHERE table_name LIKE 'tbl1'
+----
+[target] UPDATE 1
+
+## Test that an invalid file name leads to an error that notes this.
+fetch live notruncate expect-error store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 continuation-token=ab4762e5-6f70-43f8-8e15-58b4de10a007 override-file=wrong_00000003.csv
+----
+continuation file name wrong_00000003.csv doesn't match the format part_[\d+]{8}(\.csv|\.tar\.gz)
+
+## Test that we can get the data from the overrided file and after.
+## Test that even if irrelevant files with wrong data, it still works and writes the correct data
+## while skipping erroneous data.
+fetch live notruncate store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 continuation-token=ab4762e5-6f70-43f8-8e15-58b4de10a007 override-file=part_00000003.csv create-files=public.tbl1/part_00000000.csv,public.tbl1/invalid.csv cleanup-dir
+----
+
+# Verify that we get the partial data only after part 3's data (primary key 55 and after).
+query all
+SELECT * FROM tbl1
+----
+[source]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+[target]:
+id	t
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 3
+
+## Test that when we run fetch continue on an entry with no associated file_name we error out.
+exec target
+UPDATE _molt_fetch_exception SET file_name='' WHERE table_name LIKE 'tbl%'
+----
+[target] UPDATE 2
+
+# Make it so there is only one exception log, which can lead to better behavior for tests.
+exec target
+DELETE FROM _molt_fetch_exception WHERE table_name LIKE 'tbl2'
+----
+[target] DELETE 1
+
+# Run fetch and verify it fails with file name not found.
+fetch live notruncate expect-error store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 cleanup-dir
+----
+table public.tbl1 not imported because no file name is present in the exception log
+
+## Test that when the continuation token is no longer present, fetch errors and returns early.
+exec target
+DELETE FROM _molt_fetch_exception WHERE table_name LIKE 'tbl%'
+----
+[target] DELETE 1
+
+query target
+SELECT fetch_id, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception ORDER BY table_name DESC
+----
+[target]:
+fetch_id	table_name	message	sql_state	file_name	stage
+tag: SELECT 0
+
+# Run fetch and verify it fails with fetch-id with no exception logs.
+fetch live notruncate expect-error store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 cleanup-dir
+----
+no exception logs that correspond to fetch-id of d44762e5-6f70-43f8-8e15-58b4de10a007
+
+# Run fetch and verify it fails with token with no exception logs.
+fetch live notruncate expect-error store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 continuation-token=d44762e5-6f70-43f8-8e15-58b4de10a007 cleanup-dir
+----
+no exception logs that correspond to continuation-token of d44762e5-6f70-43f8-8e15-58b4de10a007
