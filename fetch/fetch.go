@@ -325,10 +325,12 @@ func fetchTable(
 	}
 
 	// Truncate table on the target side, if applicable.
-	if cfg.Truncate {
+	if cfg.Truncate && !IsImportCopyOnlyMode(cfg) {
 		if err := truncateTable(ctx, logger, table, conns); err != nil {
 			return err
 		}
+	} else if cfg.Truncate && IsImportCopyOnlyMode(cfg) {
+		logger.Warn().Msg("truncate is skipped because you are using a continuation mode and it could result in missing data")
 	}
 
 	logger.Info().Msgf("data extraction phase starting")
