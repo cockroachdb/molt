@@ -29,7 +29,6 @@ fetch --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres
 {"level":"info","message":"default compression to GZIP"}
 {"level":"info","message":"checking database details"}
 {"level":"info","message":"creating schema for tables: [public.floattable]"}
-{"level":"info","message":"dropping table with \"DROP TABLE IF EXISTS floattable\""}
 {"level":"info","message":"getting column types for table: public.floattable"}
 {"level":"info","message":"finished getting column types for table: public.floattable"}
 {"level":"info","message":"creating new table with \"CREATE TABLE floattable (id INT4 NOT NULL PRIMARY KEY, floatcol FLOAT8)\""}

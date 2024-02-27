@@ -146,9 +146,9 @@ func Fetch(
 				if err != nil {
 					return err
 				}
-				logger.Info().Msgf("dropping table with %q", dropTableStmt)
+				logger.Debug().Msgf("dropping table with %q", dropTableStmt)
 				if _, err := targetConn.Exec(ctx, dropTableStmt); err != nil {
-					return errors.Wrapf(err, "failed to create new schema %q on the target connection", t)
+					return errors.Wrapf(err, "failed to drop table %q on the target connection", t)
 				}
 				logger.Debug().Msgf("finished dropping table with %q", dropTableStmt)
 
@@ -158,7 +158,7 @@ func Fetch(
 				}
 				logger.Info().Msgf("creating new table with %q", createTableStmt)
 				if _, err := targetConn.Exec(ctx, createTableStmt); err != nil {
-					return errors.Wrapf(err, "failed to create new schema %q on the target connection", t)
+					return errors.Wrapf(err, "failed to create new schema %q on the target connection with %q", t, createTableStmt)
 				}
 				logger.Debug().Msgf("finished creating new table with %q", createTableStmt)
 			}

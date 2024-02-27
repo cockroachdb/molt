@@ -29,7 +29,6 @@ fetch --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres
 {"level":"info","message":"default compression to GZIP"}
 {"level":"info","message":"checking database details"}
 {"level":"info","message":"creating schema for tables: [public.tbl1]"}
-{"level":"info","message":"dropping table with \"DROP TABLE IF EXISTS tbl1\""}
 {"level":"info","message":"getting column types for table: public.tbl1"}
 {"level":"info","message":"finished getting column types for table: public.tbl1"}
 {"level":"info","message":"the original schema contains enum type \"my_enum_type\". A tentative enum type will be created as \"CREATE TYPE IF NOT EXISTS my_enum_type AS ENUM ('v1', 'v2', 'v3');\""}
@@ -74,7 +73,6 @@ fetch --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres
 {"level":"info","message":"checking database details"}
 {"level":"info","source_table":"public.tbl1","target_table":"public.tbl1","message":"found matching table"}
 {"level":"info","message":"creating schema for tables: [public.tbl1]"}
-{"level":"info","message":"dropping table with \"DROP TABLE IF EXISTS tbl1\""}
 {"level":"info","message":"getting column types for table: public.tbl1"}
 {"level":"info","message":"finished getting column types for table: public.tbl1"}
 {"level":"info","message":"the original schema contains enum type \"my_enum_type\". A tentative enum type will be created as \"CREATE TYPE IF NOT EXISTS my_enum_type AS ENUM ('v1', 'v2', 'v3');\""}
@@ -126,7 +124,6 @@ fetch --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres
 {"level":"info","message":"default compression to GZIP"}
 {"level":"info","message":"checking database details"}
 {"level":"info","message":"creating schema for tables: [public.employee1]"}
-{"level":"info","message":"dropping table with \"DROP TABLE IF EXISTS employee1\""}
 {"level":"info","message":"getting column types for table: public.employee1"}
 {"level":"info","message":"finished getting column types for table: public.employee1"}
 {"level":"info","message":"creating new table with \"CREATE TABLE employee1 (id INT4 NOT NULL PRIMARY KEY, name VARCHAR NOT NULL, age INT4, address VARCHAR NOT NULL, start_date DATE, end_date DATE)\""}
