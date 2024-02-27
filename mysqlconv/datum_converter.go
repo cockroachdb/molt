@@ -1,10 +1,13 @@
 package mysqlconv
 
 import (
+	"encoding/binary"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cockroachdb/cockroachdb-parser/pkg/sql/sem/tree"
+	"github.com/cockroachdb/cockroachdb-parser/pkg/util/duration"
 	"github.com/cockroachdb/cockroachdb-parser/pkg/util/json"
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/parsectx"
@@ -40,6 +43,27 @@ func ConvertRowValue(typMap *pgtype.Map, val []byte, typOID oid.Oid) (tree.Datum
 		v := string(val)
 		ret, _, err := tree.ParseDTimestampTZ(parsectx.ParseContext, v, time.Microsecond)
 		return ret, err
+	case pgtype.TimeOID:
+		// https://dev.mysql.com/doc/refman/8.0/en/time.html
+		// https://dev.mysql.com/doc/refman/8.0/en/date-and-time-literals.html#:~:text=MySQL%20recognizes%20TIME%20values%20in%20these%20formats%3A
+		// From MySQL's doc:
+		// MySQL retrieves and displays TIME values in 'hh:mm:ss' format (or 'hhh:mm:ss' format for large hours values).
+		// TIME values may range from '-838:59:59' to '838:59:59'. The hours part may be so large because the TIME type
+		// can be used not only to represent a time of day (which must be less than 24 hours), but also elapsed time or
+		// a time interval between two events (which may be much greater than 24 hours, or even negative).
+		v := string(val)
+		var ret tree.Datum
+		var err error
+		ret, _, err = tree.ParseDTime(parsectx.ParseContext, v, time.Microsecond)
+		if err == nil {
+			return ret, nil
+		}
+		// If the value cannot be parsed a time datum, try parse it as an interval. See explanation above.
+		ret, err = tree.ParseDInterval(duration.IntervalStyle_SQL_STANDARD, v)
+		if err != nil {
+			return ret, errors.Wrapf(err, "input %q cannot be parsed as time or interval", v)
+		}
+		return ret, nil
 	case pgtype.DateOID:
 		ret, _, err := tree.ParseDDate(parsectx.ParseContext, string(val))
 		return ret, err
@@ -48,7 +72,20 @@ func ConvertRowValue(typMap *pgtype.Map, val []byte, typOID oid.Oid) (tree.Datum
 	case pgtype.NumericOID:
 		return tree.ParseDDecimal(string(val))
 	case pgtype.BitOID, pgtype.VarbitOID:
-		return tree.ParseDBitArray(string(val))
+		// val in this case is a []uint8.
+		// For example:
+		// b'1000001' -> {65}
+		// b'11110000011' -> {7, 131}
+		// b'111111111110000011' -> {3, 255, 131}
+		// We need to convert it into a bit array first.
+		paddedVal := []byte{0, 0, 0, 0, 0, 0, 0, 0}
+		// Pad to the front to make it a byte slice of fixed length 8.
+		for p := 1; p < len(val)+1; p++ {
+			paddedVal[8-p] = val[len(val)-p]
+		}
+		theUint := binary.BigEndian.Uint64(paddedVal)
+		bitArrStr := strconv.FormatUint(theUint, 2)
+		return tree.ParseDBitArray(bitArrStr)
 	case oid.T_anyenum:
 		return tree.NewDString(string(val)), nil
 	}

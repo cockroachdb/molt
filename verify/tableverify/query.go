@@ -131,7 +131,11 @@ ORDER BY ordinal_position`,
 			}
 			var cm Column
 			cm.Name = tree.Name(strings.ToLower(cn))
-			cm.OID = mysqlconv.DataTypeToOID(dt, ct)
+			typeOid, err := mysqlconv.DataTypeToOID(dt, ct)
+			if err != nil {
+				return ret, err
+			}
+			cm.OID = typeOid
 			cm.NotNull = isNullable == "NO"
 			cm.Collation = collation
 			ret = append(ret, cm)
