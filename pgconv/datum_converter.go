@@ -2,6 +2,7 @@ package pgconv
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/cockroachdb/apd/v3"
@@ -15,6 +16,7 @@ import (
 	"github.com/cockroachdb/molt/parsectx"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/lib/pq/oid"
+	"github.com/shopspring/decimal"
 )
 
 func ConvertRowValue(typMap *pgtype.Map, val any, typOID oid.Oid) (tree.Datum, error) {
@@ -47,7 +49,19 @@ func ConvertRowValue(typMap *pgtype.Map, val any, typOID oid.Oid) (tree.Datum, e
 	case pgtype.NameOID:
 		return tree.NewDName(val.(string)), nil
 	case pgtype.Float4OID:
-		return tree.NewDFloat(tree.DFloat(val.(float32))), nil
+		valFloat32 := val.(float32)
+		if valFloat32 == float32(math.Inf(+1)) || valFloat32 == float32(math.Inf(-1)) || valFloat32 == float32(math.NaN()) {
+			return tree.NewDFloat(tree.DFloat(valFloat32)), nil
+		}
+		// We need additional steps to convert float32 correctly to float64, see also:
+		// - https://go.dev/play/p/6HkLVNZAdG0
+		// - https://forum.golangbridge.org/t/problem-converting-float32-to-string/32420/4
+		// When converting from float32 to float64 directly with type conversion, the additional precision of float64
+		// can reveal more non-zero digits beyond the decimal point, leading to incorrect value.
+		decimalF32 := decimal.NewFromFloat32(valFloat32)
+		float64Val, _ := decimalF32.Float64()
+		res := tree.NewDFloat(tree.DFloat(float64Val))
+		return res, nil
 	case pgtype.Float8OID:
 		return tree.NewDFloat(tree.DFloat(val.(float64))), nil
 	case pgtype.Int2OID:

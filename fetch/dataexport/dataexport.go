@@ -64,8 +64,17 @@ func scanWithRowIterator(
 	for it.HasNext(ctx) {
 		strings = strings[:0]
 		datums := it.Next(ctx)
+		var fmtFlags tree.FmtFlags
 		for _, d := range datums {
-			f := tree.NewFmtCtx(tree.FmtExport | tree.FmtParsableNumerics)
+			switch d.(type) {
+			case *tree.DFloat:
+				// With tree.FmtParsableNumerics, negative value will be bracketed, making it unable to be imported from
+				// csv.
+				fmtFlags = tree.FmtExport
+			default:
+				fmtFlags = tree.FmtExport | tree.FmtParsableNumerics
+			}
+			f := tree.NewFmtCtx(fmtFlags)
 			f.FormatNode(d)
 			strings = append(strings, f.CloseAndGetString())
 		}
