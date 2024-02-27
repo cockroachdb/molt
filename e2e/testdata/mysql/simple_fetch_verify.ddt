@@ -15,7 +15,7 @@ docker cp ../.github/e2esampledata/sampledata.csv  github-mysql-1:/var/lib/mysql
 ----
 
 exec silent
-mysql -u user -p'password'  -h '0.0.0.0' -P 3306 --database=defaultdb --execute="LOAD DATA  INFILE '/var/lib/mysql-files/sampledata.csv'  INTO TABLE tbl1  FIELDS TERMINATED BY ','  ENCLOSED BY '\"' LINES TERMINATED BY '\n' IGNORE 1 ROWS;"
+mysql -u user -p'password'  -h '0.0.0.0' -P 3306 --database=defaultdb --execute="LOAD DATA INFILE '/var/lib/mysql-files/sampledata.csv'  INTO TABLE tbl1  FIELDS TERMINATED BY ','  ENCLOSED BY '\"' LINES TERMINATED BY '\n' IGNORE 1 ROWS;"
 ----
 
 exec

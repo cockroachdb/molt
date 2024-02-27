@@ -3,6 +3,7 @@ package fetch
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/cockroachdb/cockroachdb-parser/pkg/sql/parser"
@@ -11,6 +12,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/dbtable"
+	"github.com/cockroachdb/molt/mysqlconv"
 	"github.com/lib/pq/oid"
 	"github.com/rs/zerolog"
 )
@@ -70,6 +72,7 @@ type columnWithType struct {
 	tableName     string
 	columnName    string
 	dataType      string
+	columnType    string
 	typeOid       oid.Oid
 	nullable      bool
 	isPrimaryKey  bool
@@ -98,7 +101,7 @@ func (t *columnWithType) CRDBColDef(includePk bool) (*tree.ColumnTableDef, error
 		Type: colType,
 	}
 	if t.nullable {
-		res.Nullable.Nullability = parser.NULL
+		res.Nullable.Nullability = tree.SilentNull
 	}
 	if t.isPrimaryKey && includePk {
 		res.PrimaryKey.IsPrimaryKey = true
@@ -116,7 +119,11 @@ func (t *columnWithType) String() string {
 }
 
 func GetColumnTypes(
-	ctx context.Context, logger zerolog.Logger, conn dbconn.Conn, table dbtable.DBTable,
+	ctx context.Context,
+	logger zerolog.Logger,
+	conn dbconn.Conn,
+	table dbtable.DBTable,
+	skipUnsupportedTypeErr bool,
 ) (columnsWithType, error) {
 	const (
 		pgQuery = `SELECT
@@ -187,8 +194,36 @@ LEFT JOIN (
     AND t1.table_name = t2.table_name
     AND t1.schema_name = t2.table_schema
 ORDER BY
+    t1.schema_name,
     t1.table_name,
     t2.ordinal_position;
+`
+		mysqlQuery = `SELECT 
+    c.TABLE_SCHEMA, 
+    c.TABLE_NAME, 
+    c.COLUMN_NAME, 
+    c.DATA_TYPE,
+    c.COLUMN_TYPE, 
+    CASE 
+        WHEN c.IS_NULLABLE = 'YES' THEN 'TRUE'
+        ELSE 'FALSE' 
+    END AS NULLABLE,
+    CASE 
+        WHEN c.COLUMN_KEY = 'PRI' THEN 'TRUE'
+        ELSE 'FALSE'
+    END AS IS_PRIMARY_KEY
+FROM 
+    information_schema.COLUMNS c
+JOIN 
+    information_schema.TABLES t ON c.TABLE_SCHEMA = t.TABLE_SCHEMA AND c.TABLE_NAME = t.TABLE_NAME
+WHERE 
+    c.TABLE_SCHEMA = DATABASE() 
+    AND t.TABLE_TYPE = 'BASE TABLE'
+    AND c.TABLE_NAME = '%s'
+ORDER BY 
+    c.TABLE_SCHEMA, 
+    c.TABLE_NAME,  
+    c.ORDINAL_POSITION;
 `
 	)
 
@@ -206,15 +241,41 @@ ORDER BY
 			if err := rows.Scan(&newCol.schemaName, &newCol.tableName, &newCol.columnName, &newCol.dataType, &newCol.typeOid, &newCol.nullable, &newCol.isPrimaryKey, &newCol.udtName, &newCol.udtDefinition); err != nil {
 				return nil, errors.Wrap(err, "failed to scan query result to a columnWithType object")
 			}
-			logger.Debug().Msgf("collect column:%s", newCol.String())
+			logger.Debug().Msgf("collected column:%s", newCol.String())
 			res = append(res, newCol)
 		}
-		logger.Info().Msgf("finished getting column types for table: %s", table.String())
-	// TODO(janexing): support mysql.
+	case *dbconn.MySQLConn:
+		q := fmt.Sprintf(mysqlQuery, table.Table)
+		rows, err := conn.Query(q)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			newCol := columnWithType{}
+			if err := rows.Scan(&newCol.schemaName, &newCol.tableName, &newCol.columnName, &newCol.dataType, &newCol.columnType, &newCol.nullable, &newCol.isPrimaryKey); err != nil {
+				return nil, errors.Wrap(err, "failed to scan query result to a columnWithType object")
+			}
+			logger.Debug().Msgf("collected column:%s", newCol.String())
+			pgOid, err := mysqlconv.DataTypeToOID(newCol.dataType, newCol.columnType)
+			if err != nil && !skipUnsupportedTypeErr {
+				return nil, err
+			}
+			newCol.typeOid = pgOid
+			if pgOid == oid.T_anyenum {
+				udtDefinition, udtName, getUdtErr := convertMySQLEnum(newCol)
+				if getUdtErr != nil {
+					return nil, getUdtErr
+				}
+				newCol.udtDefinition = udtDefinition
+				newCol.udtName = udtName
+			}
+			res = append(res, newCol)
+		}
 	default:
 		return nil, errors.New("not supported conn type")
 	}
 
+	logger.Info().Msgf("finished getting column types for table: %s", table.String())
 	return res, nil
 }
 
@@ -234,7 +295,7 @@ func GetDropTableStmt(table dbtable.DBTable) (string, error) {
 func GetCreateTableStmt(
 	ctx context.Context, logger zerolog.Logger, conn dbconn.Conn, table dbtable.DBTable,
 ) (string, error) {
-	newCols, err := GetColumnTypes(ctx, logger, conn, table)
+	newCols, err := GetColumnTypes(ctx, logger, conn, table, false /* skipUnsupportedTypeErr */)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed get columns for target table: %s", table.String())
 	}
@@ -255,4 +316,28 @@ func GetCreateTableStmt(
 		return strings.Join([]string{res, createTableStmt}, " "), nil
 	}
 	return createTableStmt, nil
+}
+
+func convertMySQLEnum(
+	newCol columnWithType,
+) (createEnumStmt string, enumTypeName string, err error) {
+	if newCol.columnType == "" {
+		return "", "", errors.Newf("original type is enum but with empty column type definition")
+	}
+	enumTypeName = fmt.Sprintf("%s_%s_%s_enum", newCol.schemaName, newCol.tableName, newCol.columnName)
+	pattern := regexp.MustCompile(`enum(\(.+\))`)
+	createEnumStmt = newCol.columnType
+	matches := pattern.FindAllStringSubmatch(newCol.columnType, -1)
+	if len(matches) == 0 {
+		return "", "", errors.Newf("cannot extract enum values from the original enum expression: %q", newCol.columnType)
+	}
+	for _, match := range matches {
+		if len(match) < 2 {
+			return "", "", errors.Newf("cannot extract enum values from matched enum expression: %q", match)
+		}
+		enumValues := match[1]
+		output := fmt.Sprintf("CREATE TYPE IF NOT EXISTS %s AS ENUM %s;", enumTypeName, enumValues)
+		createEnumStmt = pattern.ReplaceAllString(createEnumStmt, output)
+	}
+	return createEnumStmt, enumTypeName, nil
 }
