@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/cockroachdb-parser/pkg/sql/sem/tree"
+	"github.com/cockroachdb/cockroachdb-parser/pkg/sql/types"
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/comparectx"
 	"github.com/cockroachdb/molt/dbconn"
@@ -164,8 +165,44 @@ func verifyRows(
 					PrimaryKeyValues:  targetVals[:len(table.PrimaryKeyColumns)],
 				}
 
+				// Currently, CRDB or PG doesn't support comparison between boolean and int, i.e. `SELECT true=1;` will
+				// return a comparison error. So if we need to explicitly convert a bool datum to an int to enable its
+				// comparison with an int datum.
+				boolDatumToIntDatum := func(dbool *tree.DBool) *tree.DInt {
+					var res tree.DInt
+					if *dbool {
+						res = tree.DInt(1)
+					}
+					return &res
+				}
+
+				uuidDatumToStringDatum := func(duuid *tree.DUuid) *tree.DString {
+					// We need to use the bare string fmt so that no extra single quotes are added for the string.
+					fmtCtx := tree.NewFmtCtx(tree.FmtBareStrings)
+					fmtCtx.FormatNode(duuid)
+					res := tree.DString(fmtCtx.CloseAndGetString())
+					return &res
+				}
+
 				for valIdx := len(table.PrimaryKeyColumns); valIdx < len(targetVals); valIdx++ {
-					if retVal, err := targetVals[valIdx].CompareError(comparectx.CompareContext, truthVals[valIdx]); err != nil {
+					datumsToProcess := [2]tree.Datum{truthVals[valIdx], targetVals[valIdx]}
+
+					for i, d := range datumsToProcess {
+						switch d.ResolvedType().Family() {
+						case types.BoolFamily:
+							if datumsToProcess[1-i].ResolvedType().Family() == types.IntFamily {
+								datumsToProcess[i] = boolDatumToIntDatum(d.(*tree.DBool))
+								break
+							}
+						case types.UuidFamily:
+							if datumsToProcess[1-i].ResolvedType().Family() == types.StringFamily {
+								datumsToProcess[i] = uuidDatumToStringDatum(d.(*tree.DUuid))
+								break
+							}
+						}
+					}
+
+					if retVal, err := datumsToProcess[0].CompareError(comparectx.CompareContext, datumsToProcess[1]); err != nil {
 						if _, ok := colIdxToSeen[valIdx]; ok {
 							reportLog = false
 						}
