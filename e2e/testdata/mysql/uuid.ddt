@@ -1,0 +1,112 @@
+exec silent
+mysql -u user -p'password'  -h '0.0.0.0' -P 3306 --database=defaultdb --execute="DROP TABLE IF EXISTS uuid_table; CREATE TABLE uuid_table (id SERIAL PRIMARY KEY, unique_id VARCHAR(100) DEFAULT '550e8400-e29b-41d4-a716-446655440000');"
+----
+
+# This is needed, otherwise you might encounter a failed to export snapshot: please ensure that you have GTID-based replication enabled: Error 1142 (42000): SELECT command denied to user 'user'@'xx.xx.xx.xx' for table 'gtid_executed' error
+exec silent
+docker exec -t github-mysql-1 mysql -u root -e 'GRANT FILE, SELECT on *.* to user;'
+----
+
+exec
+mysql -u user -p'password'  -h '0.0.0.0' -P 3306 --database=defaultdb --execute="INSERT INTO uuid_table (id) VALUES (1), (2), (3)"
+----
+
+exec
+mysql -u user -p'password'  -h '0.0.0.0' -P 3306 --database=defaultdb --execute="SELECT * FROM uuid_table"
+----
+id	unique_id
+1	550e8400-e29b-41d4-a716-446655440000
+2	550e8400-e29b-41d4-a716-446655440000
+3	550e8400-e29b-41d4-a716-446655440000
+
+# Automatically create the schema.
+fetch --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'uuid_table' --table-handling 'drop-on-target-and-recreate' --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9115'  --cleanup=true
+----
+{"level":"info","message":"default compression to GZIP"}
+{"level":"info","message":"checking database details"}
+{"level":"info","message":"creating schema for tables: [public.uuid_table]"}
+{"level":"info","message":"getting column types for table: public.uuid_table"}
+{"level":"info","message":"finished getting column types for table: public.uuid_table"}
+{"level":"info","message":"creating new table with \"CREATE TABLE uuid_table (id INT8 NOT NULL PRIMARY KEY, unique_id VARCHAR)\""}
+{"level":"info","message":"after recreating table, dbTables: {[[public.uuid_table public.uuid_table]] [] []}"}
+{"level":"info","message":"verifying common tables"}
+{"level":"info","message":"establishing snapshot"}
+{"level":"info","type":"summary","num_tables":1,"cdc_cursor":"0/19E3610","message":"starting fetch"}
+{"level":"info","message":"data extraction phase starting"}
+{"level":"info","type":"summary","num_rows":3,"export_duration_ms":1000,"export_duration":"000h 00m 01s","message":"data extraction from source complete"}
+{"level":"info","message":"starting data import on target"}
+{"level":"info","message":"imported 3 rows for batch for files 1 to 1"}
+{"level":"info","type":"summary","net_duration_ms":1000,"net_duration":"000h 00m 01s","import_duration_ms":1000,"import_duration":"000h 00m 01s","export_duration_ms":1000,"export_duration":"000h 00m 01s","num_rows":3,"cdc_cursor":"0/19E3610","message":"data import on target for table complete"}
+{"level":"info","message":"cleaning up resources created during fetch run"}
+{"level":"info","type":"summary","fetch_id":"0000000000","num_tables":1,"tables":["public.uuid_table"],"cdc_cursor":"0/19E3610","net_duration_ms":1000,"net_duration":"000h 00m 01s","message":"fetch complete"}
+{"level":"info","message":"http server intentionally shut down"}
+
+
+verify --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'uuid_table'
+----
+{"level":"info","message":"verification in progress"}
+{"level":"info","message":"starting verify on public.uuid_table, shard 1/1"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"uuid_table","num_truth_rows":3,"num_success":3,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.uuid_table (shard 1/1)"}
+{"level":"info","net_duration_ms":1000,"net_duration":"000h 00m 01s","message":"verification complete"}
+
+
+exec
+psql 'postgres://root@localhost:26257/defaultdb?sslmode=disable' -c "SHOW CREATE TABLE uuid_table"
+----
+table_name |                    create_statement                     
+------------+---------------------------------------------------------
+ uuid_table | CREATE TABLE public.uuid_table (                       +
+            |         id INT8 NOT NULL,                              +
+            |         unique_id VARCHAR NULL,                        +
+            |         CONSTRAINT uuid_table_pkey PRIMARY KEY (id ASC)+
+            | )
+(1 row)
+
+exec
+psql 'postgres://root@localhost:26257/defaultdb?sslmode=disable' -c "SELECT * FROM uuid_table"
+----
+id |              unique_id               
+----+--------------------------------------
+  1 | 550e8400-e29b-41d4-a716-446655440000
+  2 | 550e8400-e29b-41d4-a716-446655440000
+  3 | 550e8400-e29b-41d4-a716-446655440000
+(3 rows)
+
+# Try the case where we explicitly create a BOOL column in CRDB.
+exec silent
+psql 'postgres://root@localhost:26257/defaultdb?sslmode=disable' -c "DROP TABLE IF EXISTS uuid_table; CREATE TABLE uuid_table (id SERIAL PRIMARY KEY, unique_id UUID DEFAULT '550e8400-e29b-41d4-a716-446655440000');"
+----
+
+fetch --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'uuid_table'  --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9115'  --cleanup=true
+----
+{"level":"info","message":"default compression to GZIP"}
+{"level":"info","message":"checking database details"}
+{"level":"info","source_table":"public.uuid_table","target_table":"public.uuid_table","message":"found matching table"}
+{"level":"info","message":"verifying common tables"}
+{"level":"info","message":"establishing snapshot"}
+{"level":"info","type":"summary","num_tables":1,"cdc_cursor":"0/19E3610","message":"starting fetch"}
+{"level":"info","message":"data extraction phase starting"}
+{"level":"info","type":"summary","num_rows":3,"export_duration_ms":1000,"export_duration":"000h 00m 01s","message":"data extraction from source complete"}
+{"level":"info","message":"starting data import on target"}
+{"level":"info","message":"imported 3 rows for batch for files 1 to 1"}
+{"level":"info","type":"summary","net_duration_ms":1000,"net_duration":"000h 00m 01s","import_duration_ms":1000,"import_duration":"000h 00m 01s","export_duration_ms":1000,"export_duration":"000h 00m 01s","num_rows":3,"cdc_cursor":"0/19E3610","message":"data import on target for table complete"}
+{"level":"info","message":"cleaning up resources created during fetch run"}
+{"level":"info","type":"summary","fetch_id":"0000000000","num_tables":1,"tables":["public.uuid_table"],"cdc_cursor":"0/19E3610","net_duration_ms":1000,"net_duration":"000h 00m 01s","message":"fetch complete"}
+{"level":"info","message":"http server intentionally shut down"}
+
+exec
+psql 'postgres://root@localhost:26257/defaultdb?sslmode=disable' -c "SELECT * FROM uuid_table"
+----
+id |              unique_id               
+----+--------------------------------------
+  1 | 550e8400-e29b-41d4-a716-446655440000
+  2 | 550e8400-e29b-41d4-a716-446655440000
+  3 | 550e8400-e29b-41d4-a716-446655440000
+(3 rows)
+
+verify --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'uuid_table'
+----
+{"level":"info","message":"verification in progress"}
+{"level":"info","message":"starting verify on public.uuid_table, shard 1/1"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"uuid_table","num_truth_rows":3,"num_success":3,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.uuid_table (shard 1/1)"}
+{"level":"info","net_duration_ms":1000,"net_duration":"000h 00m 01s","message":"verification complete"}

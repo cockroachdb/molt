@@ -24,9 +24,11 @@ func TestDataDriven(t *testing.T) {
 		t.Logf("containers are all up")
 
 		defer func() {
-			t.Logf("tearing down containers")
-			require.NoError(t, TearDown())
-			t.Logf("all containers are terminated")
+			if !*flagNoCleanContainers {
+				t.Logf("tearing down containers")
+				require.NoError(t, TearDown())
+				t.Logf("all containers are terminated")
+			}
 		}()
 
 		datadriven.RunTestAny(t, path, func(t testing.TB, d *datadriven.TestData) string {

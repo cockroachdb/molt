@@ -24,6 +24,7 @@ import (
 // flagEnabled prevents tests from running from `go test ./...` by default.
 // We avoid build tags here as it would require adding it to every test.
 var flagEnabled = flag.Bool("e2e-enabled", false, "whether the test should execute")
+var flagNoCleanContainers = flag.Bool("no-clean-containers", false, "whether to clean up the containers at the end of tests")
 
 func TestMain(t *testing.M) {
 	flag.Parse()
