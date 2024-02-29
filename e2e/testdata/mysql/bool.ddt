@@ -37,6 +37,7 @@ fetch --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres
 {"level":"info","message":"getting column types for table: public.bool_table"}
 {"level":"info","message":"finished getting column types for table: public.bool_table"}
 {"level":"info","message":"creating new table with \"CREATE TABLE bool_table (id INT8 NOT NULL PRIMARY KEY, bool_col INT2)\""}
+{"level":"warn","message":"newly created schema doesn't contain the following constraints:\ntable: public.bool_table,\"UNIQUE KEY `id` (`id`)\""}
 {"level":"info","message":"after recreating table, dbTables: {[[public.bool_table public.bool_table]] [] []}"}
 {"level":"info","message":"verifying common tables"}
 {"level":"info","message":"establishing snapshot"}

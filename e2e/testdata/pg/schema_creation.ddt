@@ -127,6 +127,7 @@ fetch --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres
 {"level":"info","message":"getting column types for table: public.employee1"}
 {"level":"info","message":"finished getting column types for table: public.employee1"}
 {"level":"info","message":"creating new table with \"CREATE TABLE employee1 (id INT4 NOT NULL PRIMARY KEY, name VARCHAR NOT NULL, age INT4, address VARCHAR NOT NULL, start_date DATE, end_date DATE)\""}
+{"level":"warn","message":"newly created schema doesn't contain the following constraints:\ntable: public.employee1,\"CHECK ((start_date <= end_date))\",\"UNIQUE (name)\",\"UNIQUE (start_date)\""}
 {"level":"info","message":"after recreating table, dbTables: {[[public.employee1 public.employee1]] [] []}"}
 {"level":"info","message":"verifying common tables"}
 {"level":"info","message":"establishing snapshot"}
