@@ -19,9 +19,12 @@ import (
 const (
 	StageSchemaCreation = "schema_creation"
 	StageDataLoad       = "data_load"
+	exceptionTable      = "_molt_fetch_exception"
 )
 
-const createExceptionsTable = `CREATE TABLE IF NOT EXISTS _molt_fetch_exception (
+var (
+	deleteQuery           = fmt.Sprintf("TRUNCATE %s;", exceptionTable)
+	createExceptionsTable = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 	fetch_id UUID NOT NULL REFERENCES _molt_fetch_status (id),
     table_name STRING,
@@ -34,7 +37,8 @@ const createExceptionsTable = `CREATE TABLE IF NOT EXISTS _molt_fetch_exception 
     time TIMESTAMP,
 	INDEX(fetch_id, sql_state)
 );
-`
+`, exceptionTable)
+)
 
 type ExceptionLog struct {
 	ID       uuid.UUID
@@ -61,7 +65,7 @@ func (e *ExceptionLog) CreateEntry(ctx context.Context, conn *pgx.Conn, stage st
 		curTime = e.Time
 	}
 
-	query := `INSERT INTO _molt_fetch_exception (fetch_id, table_name, schema_name, message, sql_state, file_name, command, stage, time) VALUES(@fetch_id, @table_name, @schema_name, @message, @sql_state, @file_name, @command, @stage, @time) RETURNING id, stage`
+	query := fmt.Sprintf(`INSERT INTO %s (fetch_id, table_name, schema_name, message, sql_state, file_name, command, stage, time) VALUES(@fetch_id, @table_name, @schema_name, @message, @sql_state, @file_name, @command, @stage, @time) RETURNING id, stage`, exceptionTable)
 	args := pgx.NamedArgs{
 		"fetch_id":    e.FetchID,
 		"table_name":  e.Table,
@@ -90,12 +94,52 @@ func (e *ExceptionLog) CreateEntry(ctx context.Context, conn *pgx.Conn, stage st
 	return nil
 }
 
+func (e *ExceptionLog) UpdateEntry(
+	ctx context.Context, conn *pgx.Conn, msg, sqlState, fileName string,
+) error {
+	query := fmt.Sprintf(`UPDATE %s SET message=@message, sql_state=@sql_state, file_name=@file_name, time=@time WHERE id=@id RETURNING message, sql_state, file_name, time`, exceptionTable)
+	args := pgx.NamedArgs{
+		"id":        e.ID,
+		"message":   msg,
+		"sql_state": sqlState,
+		"file_name": fileName,
+		"time":      time.Now(),
+	}
+
+	row := conn.QueryRow(ctx, query, args)
+	return row.Scan(&e.Message, &e.SQLState, &e.FileName, &e.Time)
+}
+
+// DeleteEntry is used when, on a continuation run, the import succeeds and we want
+// to clear the exception from the table.
+func (e *ExceptionLog) DeleteEntry(ctx context.Context, conn *pgx.Conn) error {
+	query := fmt.Sprintf(`DELETE FROM %s WHERE id=@id`, exceptionTable)
+	args := pgx.NamedArgs{
+		"id": e.ID,
+	}
+
+	if _, err := conn.Exec(ctx, query, args); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Used to clear the continuation tokens on fresh runs.
+func DeleteAllExceptionLogs(ctx context.Context, conn *pgx.Conn) error {
+	if _, err := conn.Exec(ctx, deleteQuery); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func GetExceptionLogByToken(
 	ctx context.Context, conn *pgx.Conn, token string,
 ) (*ExceptionLog, error) {
-	query := `SELECT id, fetch_id, table_name, schema_name, message, sql_state, file_name, command, stage, time 
-		FROM _molt_fetch_exception 
-		WHERE id=@id`
+	query := fmt.Sprintf(`SELECT id, fetch_id, table_name, schema_name, message, sql_state, file_name, command, stage, time 
+		FROM %s
+		WHERE id=@id`, exceptionTable)
 	args := pgx.NamedArgs{
 		"id": token,
 	}
@@ -113,10 +157,10 @@ func GetExceptionLogByToken(
 func GetAllExceptionLogsByFetchID(
 	ctx context.Context, conn *pgx.Conn, fetchID string,
 ) ([]*ExceptionLog, error) {
-	query := `SELECT DISTINCT ON (schema_name, table_name) id, fetch_id, table_name, schema_name, message, sql_state, file_name, command, stage, time 
-	FROM _molt_fetch_exception 
+	query := fmt.Sprintf(`SELECT DISTINCT ON (schema_name, table_name) id, fetch_id, table_name, schema_name, message, sql_state, file_name, command, stage, time 
+	FROM %s
 	WHERE fetch_id=@fetch_id 
-	ORDER BY schema_name, table_name,  time DESC`
+	ORDER BY schema_name, table_name, time DESC`, exceptionTable)
 	args := pgx.NamedArgs{
 		"fetch_id": fetchID,
 	}
@@ -162,6 +206,8 @@ func MaybeReportException(
 	inputErr error,
 	fileName string,
 	stage string,
+	isClearContinuationTokenMode bool,
+	exceptionLog *ExceptionLog,
 ) error {
 	fetchContext := fetchcontext.GetFetchContextData(ctx)
 
@@ -183,25 +229,34 @@ func MaybeReportException(
 		fileName = ExtractFileNameFromErr(errMsg)
 	}
 
-	exceptionLog := ExceptionLog{
-		FetchID:  fetchContext.RunID,
-		Table:    table.Table.String(),
-		Schema:   table.Schema.String(),
-		Message:  errMsg,
-		SQLState: sqlState,
-		FileName: fileName,
-		Time:     createdAt,
-	}
+	if isClearContinuationTokenMode {
+		exceptionLog = &ExceptionLog{
+			FetchID:  fetchContext.RunID,
+			Table:    table.Table.String(),
+			Schema:   table.Schema.String(),
+			Message:  errMsg,
+			SQLState: sqlState,
+			FileName: fileName,
+			Time:     createdAt,
+		}
 
-	// TODO: figure out to deduplicate or upsert and do nothing if conflict.
-	if err := exceptionLog.CreateEntry(ctx, conn, stage); err != nil {
-		logger.Err(err).Send()
-		return errors.CombineErrors(inputErr, err)
-	}
+		if err := exceptionLog.CreateEntry(ctx, conn, stage); err != nil {
+			logger.Err(err).Send()
+			return errors.CombineErrors(inputErr, err)
+		}
 
-	logger.Info().
-		Str("table", fmt.Sprintf("%s.%s", table.Schema.String(), table.Table.String())).
-		Str("continuation_token", exceptionLog.ID.String()).Msg("created continuation token")
+		logger.Info().
+			Str("table", fmt.Sprintf("%s.%s", table.Schema.String(), table.Table.String())).
+			Str("continuation_token", exceptionLog.ID.String()).Msg("created continuation token")
+	} else {
+		if err := exceptionLog.UpdateEntry(ctx, conn, errMsg, sqlState, fileName); err != nil {
+			return err
+		}
+
+		logger.Info().
+			Str("table", fmt.Sprintf("%s.%s", table.Schema.String(), table.Table.String())).
+			Str("continuation_token", exceptionLog.ID.String()).Msg("updated continuation token")
+	}
 
 	return inputErr
 }

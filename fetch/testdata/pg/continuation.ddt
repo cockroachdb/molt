@@ -90,13 +90,54 @@ UPDATE _molt_fetch_exception SET fetch_id = 'd44762e5-6f70-43f8-8e15-58b4de10a00
 
 # Ensure that the fetch_id stays consistent between test recordings.
 query target
-SELECT fetch_id, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception ORDER BY table_name DESC
+SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception ORDER BY table_name DESC
 ----
 [target]:
-fetch_id	table_name	message	sql_state	file_name	stage
-[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	tbl2	duplicate key value violates unique constraint "tbl2_pkey"; Key (id)=(0) already exists.	23505	part_00000001.csv	data_load
-[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) already exists.	23505	part_00000001.csv	data_load
+fetch_id	schema_name	table_name	message	sql_state	file_name	stage
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl2	duplicate key value violates unique constraint "tbl2_pkey"; Key (id)=(0) already exists.	23505	part_00000001.csv	data_load
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) already exists.	23505	part_00000001.csv	data_load
 tag: SELECT 2
+
+# Baseline number of fetch entries.
+query target
+SELECT COUNT(*) FROM _molt_fetch_status;
+----
+[target]:
+count
+2
+tag: SELECT 1
+
+# Update the entry so we can continue from a known token we control.
+exec target
+UPDATE _molt_fetch_exception SET id = '011762e5-6f70-43f8-8e15-58b4de10a007' WHERE table_name LIKE 'tbl2'
+----
+[target] UPDATE 1
+
+## Test that when running continuation mode with specific table, when it errors we have
+## the same exception logs.
+
+# Setup this by updating the message field so that it is temporary. Then we need to verify that
+# the message gets updated back to the correct message down below.
+exec target 
+UPDATE _molt_fetch_exception SET message='temporary' WHERE table_name LIKE 'tbl2';
+----
+[target] UPDATE 1
+
+# As we expect the exception log tied to tbl2 shows the temporary message.
+query target
+SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception ORDER BY table_name DESC
+----
+[target]:
+fetch_id	schema_name	table_name	message	sql_state	file_name	stage
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl2	temporary	23505	part_00000001.csv	data_load
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) already exists.	23505	part_00000001.csv	data_load
+tag: SELECT 2
+
+# Run this continuation test first because it doesn't clear the exceptions log table.
+# Run fetch on only one table.
+fetch live expect-error  notruncate store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 continuation-token=011762e5-6f70-43f8-8e15-58b4de10a007
+----
+ERROR: duplicate key value violates unique constraint "tbl2_pkey" (SQLSTATE 23505)
 
 # Clean up the target table and verify that it's cleaned.
 exec target
@@ -126,6 +167,113 @@ tag: SELECT 7
 id	t
 tag: SELECT 0
 
+# Ensure that there are still two exception logs when it fails.
+# Sure enough, the exception log gets updated with the latest message.
+query target
+SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception ORDER BY table_name DESC
+----
+[target]:
+fetch_id	schema_name	table_name	message	sql_state	file_name	stage
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl2	duplicate key value violates unique constraint "tbl2_pkey"; Key (id)=(0) already exists.	23505	part_00000001.csv	data_load
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) already exists.	23505	part_00000001.csv	data_load
+tag: SELECT 2
+
+## Test that when running continuation mode with specific table, when it succeeds, we remove that token.
+# Run this continuation test first because it doesn't clear the exceptions log table.
+# Run fetch on only one table.
+fetch live notruncate store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 continuation-token=011762e5-6f70-43f8-8e15-58b4de10a007
+----
+
+# Ensures there is only one log left since the one for tbl2 got removed.
+query target
+SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception ORDER BY table_name DESC
+----
+[target]:
+fetch_id	schema_name	table_name	message	sql_state	file_name	stage
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) already exists.	23505	part_00000001.csv	data_load
+tag: SELECT 1
+
+# Verify that there are no new fetch IDs.
+query target
+SELECT COUNT(*) FROM _molt_fetch_status;
+----
+[target]:
+count
+2
+tag: SELECT 1
+
+# Verify that the continuation worked and that data for table 2 is loaded properly.
+# Table 1 should not have any data loaded.
+query all
+SELECT * FROM tbl1
+----
+[source]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+[target]:
+id	t
+tag: SELECT 0
+
+query all
+SELECT * FROM tbl2
+----
+[source]:
+id	t
+0	aaa
+55	bb b
+66	ééé
+77	🫡🫡🫡
+88	娜娜
+1010	Лукас
+1212	ルカス
+tag: SELECT 7
+[target]:
+id	t
+0	aaa
+55	bb b
+66	ééé
+77	🫡🫡🫡
+88	娜娜
+1010	Лукас
+1212	ルカス
+tag: SELECT 7
+
+# Cleanup both tables on the target.
+exec target
+TRUNCATE tbl1
+----
+[target] TRUNCATE
+
+exec target
+TRUNCATE tbl2
+----
+[target] TRUNCATE
+
+# Insert an entry so that tbl2 is properly filled.
+exec target
+INSERT INTO _molt_fetch_exception (fetch_id, schema_name, table_name, file_name, sql_state, message, command, stage, time) VALUES ('d44762e5-6f70-43f8-8e15-58b4de10a007', 'public', 'tbl2', 'part_00000001.csv', '', '', '', '', now())
+----
+[target] INSERT 0 1
+
+# Ensure that the fetch_id stays consistent between test recordings.
+query target
+SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception ORDER BY table_name DESC
+----
+[target]:
+fetch_id	schema_name	table_name	message	sql_state	file_name	stage
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl2			part_00000001.csv	
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) already exists.	23505	part_00000001.csv	data_load
+tag: SELECT 2
+
+## Test import-copy only mode with only fetch ID specified wipes all existing tokens.
+# This mode of fetch with fetch ID specified will automatically truncate the _molt_fetch_exception table.
 # Run fetch with continue and verify that it loads the data properly.
 fetch live notruncate store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007
 ----
@@ -179,66 +327,58 @@ id	t
 1212	ルカス
 tag: SELECT 7
 
-# Cleanup both tables on the target.
-exec target
-TRUNCATE tbl1
+# Ensure that fetch exception table is now empty.
+query target
+SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception ORDER BY table_name DESC
 ----
-[target] TRUNCATE
-
-exec target
-TRUNCATE tbl2
-----
-[target] TRUNCATE
-
-# Update the entry so we can continue from a known token we control.
-exec target
-UPDATE _molt_fetch_exception SET id = '011762e5-6f70-43f8-8e15-58b4de10a007' WHERE table_name LIKE 'tbl2'
-----
-[target] UPDATE 1
-
-# Run fetch again on only one table.
-fetch live notruncate cleanup-dir store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 continuation-token=011762e5-6f70-43f8-8e15-58b4de10a007
-----
-
-# Verify that the continuation worked and that data for table 2 is loaded properly.
-# Table 1 should not have any data loaded.
-query all
-SELECT * FROM tbl1
-----
-[source]:
-id	t
-11	aaa
-22	bb b
-33	ééé
-44	🫡🫡🫡
-55	娜娜
-66	Лукас
-77	ルカス
-tag: SELECT 7
 [target]:
-id	t
+fetch_id	schema_name	table_name	message	sql_state	file_name	stage
 tag: SELECT 0
 
-query all
-SELECT * FROM tbl2
+# Ensure that we have a new fetch ID in the table.
+query target
+SELECT COUNT(*) FROM _molt_fetch_status;
 ----
-[source]:
-id	t
-0	aaa
-55	bb b
-66	ééé
-77	🫡🫡🫡
-88	娜娜
-1010	Лукас
-1212	ルカス
-tag: SELECT 7
 [target]:
-id	t
-0	aaa
-55	bb b
-66	ééé
-77	🫡🫡🫡
-88	娜娜
-1010	Лукас
-1212	ルカス
-tag: SELECT 7
+count
+3
+tag: SELECT 1
+
+## Test that on error in continuation mode with only fetch-id
+## the token's fetch ID are now tied to a new one.
+# Insert an entry so that tbl2 is properly filled.
+exec target
+INSERT INTO _molt_fetch_exception (fetch_id, schema_name, table_name, file_name, sql_state, message, command, stage, time) VALUES ('d44762e5-6f70-43f8-8e15-58b4de10a007', 'public', 'tbl2', 'part_00000001.csv', '', 'duplicate key value violates unique constraint "tbl2_pkey"; Key (id)=(0) already exists', '', '', now())
+----
+[target] INSERT 0 1
+
+# Ensure that the fetch_id stays consistent between test recordings.
+query target
+SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception ORDER BY table_name DESC
+----
+[target]:
+fetch_id	schema_name	table_name	message	sql_state	file_name	stage
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl2	duplicate key value violates unique constraint "tbl2_pkey"; Key (id)=(0) already exists		part_00000001.csv	
+tag: SELECT 1
+
+# Ensure that we see 1 item that has fetch_id of what we specified above.
+query target
+SELECT COUNT(*) FROM _molt_fetch_exception WHERE fetch_id='d44762e5-6f70-43f8-8e15-58b4de10a007';
+----
+[target]:
+count
+1
+tag: SELECT 1
+
+fetch live expect-error notruncate cleanup-dir store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007
+----
+ERROR: duplicate key value violates unique constraint "tbl2_pkey" (SQLSTATE 23505)
+
+# Note that we no longer have any exception log tokens that match the fetch_id.
+query target
+SELECT COUNT(*) FROM _molt_fetch_exception WHERE fetch_id='d44762e5-6f70-43f8-8e15-58b4de10a007';
+----
+[target]:
+count
+0
+tag: SELECT 1

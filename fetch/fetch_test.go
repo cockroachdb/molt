@@ -195,6 +195,7 @@ func TestDataDriven(t *testing.T) {
 								ContinuationToken:    continuationToken,
 								ContinuationFileName: overrideFile,
 								FlushRows:            flushRows,
+								NonInteractive:       true,
 							},
 							logger,
 							conns,
@@ -261,7 +262,7 @@ func TestInitStatusEntry(t *testing.T) {
 		require.NoError(t, err)
 		pgConn := conn.(*dbconn.PGConn).Conn
 
-		actual, err := initStatusEntry(ctx, pgConn, "PostgreSQL")
+		actual, err := initStatusEntry(ctx, Config{}, pgConn, "PostgreSQL")
 		require.NoError(t, err)
 		require.NotEqual(t, uuid.Nil, actual.ID)
 	})
@@ -273,7 +274,7 @@ func TestInitStatusEntry(t *testing.T) {
 		// Setup the tables that we need to write for status.
 		require.NoError(t, status.CreateStatusAndExceptionTables(ctx, pgConn))
 
-		actual, err := initStatusEntry(ctx, pgConn, "PostgreSQL")
+		actual, err := initStatusEntry(ctx, Config{}, pgConn, "PostgreSQL")
 		require.NoError(t, err)
 		require.NotEqual(t, uuid.Nil, actual.ID)
 	})

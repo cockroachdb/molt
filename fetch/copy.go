@@ -27,6 +27,8 @@ func Copy(
 	table dbtable.VerifiedTable,
 	resources []datablobstorage.Resource,
 	isLocal bool,
+	isClearContinuationTokenMode bool,
+	exceptionLog *status.ExceptionLog,
 ) (CopyResult, error) {
 	dataLogger := moltlogger.GetDataLogger(logger)
 	ret := CopyResult{
@@ -59,7 +61,7 @@ func Copy(
 				dataquery.CopyFrom(table, isLocal /*skips header if local */),
 			); err != nil {
 				fileName := path.Base(key)
-				return status.MaybeReportException(ctx, logger, conn, table.Name, err, fileName, status.StageDataLoad)
+				return status.MaybeReportException(ctx, logger, conn, table.Name, err, fileName, status.StageDataLoad, isClearContinuationTokenMode, exceptionLog)
 			} else {
 				rowsSoFar += int(copyRet.RowsAffected())
 				dataLogger.Info().

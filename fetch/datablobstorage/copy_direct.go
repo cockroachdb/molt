@@ -47,7 +47,10 @@ func (c *copyCRDBDirect) CreateFromReader(
 
 	c.logger.Debug().Int("batch", iteration).Msgf("csv batch starting")
 	if _, err := conn.PgConn().CopyFrom(ctx, r, dataquery.CopyFrom(table, false /*skipHeader*/)); err != nil {
-		pgErr := status.MaybeReportException(ctx, c.logger, conn, table.Name, err, "" /* fileName */, status.StageDataLoad)
+		// In direct copy mode, we cannot continue, so might as well just make a new entry each time.
+		// Default to not clearing the continuation tokens and pass in a nil exception log so it
+		// creates the new entry.
+		pgErr := status.MaybeReportException(ctx, c.logger, conn, table.Name, err, "" /* fileName */, status.StageDataLoad, false /* isClearContinuationTokenMode */, nil /* exceptionLog */)
 		return nil, errors.CombineErrors(pgErr, conn.Close(ctx))
 	}
 	if testingKnobs.FailedWriteToBucket.FailedAfterReadFromPipe {

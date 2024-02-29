@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cockroachdb/cockroachdb-parser/pkg/util/uuid"
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/compression"
 	"github.com/cockroachdb/molt/dbconn"
@@ -45,6 +46,11 @@ type Config struct {
 
 	DropAndRecreateNewSchema bool
 
+	// NonInteractive relates to if user input should be prompted. If false,
+	// user prompting is initiating before certain actions like wiping data.
+	// If true, user prompting will be skipped and actions will be confirmed automatically.
+	NonInteractive bool
+
 	Compression    compression.Flag
 	ExportSettings dataexport.Settings
 }
@@ -64,7 +70,7 @@ func Fetch(
 		return errors.New("failed to assert conn as a pgconn")
 	}
 	targetPgxConn := targetPgConn.Conn
-	fetchStatus, err := initStatusEntry(ctx, targetPgxConn, conns[0].Dialect())
+	fetchStatus, err := initStatusEntry(ctx, cfg, targetPgxConn, conns[0].Dialect())
 	if err != nil {
 		return err
 	}
@@ -195,8 +201,13 @@ func Fetch(
 	// We only want to log out if the fetch fails.
 	defer func() {
 		if retErr != nil {
+			fetchID := fetchStatus.ID.String()
+			if !IsClearContinuationTokenMode(cfg) && cfg.FetchID != "" {
+				fetchID = cfg.FetchID
+			}
+
 			logger.Info().
-				Str("fetch_id", utils.MaybeFormatFetchID(cfg.TestOnly, fetchStatus.ID.String())).Msg("continue from this fetch ID")
+				Str("fetch_id", utils.MaybeFormatFetchID(cfg.TestOnly, fetchID)).Msg("continue from this fetch ID")
 		}
 	}()
 
@@ -241,6 +252,29 @@ func Fetch(
 		return errors.New(errMsg)
 	}
 
+	// We want to do the exceptions log deleting after the exception log retrieval/checks for two reasons.
+	// 1. We want to get the most recent exception logs for the mode of continuation where fetch-id is specified
+	// 2. We don't want the check for isImportCopyOnly mode and len(mapping) = 0 to cause an error
+	// This case will certainly happen if we clear the table first before checking the mapping size.
+	isClearContinuationTokenMode := IsClearContinuationTokenMode(cfg)
+	if isClearContinuationTokenMode {
+		if cfg.NonInteractive {
+			logger.Warn().Msg("clearing all continuation tokens because running in clear continuation mode")
+		} else {
+			fmt.Println("Clearing all continuation tokens. Confirm (y/n)?")
+			var confirmation string
+			fmt.Scanln(&confirmation)
+
+			if !strings.EqualFold(confirmation, "y") {
+				return errors.New("clearing continuation tokens was not confirmed, exiting early")
+			}
+		}
+
+		if err := status.DeleteAllExceptionLogs(ctx, targetPgxConn); err != nil {
+			return err
+		}
+	}
+
 	workCh := make(chan tableverify.Result)
 	g, _ := errgroup.WithContext(ctx)
 	for i := 0; i < cfg.Concurrency; i++ {
@@ -261,9 +295,11 @@ func Fetch(
 				// 2. When the fetch ID is passed in and exception log is not nil, which means it is a table we want to continue from.
 				// This means we want to skip if we are trying to continue but there is no entry that specifies where to continue from.
 				if (cfg.FetchID != "" && relevantExceptionLog != nil) || (cfg.FetchID == "") {
-					if err := fetchTable(ctx, cfg, logger, conns, blobStore, sqlSrc, table, relevantExceptionLog, testingKnobs); err != nil {
+					if err := fetchTable(ctx, cfg, logger, conns, blobStore, sqlSrc, table, relevantExceptionLog, isClearContinuationTokenMode, testingKnobs); err != nil {
 						return err
 					}
+				} else {
+					logger.Warn().Msgf("skipping fetch for %s", table.SafeString())
 				}
 
 				stats.Lock()
@@ -328,6 +364,7 @@ func fetchTable(
 	sqlSrc dataexport.Source,
 	table tableverify.Result,
 	exceptionLog *status.ExceptionLog,
+	isClearContinuationTokenMode bool,
 	testingKnobs testutils.FetchTestingKnobs,
 ) (retErr error) {
 	tableStartTime := time.Now()
@@ -424,6 +461,27 @@ func fetchTable(
 			return err
 		}
 		var importDuration time.Duration
+
+		// Make sure this is outside the closure below so that retErr is assigned to the error properly.
+		// In the case that retErr is nil, it means that this table
+		// fetch suceeded and we want to delete the entry for
+		// the continuation token because it's no longer relevant.
+		defer func() {
+			if retErr == nil && !isClearContinuationTokenMode && exceptionLog != nil {
+				targetPgConn, valid := conns[1].(*dbconn.PGConn)
+				if !valid {
+					retErr = errors.New("failed to assert conn as a pgconn")
+				}
+				targetPgxConn := targetPgConn.Conn
+
+				if err := exceptionLog.DeleteEntry(ctx, targetPgxConn); err != nil {
+					retErr = err
+				} else {
+					logger.Info().Msgf("removing exception log for continuation-token %s because fetch was successful on table %s", exceptionLog.ID, table.SafeString())
+				}
+			}
+		}()
+
 		if err := func() error {
 			logger.Info().
 				Msgf("starting data import on target")
@@ -432,6 +490,7 @@ func fetchTable(
 			if len(e.Resources) > 0 {
 				isLocal = e.Resources[0].IsLocal()
 			}
+
 			if !cfg.Live {
 				go func() {
 					err := reportImportTableProgress(ctx,
@@ -445,13 +504,13 @@ func fetchTable(
 					}
 				}()
 
-				r, err := importTable(ctx, cfg, targetConn, logger, table.VerifiedTable, e.Resources, testingKnobs, isLocal)
+				r, err := importTable(ctx, cfg, targetConn, logger, table.VerifiedTable, e.Resources, testingKnobs, isLocal, isClearContinuationTokenMode, exceptionLog)
 				if err != nil {
 					return err
 				}
 				importDuration = utils.MaybeFormatDurationForTest(cfg.TestOnly, r.EndTime.Sub(r.StartTime))
 			} else {
-				r, err := Copy(ctx, targetConn, logger, table.VerifiedTable, e.Resources, isLocal)
+				r, err := Copy(ctx, targetConn, logger, table.VerifiedTable, e.Resources, isLocal, isClearContinuationTokenMode, exceptionLog)
 				if err != nil {
 					return err
 				}
@@ -508,7 +567,7 @@ func reportTelemetry(
 }
 
 func initStatusEntry(
-	ctx context.Context, conn *pgx.Conn, dialect string,
+	ctx context.Context, cfg Config, conn *pgx.Conn, dialect string,
 ) (*status.FetchStatus, error) {
 	// Setup the status and exception tables.
 	if err := status.CreateStatusAndExceptionTables(ctx, conn); err != nil {
@@ -521,14 +580,25 @@ func initStatusEntry(
 		StartedAt:     createdAt,
 		SourceDialect: dialect,
 	}
-	if err := fetchStatus.CreateEntry(ctx, conn); err != nil {
-		return nil, err
+
+	// This is the case where we have a continuation for a specific table
+	// and we want to "reuse the last run" as the current one.
+	if !IsClearContinuationTokenMode(cfg) && cfg.FetchID != "" {
+		id, err := uuid.FromString(cfg.FetchID)
+		if err != nil {
+			return nil, err
+		}
+
+		fetchStatus.ID = id
+	} else {
+		if err := fetchStatus.CreateEntry(ctx, conn); err != nil {
+			return nil, err
+		}
 	}
 
 	return fetchStatus, nil
 }
 
-// TODO: handle the case where the file override happens.
 func getExceptionLogMapping(
 	ctx context.Context, cfg Config, targetPgxConn *pgx.Conn,
 ) (excLogMap map[string]*status.ExceptionLog, retErr error) {
@@ -562,4 +632,19 @@ func getExceptionLogMapping(
 
 func IsImportCopyOnlyMode(cfg Config) bool {
 	return strings.TrimSpace(cfg.FetchID) != ""
+}
+
+// IsClearContinuationTokenMode determines if we must clear continuation tokens
+// from the _molt_fetch_exception table. This is to ensure that there is only
+// ever one set of active tokens at a time.
+func IsClearContinuationTokenMode(cfg Config) bool {
+	trimmedFetchID := strings.TrimSpace(cfg.FetchID)
+	trimmedContToken := strings.TrimSpace(cfg.ContinuationToken)
+
+	// First condition: fresh fetch run without continuation; second condition: fetch run with continuation
+	// but of all tokens with a fetch ID, which means we want to update existing tokens.
+	if trimmedFetchID == "" || (trimmedFetchID != "" && trimmedContToken == "") {
+		return true
+	}
+	return false
 }
