@@ -17,13 +17,13 @@ require (
 	github.com/jackc/pgx/v5 v5.5.1
 	github.com/jstemmer/go-junit-report v1.0.0
 	github.com/lib/pq v1.10.6
-	github.com/shopspring/decimal v1.3.1
 	github.com/pashagolub/pgxmock/v3 v3.3.0
 	github.com/pingcap/tidb v1.1.0-beta.0.20211124132551-4a1b2e9fe5b5
 	github.com/pingcap/tidb/parser v0.0.0-20211124132551-4a1b2e9fe5b5
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.18.0
 	github.com/rs/zerolog v1.29.1
+	github.com/shopspring/decimal v1.3.1
 	github.com/sijms/go-ora/v2 v2.7.13
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.8.4
