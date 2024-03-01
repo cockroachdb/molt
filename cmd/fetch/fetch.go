@@ -317,6 +317,15 @@ func Command() *cobra.Command {
 		"",
 		"If set, restarts the fetch process for at the given file name instead of recorded file in the exceptions table",
 	)
+
+	const nonInteractiveStr = "non-interactive"
+	cmd.PersistentFlags().BoolVar(
+		&cfg.NonInteractive,
+		nonInteractiveStr,
+		false,
+		`If set, automatically skips all user prompting and initiates actions such as clearing exception log data (preferable if running in CI)
+or as an automated job. If not set, prompts user for confirmation before performing actions.`,
+	)
 	moltlogger.RegisterLoggerFlags(cmd)
 	cmdutil.RegisterDBConnFlags(cmd)
 	cmdutil.RegisterNameFilterFlags(cmd)
@@ -334,6 +343,10 @@ func Command() *cobra.Command {
 	)
 
 	if err := cmd.PersistentFlags().MarkHidden(testOnlyFlagStr); err != nil {
+		panic(err)
+	}
+
+	if err := cmd.PersistentFlags().MarkHidden(nonInteractiveStr); err != nil {
 		panic(err)
 	}
 

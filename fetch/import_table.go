@@ -138,6 +138,8 @@ func importTable(
 	resources []datablobstorage.Resource,
 	testingKnobs testutils.FetchTestingKnobs,
 	isLocal bool,
+	isClearContinuationTokenMode bool,
+	exceptionLog *status.ExceptionLog,
 ) (importResult, error) {
 	ret := importResult{
 		StartTime: time.Now(),
@@ -183,7 +185,7 @@ func importTable(
 		file, err := importWithBisect(ctx, kvOptions, table, logger, conn, locBatch)
 		if err != nil {
 			fileName := status.ExtractFileNameFromErr(file)
-			pgErr := status.MaybeReportException(ctx, logger, baseConn.(*dbconn.PGConn).Conn, table.Name, err, fileName, status.StageDataLoad)
+			pgErr := status.MaybeReportException(ctx, logger, baseConn.(*dbconn.PGConn).Conn, table.Name, err, fileName, status.StageDataLoad, isClearContinuationTokenMode, exceptionLog)
 			return ret, errors.Wrap(pgErr, "error importing data")
 		}
 
