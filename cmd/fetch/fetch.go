@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+	"github.com/cockroachdb/molt/cmd/fetch/tokens"
 	"github.com/cockroachdb/molt/cmd/internal/cmdutil"
 	"github.com/cockroachdb/molt/compression"
 	"github.com/cockroachdb/molt/dbconn"
@@ -69,6 +70,23 @@ func Command() *cobra.Command {
 		Use:   "fetch",
 		Short: "Moves data from source to target.",
 		Long:  `Imports data from source directly into target tables.`,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			commandsToremoveDBConnsFlag := map[string]any{"molt fetch tokens": nil}
+			if _, ok := commandsToremoveDBConnsFlag[cmd.CommandPath()]; ok {
+				// This marks these flags as not required.
+				// In the case that we want to list molt fetch tokens,
+				// we no longer need to mark the source and target as required flags.
+				if err := cmd.InheritedFlags().SetAnnotation("source", cobra.BashCompOneRequiredFlag, []string{"false"}); err != nil {
+					return err
+				}
+
+				if err := cmd.InheritedFlags().SetAnnotation("target", cobra.BashCompOneRequiredFlag, []string{"false"}); err != nil {
+					return err
+				}
+			}
+
+			return nil
+		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			// Ensure that if continuation-token is set that fetch-id is set
 			if err := cmdutil.CheckFlagDependency(cmd, fetchID, []string{continuationToken}); err != nil {
@@ -186,6 +204,8 @@ func Command() *cobra.Command {
 			return err
 		},
 	}
+
+	cmd.AddCommand(tokens.Command())
 
 	cmd.PersistentFlags().StringVar(
 		&logFile,

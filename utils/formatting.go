@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/cockroachdb-parser/pkg/sql/sem/tree"
+	"github.com/cockroachdb/cockroachdb-parser/pkg/util/uuid"
 )
 
 func SchemaTableString(schema, table tree.Name) string {
@@ -54,4 +55,13 @@ func MaybeFormatFetchID(testOnly bool, s string) string {
 	}
 
 	return "0000000000"
+}
+
+// MaybeFormatID is to make a deterministic UUID for test.
+func MaybeFormatID(testOnly bool, s uuid.UUID) uuid.UUID {
+	if !testOnly {
+		return s
+	}
+
+	return uuid.Must(uuid.FromString("123e4567-e89b-12d3-a456-426655440000"))
 }

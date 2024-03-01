@@ -11,6 +11,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/cockroachdb/molt/fetch/fetchcontext"
+	"github.com/cockroachdb/molt/utils"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/rs/zerolog"
@@ -51,6 +52,25 @@ type ExceptionLog struct {
 	Command  string
 	Stage    string
 	Time     time.Time
+}
+
+// Implementing the utils.OutputFormat interface.
+var _ utils.OutputFormat = ExceptionLog{}
+
+func (l ExceptionLog) JSONFormat() string {
+	return utils.PrettyJSON(l)
+}
+
+func (l ExceptionLog) TableFormat() []string {
+	return []string{l.ID.String(), l.FetchID.String(), fmt.Sprintf("%s.%s", l.Schema, l.Table), l.FileName}
+}
+
+func (l ExceptionLog) TableHeaders() []string {
+	return []string{"ID", "FETCH ID", "TABLE NAME", "FILE NAME"}
+}
+
+func (l ExceptionLog) Caption() string {
+	return "Continuation Tokens."
 }
 
 // Added logic to be able to set the time from the struct itself to simplify testing.
@@ -152,6 +172,41 @@ func GetExceptionLogByToken(
 	}
 
 	return e, nil
+}
+
+const defaultNumTokens = 10
+
+func GetAllExceptionLogs(
+	ctx context.Context, conn *pgx.Conn, numResults int,
+) ([]ExceptionLog, error) {
+	if numResults == 0 {
+		numResults = defaultNumTokens
+	}
+
+	query := `SELECT id, fetch_id, table_name, schema_name, file_name, time 
+	FROM _molt_fetch_exception
+	ORDER BY table_name DESC
+	LIMIT @limit`
+	args := pgx.NamedArgs{
+		"limit": numResults,
+	}
+	excLogs := []ExceptionLog{}
+
+	rows, err := conn.Query(ctx, query, args)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		e := ExceptionLog{}
+		if err := rows.Scan(&e.ID, &e.FetchID, &e.Table, &e.Schema, &e.FileName, &e.Time); err != nil {
+			return nil, err
+		}
+		excLogs = append(excLogs, e)
+	}
+
+	return excLogs, nil
 }
 
 func GetAllExceptionLogsByFetchID(
