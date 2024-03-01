@@ -22,4 +22,4 @@ run_e2e_tests:
 	go test -timeout 100s -run TestDataDriven github.com/cockroachdb/molt/e2e -e2e-enabled
 
 rewrite_e2e_tests:
-	go test -timeout 100s -run TestDataDriven github.com/cockroachdb/molt/e2e -e2e-enabled --rewrite
+	go test -timeout 600s -run TestDataDriven github.com/cockroachdb/molt/e2e -e2e-enabled --rewrite

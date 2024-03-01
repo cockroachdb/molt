@@ -24,7 +24,7 @@ id | floatcol
   7 |       NaN
 (7 rows)
 
-fetch --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'floattable' --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9115' --table-handling 'drop-on-target-and-recreate'  --cleanup=true
+fetch --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'floattable' --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9115' --table-handling 'drop-on-target-and-recreate'  --cleanup=true --non-interactive
 ----
 {"level":"info","message":"default compression to GZIP"}
 {"level":"info","message":"checking database details"}
@@ -36,6 +36,7 @@ fetch --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres
 {"level":"info","message":"verifying common tables"}
 {"level":"info","message":"establishing snapshot"}
 {"level":"info","type":"summary","num_tables":1,"cdc_cursor":"0/19E3610","message":"starting fetch"}
+{"level":"warn","message":"clearing all continuation tokens because running in clear continuation mode"}
 {"level":"info","message":"data extraction phase starting"}
 {"level":"info","type":"summary","num_rows":7,"export_duration_ms":1000,"export_duration":"000h 00m 01s","message":"data extraction from source complete"}
 {"level":"info","message":"starting data import on target"}

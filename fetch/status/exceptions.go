@@ -20,11 +20,11 @@ import (
 const (
 	StageSchemaCreation = "schema_creation"
 	StageDataLoad       = "data_load"
-	exceptionTable      = "_molt_fetch_exception"
+	exceptionsTable     = "_molt_fetch_exceptions"
 )
 
 var (
-	deleteQuery           = fmt.Sprintf("TRUNCATE %s;", exceptionTable)
+	deleteQuery           = fmt.Sprintf("TRUNCATE %s;", exceptionsTable)
 	createExceptionsTable = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 	fetch_id UUID NOT NULL REFERENCES _molt_fetch_status (id),
@@ -38,7 +38,7 @@ var (
     time TIMESTAMP,
 	INDEX(fetch_id, sql_state)
 );
-`, exceptionTable)
+`, exceptionsTable)
 )
 
 type ExceptionLog struct {
@@ -85,7 +85,7 @@ func (e *ExceptionLog) CreateEntry(ctx context.Context, conn *pgx.Conn, stage st
 		curTime = e.Time
 	}
 
-	query := fmt.Sprintf(`INSERT INTO %s (fetch_id, table_name, schema_name, message, sql_state, file_name, command, stage, time) VALUES(@fetch_id, @table_name, @schema_name, @message, @sql_state, @file_name, @command, @stage, @time) RETURNING id, stage`, exceptionTable)
+	query := fmt.Sprintf(`INSERT INTO %s (fetch_id, table_name, schema_name, message, sql_state, file_name, command, stage, time) VALUES(@fetch_id, @table_name, @schema_name, @message, @sql_state, @file_name, @command, @stage, @time) RETURNING id, stage`, exceptionsTable)
 	args := pgx.NamedArgs{
 		"fetch_id":    e.FetchID,
 		"table_name":  e.Table,
@@ -117,7 +117,7 @@ func (e *ExceptionLog) CreateEntry(ctx context.Context, conn *pgx.Conn, stage st
 func (e *ExceptionLog) UpdateEntry(
 	ctx context.Context, conn *pgx.Conn, msg, sqlState, fileName string,
 ) error {
-	query := fmt.Sprintf(`UPDATE %s SET message=@message, sql_state=@sql_state, file_name=@file_name, time=@time WHERE id=@id RETURNING message, sql_state, file_name, time`, exceptionTable)
+	query := fmt.Sprintf(`UPDATE %s SET message=@message, sql_state=@sql_state, file_name=@file_name, time=@time WHERE id=@id RETURNING message, sql_state, file_name, time`, exceptionsTable)
 	args := pgx.NamedArgs{
 		"id":        e.ID,
 		"message":   msg,
@@ -133,7 +133,7 @@ func (e *ExceptionLog) UpdateEntry(
 // DeleteEntry is used when, on a continuation run, the import succeeds and we want
 // to clear the exception from the table.
 func (e *ExceptionLog) DeleteEntry(ctx context.Context, conn *pgx.Conn) error {
-	query := fmt.Sprintf(`DELETE FROM %s WHERE id=@id`, exceptionTable)
+	query := fmt.Sprintf(`DELETE FROM %s WHERE id=@id`, exceptionsTable)
 	args := pgx.NamedArgs{
 		"id": e.ID,
 	}
@@ -159,7 +159,7 @@ func GetExceptionLogByToken(
 ) (*ExceptionLog, error) {
 	query := fmt.Sprintf(`SELECT id, fetch_id, table_name, schema_name, message, sql_state, file_name, command, stage, time 
 		FROM %s
-		WHERE id=@id`, exceptionTable)
+		WHERE id=@id`, exceptionsTable)
 	args := pgx.NamedArgs{
 		"id": token,
 	}
@@ -183,10 +183,10 @@ func GetAllExceptionLogs(
 		numResults = defaultNumTokens
 	}
 
-	query := `SELECT id, fetch_id, table_name, schema_name, file_name, time 
-	FROM _molt_fetch_exception
+	query := fmt.Sprintf(`SELECT id, fetch_id, table_name, schema_name, file_name, time 
+	FROM %s
 	ORDER BY table_name DESC
-	LIMIT @limit`
+	LIMIT @limit`, exceptionsTable)
 	args := pgx.NamedArgs{
 		"limit": numResults,
 	}
@@ -215,7 +215,7 @@ func GetAllExceptionLogsByFetchID(
 	query := fmt.Sprintf(`SELECT DISTINCT ON (schema_name, table_name) id, fetch_id, table_name, schema_name, message, sql_state, file_name, command, stage, time 
 	FROM %s
 	WHERE fetch_id=@fetch_id 
-	ORDER BY schema_name, table_name, time DESC`, exceptionTable)
+	ORDER BY schema_name, table_name, time DESC`, exceptionsTable)
 	args := pgx.NamedArgs{
 		"fetch_id": fetchID,
 	}

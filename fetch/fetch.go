@@ -635,7 +635,7 @@ func IsImportCopyOnlyMode(cfg Config) bool {
 }
 
 // IsClearContinuationTokenMode determines if we must clear continuation tokens
-// from the _molt_fetch_exception table. This is to ensure that there is only
+// from the _molt_fetch_exceptions table. This is to ensure that there is only
 // ever one set of active tokens at a time.
 func IsClearContinuationTokenMode(cfg Config) bool {
 	trimmedFetchID := strings.TrimSpace(cfg.FetchID)

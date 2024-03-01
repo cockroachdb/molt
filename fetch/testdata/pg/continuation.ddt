@@ -84,13 +84,13 @@ INSERT INTO _molt_fetch_status (id, name, source_dialect) VALUES('d44762e5-6f70-
 
 # Make it so that the exception id is deterministic for future steps.
 exec target
-UPDATE _molt_fetch_exception SET fetch_id = 'd44762e5-6f70-43f8-8e15-58b4de10a007' WHERE table_name LIKE 'tbl%'
+UPDATE _molt_fetch_exceptions SET fetch_id = 'd44762e5-6f70-43f8-8e15-58b4de10a007' WHERE table_name LIKE 'tbl%'
 ----
 [target] UPDATE 2
 
 # Ensure that the fetch_id stays consistent between test recordings.
 query target
-SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception ORDER BY table_name DESC
+SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exceptions ORDER BY table_name DESC
 ----
 [target]:
 fetch_id	schema_name	table_name	message	sql_state	file_name	stage
@@ -109,7 +109,7 @@ tag: SELECT 1
 
 # Update the entry so we can continue from a known token we control.
 exec target
-UPDATE _molt_fetch_exception SET id = '011762e5-6f70-43f8-8e15-58b4de10a007' WHERE table_name LIKE 'tbl2'
+UPDATE _molt_fetch_exceptions SET id = '011762e5-6f70-43f8-8e15-58b4de10a007' WHERE table_name LIKE 'tbl2'
 ----
 [target] UPDATE 1
 
@@ -119,13 +119,13 @@ UPDATE _molt_fetch_exception SET id = '011762e5-6f70-43f8-8e15-58b4de10a007' WHE
 # Setup this by updating the message field so that it is temporary. Then we need to verify that
 # the message gets updated back to the correct message down below.
 exec target 
-UPDATE _molt_fetch_exception SET message='temporary' WHERE table_name LIKE 'tbl2';
+UPDATE _molt_fetch_exceptions SET message='temporary' WHERE table_name LIKE 'tbl2';
 ----
 [target] UPDATE 1
 
 # As we expect the exception log tied to tbl2 shows the temporary message.
 query target
-SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception ORDER BY table_name DESC
+SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exceptions ORDER BY table_name DESC
 ----
 [target]:
 fetch_id	schema_name	table_name	message	sql_state	file_name	stage
@@ -170,7 +170,7 @@ tag: SELECT 0
 # Ensure that there are still two exception logs when it fails.
 # Sure enough, the exception log gets updated with the latest message.
 query target
-SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception ORDER BY table_name DESC
+SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exceptions ORDER BY table_name DESC
 ----
 [target]:
 fetch_id	schema_name	table_name	message	sql_state	file_name	stage
@@ -186,7 +186,7 @@ fetch live notruncate store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e
 
 # Ensures there is only one log left since the one for tbl2 got removed.
 query target
-SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception ORDER BY table_name DESC
+SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exceptions ORDER BY table_name DESC
 ----
 [target]:
 fetch_id	schema_name	table_name	message	sql_state	file_name	stage
@@ -258,13 +258,13 @@ TRUNCATE tbl2
 
 # Insert an entry so that tbl2 is properly filled.
 exec target
-INSERT INTO _molt_fetch_exception (fetch_id, schema_name, table_name, file_name, sql_state, message, command, stage, time) VALUES ('d44762e5-6f70-43f8-8e15-58b4de10a007', 'public', 'tbl2', 'part_00000001.csv', '', '', '', '', now())
+INSERT INTO _molt_fetch_exceptions (fetch_id, schema_name, table_name, file_name, sql_state, message, command, stage, time) VALUES ('d44762e5-6f70-43f8-8e15-58b4de10a007', 'public', 'tbl2', 'part_00000001.csv', '', '', '', '', now())
 ----
 [target] INSERT 0 1
 
 # Ensure that the fetch_id stays consistent between test recordings.
 query target
-SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception ORDER BY table_name DESC
+SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exceptions ORDER BY table_name DESC
 ----
 [target]:
 fetch_id	schema_name	table_name	message	sql_state	file_name	stage
@@ -273,7 +273,7 @@ fetch_id	schema_name	table_name	message	sql_state	file_name	stage
 tag: SELECT 2
 
 ## Test import-copy only mode with only fetch ID specified wipes all existing tokens.
-# This mode of fetch with fetch ID specified will automatically truncate the _molt_fetch_exception table.
+# This mode of fetch with fetch ID specified will automatically truncate the _molt_fetch_exceptions table.
 # Run fetch with continue and verify that it loads the data properly.
 fetch live notruncate store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007
 ----
@@ -329,7 +329,7 @@ tag: SELECT 7
 
 # Ensure that fetch exception table is now empty.
 query target
-SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception ORDER BY table_name DESC
+SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exceptions ORDER BY table_name DESC
 ----
 [target]:
 fetch_id	schema_name	table_name	message	sql_state	file_name	stage
@@ -348,13 +348,13 @@ tag: SELECT 1
 ## the token's fetch ID are now tied to a new one.
 # Insert an entry so that tbl2 is properly filled.
 exec target
-INSERT INTO _molt_fetch_exception (fetch_id, schema_name, table_name, file_name, sql_state, message, command, stage, time) VALUES ('d44762e5-6f70-43f8-8e15-58b4de10a007', 'public', 'tbl2', 'part_00000001.csv', '', 'duplicate key value violates unique constraint "tbl2_pkey"; Key (id)=(0) already exists', '', '', now())
+INSERT INTO _molt_fetch_exceptions (fetch_id, schema_name, table_name, file_name, sql_state, message, command, stage, time) VALUES ('d44762e5-6f70-43f8-8e15-58b4de10a007', 'public', 'tbl2', 'part_00000001.csv', '', 'duplicate key value violates unique constraint "tbl2_pkey"; Key (id)=(0) already exists', '', '', now())
 ----
 [target] INSERT 0 1
 
 # Ensure that the fetch_id stays consistent between test recordings.
 query target
-SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception ORDER BY table_name DESC
+SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exceptions ORDER BY table_name DESC
 ----
 [target]:
 fetch_id	schema_name	table_name	message	sql_state	file_name	stage
@@ -363,7 +363,7 @@ tag: SELECT 1
 
 # Ensure that we see 1 item that has fetch_id of what we specified above.
 query target
-SELECT COUNT(*) FROM _molt_fetch_exception WHERE fetch_id='d44762e5-6f70-43f8-8e15-58b4de10a007';
+SELECT COUNT(*) FROM _molt_fetch_exceptions WHERE fetch_id='d44762e5-6f70-43f8-8e15-58b4de10a007';
 ----
 [target]:
 count
@@ -376,7 +376,7 @@ ERROR: duplicate key value violates unique constraint "tbl2_pkey" (SQLSTATE 2350
 
 # Note that we no longer have any exception log tokens that match the fetch_id.
 query target
-SELECT COUNT(*) FROM _molt_fetch_exception WHERE fetch_id='d44762e5-6f70-43f8-8e15-58b4de10a007';
+SELECT COUNT(*) FROM _molt_fetch_exceptions WHERE fetch_id='d44762e5-6f70-43f8-8e15-58b4de10a007';
 ----
 [target]:
 count
