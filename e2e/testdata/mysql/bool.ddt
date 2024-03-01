@@ -29,7 +29,7 @@ id	bool_col
 4	0
 
 # Automatically create the schema -- the column in the target db will be mapped to INT2, as BOOL column is essentially of TINYINT in MySQL.
-fetch --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'bool_table' --table-handling 'drop-on-target-and-recreate' --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9115'  --cleanup=true
+fetch --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'bool_table' --table-handling 'drop-on-target-and-recreate' --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9115'  --cleanup=true --non-interactive
 ----
 {"level":"info","message":"default compression to GZIP"}
 {"level":"info","message":"checking database details"}
@@ -41,6 +41,7 @@ fetch --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres
 {"level":"info","message":"verifying common tables"}
 {"level":"info","message":"establishing snapshot"}
 {"level":"info","type":"summary","num_tables":1,"cdc_cursor":"0/19E3610","message":"starting fetch"}
+{"level":"warn","message":"clearing all continuation tokens because running in clear continuation mode"}
 {"level":"info","message":"data extraction phase starting"}
 {"level":"info","type":"summary","num_rows":4,"export_duration_ms":1000,"export_duration":"000h 00m 01s","message":"data extraction from source complete"}
 {"level":"info","message":"starting data import on target"}
@@ -87,7 +88,7 @@ exec silent
 psql 'postgres://root@localhost:26257/defaultdb?sslmode=disable' -c "DROP TABLE IF EXISTS bool_table; CREATE TABLE bool_table (id SERIAL PRIMARY KEY, bool_col BOOL);"
 ----
 
-fetch --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'bool_table'  --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9115'  --cleanup=true
+fetch --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'bool_table'  --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9115'  --cleanup=true --non-interactive
 ----
 {"level":"info","message":"default compression to GZIP"}
 {"level":"info","message":"checking database details"}
@@ -95,6 +96,7 @@ fetch --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres
 {"level":"info","message":"verifying common tables"}
 {"level":"info","message":"establishing snapshot"}
 {"level":"info","type":"summary","num_tables":1,"cdc_cursor":"0/19E3610","message":"starting fetch"}
+{"level":"warn","message":"clearing all continuation tokens because running in clear continuation mode"}
 {"level":"info","message":"data extraction phase starting"}
 {"level":"info","type":"summary","num_rows":4,"export_duration_ms":1000,"export_duration":"000h 00m 01s","message":"data extraction from source complete"}
 {"level":"info","message":"starting data import on target"}
