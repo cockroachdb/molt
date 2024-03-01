@@ -1,0 +1,72 @@
+# Testing for duplicate key errors.
+exec all
+CREATE TABLE tbl1(id INT PRIMARY KEY, t TEXT)
+----
+[source] CREATE TABLE
+[target] CREATE TABLE
+
+exec all
+CREATE TABLE tbl2(id INT PRIMARY KEY, t TEXT)
+----
+[source] CREATE TABLE
+[target] CREATE TABLE
+
+# Seeds the data so we force a collision.
+exec all
+INSERT INTO tbl1 VALUES (11, 'aaa'), (22, 'bb b'), (33, 'ééé'), (44, '🫡🫡🫡'), (55, '娜娜'), (66, 'Лукас'), (77, 'ルカス')
+----
+[source] INSERT 0 7
+[target] INSERT 0 7
+
+exec all
+INSERT INTO tbl2 VALUES (00, 'aaa'), (55, 'bb b'), (66, 'ééé'), (77, '🫡🫡🫡'), (88, '娜娜'), (1010, 'Лукас'), (1212, 'ルカス')
+----
+[source] INSERT 0 7
+[target] INSERT 0 7
+
+## Test that we can continue from data after file 1.
+# Force exception log.
+# Create multiple export files so we can continue from something other than part 1.
+fetch live notruncate expect-error suppress-error flush-rows=2
+----
+
+## Test without limit.
+list-tokens
+----
++--------------------------------------+--------------------------------------+-------------+-------------------+
+|                  ID                  |               FETCH ID               | TABLE NAME  |     FILE NAME     |
++--------------------------------------+--------------------------------------+-------------+-------------------+
+| 123e4567-e89b-12d3-a456-426655440000 | 123e4567-e89b-12d3-a456-426655440000 | public.tbl2 | part_00000001.csv |
+| 123e4567-e89b-12d3-a456-426655440000 | 123e4567-e89b-12d3-a456-426655440000 | public.tbl1 | part_00000001.csv |
++--------------------------------------+--------------------------------------+-------------+-------------------+
+Continuation Tokens.
+
+## Test with limit.
+list-tokens num-results=1
+----
++--------------------------------------+--------------------------------------+-------------+-------------------+
+|                  ID                  |               FETCH ID               | TABLE NAME  |     FILE NAME     |
++--------------------------------------+--------------------------------------+-------------+-------------------+
+| 123e4567-e89b-12d3-a456-426655440000 | 123e4567-e89b-12d3-a456-426655440000 | public.tbl2 | part_00000001.csv |
++--------------------------------------+--------------------------------------+-------------+-------------------+
+Continuation Tokens.
+
+## Test when no continuation tokens found.
+exec target
+TRUNCATE _molt_fetch_exception;
+----
+[target] TRUNCATE
+
+list-tokens num-results=1
+----
+No continuation tokens found.
+
+## Test when an error is forced.
+exec target
+DROP TABLE _molt_fetch_exception;
+----
+[target] DROP TABLE
+
+list-tokens expect-error num-results=1
+----
+ERROR: relation "_molt_fetch_exception" does not exist (SQLSTATE 42P01)

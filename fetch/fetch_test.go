@@ -222,6 +222,35 @@ func TestDataDriven(t *testing.T) {
 						}
 						require.NoError(t, err)
 						return ""
+					case "list-tokens":
+						// We don't want to clean the database in this case.
+						targetConn := conns[1]
+						targetPgConn, valid := targetConn.(*dbconn.PGConn)
+						require.Equal(t, true, valid)
+
+						numResults := 5
+
+						for _, cmd := range d.CmdArgs {
+							switch cmd.Key {
+							case "num-results":
+								res, err := strconv.Atoi(cmd.Vals[0])
+								require.NoError(t, err)
+								numResults = res
+							default:
+								t.Errorf("unknown key %s", cmd.Key)
+							}
+						}
+
+						val, err := ListContinuationTokens(ctx, true /*testOnly*/, targetPgConn.Conn, numResults)
+
+						if !expectError {
+							require.NoError(t, err)
+							return val
+						} else {
+							require.Error(t, err)
+							return err.Error()
+						}
+
 					default:
 						t.Errorf("unknown command: %s", d.Cmd)
 					}
