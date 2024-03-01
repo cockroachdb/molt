@@ -20,7 +20,7 @@ fetch live expect-error
 ERROR: null value in column "t" violates not-null constraint (SQLSTATE 23502)
 
 query target
-SELECT table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception WHERE table_name='null_text'
+SELECT table_name, message, sql_state, file_name, stage FROM _molt_fetch_exceptions WHERE table_name='null_text'
 ----
 [target]:
 table_name	message	sql_state	file_name	stage
@@ -67,7 +67,7 @@ fetch live expect-error
 failed executing the TRUNCATE TABLE statement: ERROR: "dependency" is referenced by foreign key from table "dependent" (SQLSTATE XXUUU)
 
 query target
-SELECT table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception WHERE table_name='dependent'
+SELECT table_name, message, sql_state, file_name, stage FROM _molt_fetch_exceptions WHERE table_name='dependent'
 ----
 [target]:
 table_name	message	sql_state	file_name	stage
@@ -108,7 +108,7 @@ fetch live expect-error
 ERROR: duplicate key value violates unique constraint "unique_field_t_key" (SQLSTATE 23505)
 
 query target
-SELECT table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception WHERE table_name='unique_field'
+SELECT table_name, message, sql_state, file_name, stage FROM _molt_fetch_exceptions WHERE table_name='unique_field'
 ----
 [target]:
 table_name	message	sql_state	file_name	stage
@@ -142,7 +142,7 @@ fetch live expect-error
 ERROR: failed to satisfy CHECK constraint (val > 0:::DECIMAL) (SQLSTATE 23514)
 
 query target
-SELECT table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception WHERE table_name='check_field'
+SELECT table_name, message, sql_state, file_name, stage FROM _molt_fetch_exceptions WHERE table_name='check_field'
 ----
 [target]:
 table_name	message	sql_state	file_name	stage

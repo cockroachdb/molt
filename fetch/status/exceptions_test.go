@@ -66,7 +66,7 @@ func TestCreateExceptionEntry(t *testing.T) {
 			Time:     time.Now(),
 		}
 		err = e.CreateEntry(ctx, pgConn, StageDataLoad)
-		require.EqualError(t, err, "ERROR: insert on table \"_molt_fetch_exception\" violates foreign key constraint \"_molt_fetch_exception_fetch_id_fkey\" (SQLSTATE 23503)")
+		require.EqualError(t, err, "ERROR: insert on table \"_molt_fetch_exceptions\" violates foreign key constraint \"_molt_fetch_exceptions_fetch_id_fkey\" (SQLSTATE 23503)")
 	})
 }
 

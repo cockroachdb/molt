@@ -53,7 +53,7 @@ Continuation Tokens.
 
 ## Test when no continuation tokens found.
 exec target
-TRUNCATE _molt_fetch_exception;
+TRUNCATE _molt_fetch_exceptions;
 ----
 [target] TRUNCATE
 
@@ -63,10 +63,10 @@ No continuation tokens found.
 
 ## Test when an error is forced.
 exec target
-DROP TABLE _molt_fetch_exception;
+DROP TABLE _molt_fetch_exceptions;
 ----
 [target] DROP TABLE
 
 list-tokens expect-error num-results=1
 ----
-ERROR: relation "_molt_fetch_exception" does not exist (SQLSTATE 42P01)
+ERROR: relation "_molt_fetch_exceptions" does not exist (SQLSTATE 42P01)

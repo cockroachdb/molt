@@ -85,13 +85,13 @@ INSERT INTO _molt_fetch_status (id, name, source_dialect) VALUES('d44762e5-6f70-
 
 # Make it so that the exception id is deterministic for future steps.
 exec target
-UPDATE _molt_fetch_exception SET fetch_id = 'd44762e5-6f70-43f8-8e15-58b4de10a007', file_name='part_00000002.csv' WHERE table_name LIKE 'tbl%'
+UPDATE _molt_fetch_exceptions SET fetch_id = 'd44762e5-6f70-43f8-8e15-58b4de10a007', file_name='part_00000002.csv' WHERE table_name LIKE 'tbl%'
 ----
 [target] UPDATE 2
 
 # Ensure that the fetch_id stays consistent between test recordings.
 query target
-SELECT fetch_id, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception ORDER BY table_name DESC
+SELECT fetch_id, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exceptions ORDER BY table_name DESC
 ----
 [target]:
 fetch_id	table_name	message	sql_state	file_name	stage
@@ -172,13 +172,13 @@ continuation file name wrong_00000003.csv doesn't match the format part_[\d+]{8}
 
 # Insert an entry so that tbl1 entry is properly filled. Prev fetch wiped out tokens.
 exec target
-INSERT INTO _molt_fetch_exception (fetch_id, schema_name, table_name, file_name, sql_state, message, command, stage, time) VALUES ('d44762e5-6f70-43f8-8e15-58b4de10a007', 'public', 'tbl1', 'part_00000001.csv', '', '', '', '', now())
+INSERT INTO _molt_fetch_exceptions (fetch_id, schema_name, table_name, file_name, sql_state, message, command, stage, time) VALUES ('d44762e5-6f70-43f8-8e15-58b4de10a007', 'public', 'tbl1', 'part_00000001.csv', '', '', '', '', now())
 ----
 [target] INSERT 0 1
 
 # Make it so that the exception id is deterministic for future steps.
 exec target
-UPDATE _molt_fetch_exception SET id = 'ab4762e5-6f70-43f8-8e15-58b4de10a007' WHERE table_name LIKE 'tbl1'
+UPDATE _molt_fetch_exceptions SET id = 'ab4762e5-6f70-43f8-8e15-58b4de10a007' WHERE table_name LIKE 'tbl1'
 ----
 [target] UPDATE 1
 
@@ -211,13 +211,13 @@ tag: SELECT 3
 
 # Insert an entry so that tbl1 entry is properly filled. Prev fetch wiped out tokens.
 exec target
-INSERT INTO _molt_fetch_exception (fetch_id, schema_name, table_name, file_name, sql_state, message, command, stage, time) VALUES ('d44762e5-6f70-43f8-8e15-58b4de10a007', 'public', 'tbl1', 'part_00000001.csv', '', '', '', '', now())
+INSERT INTO _molt_fetch_exceptions (fetch_id, schema_name, table_name, file_name, sql_state, message, command, stage, time) VALUES ('d44762e5-6f70-43f8-8e15-58b4de10a007', 'public', 'tbl1', 'part_00000001.csv', '', '', '', '', now())
 ----
 [target] INSERT 0 1
 
 ## Test that when we run fetch continue on an entry with no associated file_name we error out.
 exec target
-UPDATE _molt_fetch_exception SET file_name='' WHERE table_name LIKE 'tbl%'
+UPDATE _molt_fetch_exceptions SET file_name='' WHERE table_name LIKE 'tbl%'
 ----
 [target] UPDATE 1
 
@@ -228,12 +228,12 @@ table public.tbl1 not imported because no file name is present in the exception 
 
 ## Test that when the continuation token is no longer present, fetch errors and returns early.
 exec target
-DELETE FROM _molt_fetch_exception WHERE table_name LIKE 'tbl%'
+DELETE FROM _molt_fetch_exceptions WHERE table_name LIKE 'tbl%'
 ----
 [target] DELETE 0
 
 query target
-SELECT fetch_id, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exception ORDER BY table_name DESC
+SELECT fetch_id, table_name, message, sql_state, file_name, stage FROM _molt_fetch_exceptions ORDER BY table_name DESC
 ----
 [target]:
 fetch_id	table_name	message	sql_state	file_name	stage
