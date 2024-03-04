@@ -11,6 +11,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/cockroachdb/molt/fetch/fetchcontext"
+	"github.com/cockroachdb/molt/retry"
 	"github.com/cockroachdb/molt/utils"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -253,6 +254,7 @@ func GetTableSchemaToExceptionLog(el []*ExceptionLog) map[string]*ExceptionLog {
 // Stands for undefined_object.
 const excludedSqlState = "42704"
 
+// TODO (rluu): use connection pool later on.
 func MaybeReportException(
 	ctx context.Context,
 	logger zerolog.Logger,
@@ -284,6 +286,11 @@ func MaybeReportException(
 		fileName = ExtractFileNameFromErr(errMsg)
 	}
 
+	logger.Info().
+		Str("table", table.SafeString()).
+		Str("file_name", fileName).
+		Msgf("creating or updating token for %s", errMsg)
+
 	if isClearContinuationTokenMode {
 		exceptionLog = &ExceptionLog{
 			FetchID:  fetchContext.RunID,
@@ -304,7 +311,20 @@ func MaybeReportException(
 			Str("table", fmt.Sprintf("%s.%s", table.Schema.String(), table.Table.String())).
 			Str("continuation_token", exceptionLog.ID.String()).Msg("created continuation token")
 	} else {
-		if err := exceptionLog.UpdateEntry(ctx, conn, errMsg, sqlState, fileName); err != nil {
+		r, err := retry.NewRetry(retry.Settings{
+			InitialBackoff: 1 * time.Second,
+			Multiplier:     1,
+			MaxRetries:     3,
+		})
+		if err != nil {
+			return err
+		}
+
+		if err := r.Do(func() error {
+			return exceptionLog.UpdateEntry(ctx, conn, errMsg, sqlState, fileName)
+		}, func(err error) {
+			logger.Err(err).Msgf("failed to update entry for table %s", table.SafeString())
+		}); err != nil {
 			return err
 		}
 
