@@ -167,6 +167,16 @@ func Fetch(
 					return errors.Wrapf(err, "failed to create new schema %q on the target connection with %q", t, createTableStmt)
 				}
 				logger.Debug().Msgf("finished creating new table with %q", createTableStmt)
+
+				// TODO(janexing): maybe persist it in table?
+				droppedConstraints, err := GetConstraints(ctx, logger, conns[0], t)
+				if err != nil {
+					return err
+				}
+				if len(droppedConstraints) != 0 {
+					consWithTable := constraintsWithTable{table: t, cons: droppedConstraints}
+					logger.Warn().Msgf("newly created schema doesn't contain the following constraints:\n%s", consWithTable.String())
+				}
 			}
 			// Redo the verify.
 			dbTables, err = dbverify.Verify(ctx, conns)

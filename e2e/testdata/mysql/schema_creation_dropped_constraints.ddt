@@ -1,0 +1,115 @@
+exec silent
+mysql -u user -p'password'  -h '0.0.0.0' -P 3306 --database=defaultdb --execute="CREATE TABLE tenants (tenant_id integer PRIMARY KEY);"
+----
+
+exec silent
+mysql -u user -p'password'  -h '0.0.0.0' -P 3306 --database=defaultdb --execute="CREATE TABLE users (tenant_id INTEGER REFERENCES tenants ON DELETE CASCADE, user_id INTEGER NOT NULL UNIQUE, age INTEGER CHECK (age > 18), PRIMARY KEY (tenant_id, user_id));"
+----
+
+exec silent
+mysql -u user -p'password'  -h '0.0.0.0' -P 3306 --database=defaultdb --execute="CREATE TABLE posts (tenant_id INTEGER, post_id INTEGER NOT NULL, author_id INTEGER UNIQUE, number INTEGER CHECK (number > 10) UNIQUE, PRIMARY KEY (post_id), FOREIGN KEY (tenant_id) REFERENCES tenants(tenant_id) ON DELETE RESTRICT, FOREIGN KEY (tenant_id, author_id) REFERENCES users(tenant_id, user_id) ON DELETE SET NULL);"
+----
+
+exec silent
+docker exec -t github-mysql-1 mysql -u root -e 'GRANT FILE, SELECT on *.* to user;'
+----
+
+fetch --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'users' --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9115' --table-handling 'drop-on-target-and-recreate' --cleanup=true
+----
+{"level":"info","message":"default compression to GZIP"}
+{"level":"info","message":"checking database details"}
+{"level":"info","message":"creating schema for tables: [public.users]"}
+{"level":"info","message":"getting column types for table: public.users"}
+{"level":"info","message":"finished getting column types for table: public.users"}
+{"level":"info","message":"creating new table with \"CREATE TABLE users (tenant_id INT4 NOT NULL, user_id INT4 NOT NULL, age INT4, CONSTRAINT \\\"primary\\\" PRIMARY KEY (tenant_id, user_id))\""}
+{"level":"warn","message":"newly created schema doesn't contain the following constraints:\ntable: public.users,\"UNIQUE KEY `user_id` (`user_id`)\",\"CONSTRAINT `users_chk_1` CHECK ((`age` > 18))\""}
+{"level":"info","message":"after recreating table, dbTables: {[[public.users public.users]] [] []}"}
+{"level":"info","message":"verifying common tables"}
+{"level":"info","message":"establishing snapshot"}
+{"level":"info","type":"summary","num_tables":1,"cdc_cursor":"0/19E3610","message":"starting fetch"}
+{"level":"info","message":"data extraction phase starting"}
+{"level":"info","type":"summary","num_rows":0,"export_duration_ms":1000,"export_duration":"000h 00m 01s","message":"data extraction from source complete"}
+{"level":"info","message":"starting data import on target"}
+{"level":"info","type":"summary","net_duration_ms":1000,"net_duration":"000h 00m 01s","import_duration_ms":1000,"import_duration":"000h 00m 01s","export_duration_ms":1000,"export_duration":"000h 00m 01s","num_rows":0,"cdc_cursor":"0/19E3610","message":"data import on target for table complete"}
+{"level":"info","message":"cleaning up resources created during fetch run"}
+{"level":"info","type":"summary","fetch_id":"0000000000","num_tables":1,"tables":["public.users"],"cdc_cursor":"0/19E3610","net_duration_ms":1000,"net_duration":"000h 00m 01s","message":"fetch complete"}
+{"level":"info","message":"http server intentionally shut down"}
+
+fetch --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'posts' --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9115' --table-handling 'drop-on-target-and-recreate' --cleanup=true
+----
+{"level":"info","message":"default compression to GZIP"}
+{"level":"info","message":"checking database details"}
+{"level":"info","message":"creating schema for tables: [public.posts]"}
+{"level":"info","message":"getting column types for table: public.posts"}
+{"level":"info","message":"finished getting column types for table: public.posts"}
+{"level":"info","message":"creating new table with \"CREATE TABLE posts (tenant_id INT4, post_id INT4 NOT NULL PRIMARY KEY, author_id INT4, number INT4)\""}
+{"level":"warn","message":"newly created schema doesn't contain the following constraints:\ntable: public.posts,\"UNIQUE KEY `author_id` (`author_id`)\",\"UNIQUE KEY `number` (`number`)\",\"CONSTRAINT `posts_ibfk_1` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`tenant_id`) ON DELETE RESTRICT\",\"CONSTRAINT `posts_ibfk_2` FOREIGN KEY (`tenant_id`, `author_id`) REFERENCES `users` (`tenant_id`, `user_id`) ON DELETE SET NULL\",\"CONSTRAINT `posts_chk_1` CHECK ((`number` > 10))\""}
+{"level":"info","message":"after recreating table, dbTables: {[[public.posts public.posts]] [] []}"}
+{"level":"info","message":"verifying common tables"}
+{"level":"info","message":"establishing snapshot"}
+{"level":"info","type":"summary","num_tables":1,"cdc_cursor":"0/19E3610","message":"starting fetch"}
+{"level":"info","message":"data extraction phase starting"}
+{"level":"info","type":"summary","num_rows":0,"export_duration_ms":1000,"export_duration":"000h 00m 01s","message":"data extraction from source complete"}
+{"level":"info","message":"starting data import on target"}
+{"level":"info","type":"summary","net_duration_ms":1000,"net_duration":"000h 00m 01s","import_duration_ms":1000,"import_duration":"000h 00m 01s","export_duration_ms":1000,"export_duration":"000h 00m 01s","num_rows":0,"cdc_cursor":"0/19E3610","message":"data import on target for table complete"}
+{"level":"info","message":"cleaning up resources created during fetch run"}
+{"level":"info","type":"summary","fetch_id":"0000000000","num_tables":1,"tables":["public.posts"],"cdc_cursor":"0/19E3610","net_duration_ms":1000,"net_duration":"000h 00m 01s","message":"fetch complete"}
+{"level":"info","message":"http server intentionally shut down"}
+
+fetch --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'tenants' --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9115' --table-handling 'drop-on-target-and-recreate' --cleanup=true
+----
+{"level":"info","message":"default compression to GZIP"}
+{"level":"info","message":"checking database details"}
+{"level":"info","message":"creating schema for tables: [public.tenants]"}
+{"level":"info","message":"getting column types for table: public.tenants"}
+{"level":"info","message":"finished getting column types for table: public.tenants"}
+{"level":"info","message":"creating new table with \"CREATE TABLE tenants (tenant_id INT4 NOT NULL PRIMARY KEY)\""}
+{"level":"info","message":"after recreating table, dbTables: {[[public.tenants public.tenants]] [] []}"}
+{"level":"info","message":"verifying common tables"}
+{"level":"info","message":"establishing snapshot"}
+{"level":"info","type":"summary","num_tables":1,"cdc_cursor":"0/19E3610","message":"starting fetch"}
+{"level":"info","message":"data extraction phase starting"}
+{"level":"info","type":"summary","num_rows":0,"export_duration_ms":1000,"export_duration":"000h 00m 01s","message":"data extraction from source complete"}
+{"level":"info","message":"starting data import on target"}
+{"level":"info","type":"summary","net_duration_ms":1000,"net_duration":"000h 00m 01s","import_duration_ms":1000,"import_duration":"000h 00m 01s","export_duration_ms":1000,"export_duration":"000h 00m 01s","num_rows":0,"cdc_cursor":"0/19E3610","message":"data import on target for table complete"}
+{"level":"info","message":"cleaning up resources created during fetch run"}
+{"level":"info","type":"summary","fetch_id":"0000000000","num_tables":1,"tables":["public.tenants"],"cdc_cursor":"0/19E3610","net_duration_ms":1000,"net_duration":"000h 00m 01s","message":"fetch complete"}
+{"level":"info","message":"http server intentionally shut down"}
+
+exec
+psql 'postgres://root@localhost:26257/defaultdb?sslmode=disable' -c "SHOW CREATE TABLE posts"
+----
+table_name |                    create_statement                     
+------------+---------------------------------------------------------
+ posts      | CREATE TABLE public.posts (                            +
+            |         tenant_id INT4 NULL,                           +
+            |         post_id INT4 NOT NULL,                         +
+            |         author_id INT4 NULL,                           +
+            |         number INT4 NULL,                              +
+            |         CONSTRAINT posts_pkey PRIMARY KEY (post_id ASC)+
+            | )
+(1 row)
+
+exec
+psql 'postgres://root@localhost:26257/defaultdb?sslmode=disable' -c "SHOW CREATE TABLE users"
+----
+table_name |                           create_statement                            
+------------+-----------------------------------------------------------------------
+ users      | CREATE TABLE public.users (                                          +
+            |         tenant_id INT4 NOT NULL,                                     +
+            |         user_id INT4 NOT NULL,                                       +
+            |         age INT4 NULL,                                               +
+            |         CONSTRAINT "primary" PRIMARY KEY (tenant_id ASC, user_id ASC)+
+            | )
+(1 row)
+
+exec
+psql 'postgres://root@localhost:26257/defaultdb?sslmode=disable' -c "SHOW CREATE TABLE tenants"
+----
+table_name |                      create_statement                       
+------------+-------------------------------------------------------------
+ tenants    | CREATE TABLE public.tenants (                              +
+            |         tenant_id INT4 NOT NULL,                           +
+            |         CONSTRAINT tenants_pkey PRIMARY KEY (tenant_id ASC)+
+            | )
+(1 row)

@@ -1,6 +1,7 @@
 package fetch
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"regexp"
@@ -68,16 +69,17 @@ func (cs columnsWithType) CRDBCreateTableStmt() (string, error) {
 }
 
 type columnWithType struct {
-	schemaName    string
-	tableName     string
-	columnName    string
-	dataType      string
-	columnType    string
-	typeOid       oid.Oid
-	nullable      bool
-	isPrimaryKey  bool
-	udtName       string
-	udtDefinition string
+	schemaName      string
+	tableName       string
+	columnName      string
+	dataType        string
+	columnType      string
+	typeOid         oid.Oid
+	nullable        bool
+	isPrimaryKey    bool
+	udtName         string
+	udtDefinition   string
+	ordinalPosition int
 }
 
 func (t *columnWithType) CRDBColDef(includePk bool) (*tree.ColumnTableDef, error) {
@@ -126,7 +128,7 @@ func GetColumnTypes(
 	skipUnsupportedTypeErr bool,
 ) (columnsWithType, error) {
 	const (
-		pgQuery = `SELECT
+		pgQuery = `SELECT DISTINCT
     t1.schema_name,
     t1.table_name,
     t1.column_name,
@@ -135,7 +137,8 @@ func GetColumnTypes(
     t1.nullable,
     t1.is_primary_key,
     COALESCE(t2.udt_name, '') AS enum_type,
-    COALESCE(t2.udt_def, '') AS enum_type_definition
+    COALESCE(t2.udt_def, '') AS enum_type_definition,
+    t2.ordinal_position
 FROM (
     SELECT
         c.relnamespace::regnamespace::text AS schema_name,
@@ -238,7 +241,7 @@ ORDER BY
 		}
 		for rows.Next() {
 			newCol := columnWithType{}
-			if err := rows.Scan(&newCol.schemaName, &newCol.tableName, &newCol.columnName, &newCol.dataType, &newCol.typeOid, &newCol.nullable, &newCol.isPrimaryKey, &newCol.udtName, &newCol.udtDefinition); err != nil {
+			if err := rows.Scan(&newCol.schemaName, &newCol.tableName, &newCol.columnName, &newCol.dataType, &newCol.typeOid, &newCol.nullable, &newCol.isPrimaryKey, &newCol.udtName, &newCol.udtDefinition, &newCol.ordinalPosition); err != nil {
 				return nil, errors.Wrap(err, "failed to scan query result to a columnWithType object")
 			}
 			logger.Debug().Msgf("collected column:%s", newCol.String())
@@ -340,4 +343,94 @@ func convertMySQLEnum(
 		createEnumStmt = pattern.ReplaceAllString(createEnumStmt, output)
 	}
 	return createEnumStmt, enumTypeName, nil
+}
+
+type constraints []string
+
+type constraintsWithTable struct {
+	table dbtable.DBTable
+	cons  constraints
+}
+
+func (ct *constraintsWithTable) String() string {
+	var b bytes.Buffer
+	b.WriteString(fmt.Sprintf("table: %s,", ct.table))
+	for i, con := range ct.cons {
+		b.WriteString(fmt.Sprintf("%q", con))
+		if i != len(ct.cons)-1 {
+			b.WriteString(",")
+		}
+	}
+	return b.String()
+}
+
+func GetConstraints(
+	ctx context.Context, logger zerolog.Logger, conn dbconn.Conn, table dbtable.DBTable,
+) ([]string, error) {
+	const (
+		pgQuery = `SELECT         
+        pg_catalog.pg_get_constraintdef(c.oid) AS constraint_def
+        FROM pg_catalog.pg_class s
+        JOIN pg_catalog.pg_constraint c ON (s.oid = c.conrelid)
+        WHERE conparentid = 0 
+          AND s.relkind = 'r' -- 'r' indicates a table (relation)
+          AND c.contype != 'p' -- 'p' indicates a primary key constraint
+          AND s.relname= $1
+          AND s.relnamespace::regnamespace::text = $2 
+        ORDER BY conrelid, conname;`
+		mysqlQuery = `SHOW CREATE TABLE %s`
+	)
+
+	var res []string
+	switch conn := conn.(type) {
+	case *dbconn.PGConn:
+		rows, err := conn.Query(ctx, pgQuery, table.Table, table.Schema)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var constraintStmt string
+			if err := rows.Scan(&constraintStmt); err != nil {
+				return nil, err
+			}
+			res = append(res, constraintStmt)
+		}
+	case *dbconn.MySQLConn:
+		rows, err := conn.Query(fmt.Sprintf(mysqlQuery, table.Table))
+		if err != nil {
+			return nil, err
+		}
+		var tableName string
+		var createTableStmt string
+		for rows.Next() {
+			if err := rows.Scan(&tableName, &createTableStmt); err != nil {
+				return nil, err
+			}
+			res = append(res, formatMySQLConstraints(createTableStmt)...)
+		}
+	}
+	return res, nil
+}
+
+func formatMySQLConstraints(createTableStmt string) []string {
+	var res []string
+	const (
+		uniqueKeyMySQLRegex = `UNIQUE KEY [^\n]+`
+		fkMySQLRegex        = `CONSTRAINT \S+ FOREIGN KEY [^\n]+`
+		checkMySQLRegex     = `CONSTRAINT \S+ CHECK [^\n]+`
+	)
+
+	for _, rx := range []string{
+		uniqueKeyMySQLRegex,
+		fkMySQLRegex,
+		checkMySQLRegex,
+	} {
+		ks := regexp.MustCompile(rx).FindAllStringSubmatch(createTableStmt, -1)
+		if len(ks) > 0 {
+			for _, kgroup := range ks {
+				res = append(res, strings.TrimSuffix(kgroup[0], ","))
+			}
+		}
+	}
+	return res
 }

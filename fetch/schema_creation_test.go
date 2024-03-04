@@ -838,5 +838,155 @@ func TestCreateTableStatement(t *testing.T) {
 			t.Logf("test passed!")
 		})
 	}
+}
 
+func TestGetDroppedConstraints(t *testing.T) {
+	ctx := context.Background()
+	logger := zerolog.New(os.Stderr)
+
+	type testcase struct {
+		dialect               testutils.Dialect
+		desc                  string
+		createTableStatements []string
+		tableFilter           utils.FilterConfig
+		expectedConstraints   map[string][]string // Table name -> constraints
+	}
+	const dbName = "get_dropped_constraints"
+	for idx, tc := range []testcase{
+		{
+			dialect: testutils.PostgresDialect,
+			desc:    "many constraints",
+			createTableStatements: []string{
+				`
+				CREATE TABLE tenants (tenant_id integer PRIMARY KEY);
+				`,
+				`
+				CREATE TABLE users (
+					tenant_id integer REFERENCES tenants ON DELETE CASCADE,
+					user_id integer NOT NULL UNIQUE,
+					age integer CHECK (age > 18),
+					PRIMARY KEY (tenant_id, user_id)
+				);`,
+				`
+				CREATE TABLE posts (
+					tenant_id integer REFERENCES tenants ON DELETE RESTRICT,
+					post_id integer NOT NULL,
+					author_id integer UNIQUE,
+					number_pg integer UNIQUE,
+					PRIMARY KEY (tenant_id, post_id),
+					FOREIGN KEY (tenant_id, author_id) REFERENCES users ON DELETE SET NULL (author_id)
+				);
+				`,
+			},
+			tableFilter: utils.FilterConfig{TableFilter: ".*"},
+			expectedConstraints: map[string][]string{
+				"public.posts": {
+					"UNIQUE (author_id)",
+					"UNIQUE (number_pg)",
+					"FOREIGN KEY (tenant_id, author_id) REFERENCES users(tenant_id, user_id) ON DELETE SET NULL (author_id)",
+					"FOREIGN KEY (tenant_id) REFERENCES tenants(tenant_id) ON DELETE RESTRICT",
+				},
+				"public.users": {
+					"CHECK ((age > 18))",
+					"FOREIGN KEY (tenant_id) REFERENCES tenants(tenant_id) ON DELETE CASCADE",
+					"UNIQUE (user_id)",
+				},
+				"public.tenants": {},
+			},
+		},
+		{
+			dialect: testutils.MySQLDialect,
+			desc:    "many constraints",
+			createTableStatements: []string{
+				`
+				CREATE TABLE tenants (tenant_id integer PRIMARY KEY);
+				`,
+				`
+				CREATE TABLE users (
+					tenant_id integer REFERENCES tenants ON DELETE CASCADE,
+					user_id integer NOT NULL UNIQUE,
+					age integer CHECK (age > 18),
+					PRIMARY KEY (tenant_id, user_id)
+				);`,
+				`
+				CREATE TABLE posts (
+					tenant_id INTEGER,
+					post_id INTEGER NOT NULL,
+					author_id INTEGER UNIQUE,
+					number integer CHECK (number > 10) UNIQUE,
+					PRIMARY KEY (post_id),
+					FOREIGN KEY (tenant_id) REFERENCES tenants(tenant_id) ON DELETE RESTRICT,
+					FOREIGN KEY (tenant_id, author_id) REFERENCES users(tenant_id, user_id) ON DELETE SET NULL
+				);
+				`,
+			},
+			tableFilter: utils.FilterConfig{TableFilter: ".*"},
+			expectedConstraints: map[string][]string{
+				"public.posts": {
+					"UNIQUE KEY `author_id` (`author_id`)",
+					"UNIQUE KEY `number` (`number`)",
+					"CONSTRAINT `posts_ibfk_1` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`tenant_id`) ON DELETE RESTRICT",
+					"CONSTRAINT `posts_ibfk_2` FOREIGN KEY (`tenant_id`, `author_id`) REFERENCES `users` (`tenant_id`, `user_id`) ON DELETE SET NULL",
+					"CONSTRAINT `posts_chk_1` CHECK ((`number` > 10))",
+				},
+				"public.users": {
+					"UNIQUE KEY `user_id` (`user_id`)",
+					"CONSTRAINT `users_chk_1` CHECK ((`age` > 18))",
+				},
+				"public.tenants": {},
+			},
+		},
+	} {
+		t.Run(fmt.Sprintf("%s/%s", tc.dialect.String(), tc.desc), func(t *testing.T) {
+			var conns dbconn.OrderedConns
+			var err error
+			switch tc.dialect {
+			case testutils.PostgresDialect:
+				conns[0], err = dbconn.TestOnlyCleanDatabase(ctx, "source", testutils.PGConnStr(), fmt.Sprintf("%s-%d", dbName, idx))
+				require.NoError(t, err)
+			case testutils.MySQLDialect:
+				conns[0], err = dbconn.TestOnlyCleanDatabase(ctx, "source", testutils.MySQLConnStr(), dbName)
+				require.NoError(t, err)
+			default:
+				t.Fatalf("unsupported dialect: %s", tc.dialect.String())
+			}
+
+			conns[1], err = dbconn.TestOnlyCleanDatabase(ctx, "target", testutils.CRDBConnStr(), fmt.Sprintf("%s-%d", dbName, idx))
+			require.NoError(t, err)
+
+			// Check the 2 dbs are up.
+			for _, c := range conns {
+				_, err := testutils.ExecConnQuery(ctx, "SELECT 1", c)
+				require.NoError(t, err)
+			}
+
+			defer func() {
+				require.NoError(t, conns[0].Close(ctx))
+				require.NoError(t, conns[1].Close(ctx))
+			}()
+
+			for _, stmt := range tc.createTableStatements {
+				_, err = testutils.ExecConnQuery(ctx, stmt, conns[0])
+				require.NoError(t, err)
+			}
+
+			missingTables, err := getFilteredMissingTables(ctx, conns, tc.tableFilter)
+			require.NoError(t, err)
+
+			res := make(map[string][]string)
+			for _, missingTable := range missingTables {
+				constraints, err := GetConstraints(ctx, logger, conns[0], missingTable.DBTable)
+				require.NoError(t, err)
+				res[missingTable.String()] = constraints
+			}
+
+			for mt, actualConstraints := range res {
+				expectedConstraints := tc.expectedConstraints[mt]
+				require.Equal(t, len(expectedConstraints), len(actualConstraints))
+				for j, actualConstraint := range actualConstraints {
+					require.Equal(t, actualConstraint, actualConstraints[j])
+				}
+			}
+		})
+	}
 }

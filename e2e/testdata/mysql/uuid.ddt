@@ -28,6 +28,7 @@ fetch --source 'mysql://user:password@0.0.0.0:3306/defaultdb' --target 'postgres
 {"level":"info","message":"getting column types for table: public.uuid_table"}
 {"level":"info","message":"finished getting column types for table: public.uuid_table"}
 {"level":"info","message":"creating new table with \"CREATE TABLE uuid_table (id INT8 NOT NULL PRIMARY KEY, unique_id VARCHAR)\""}
+{"level":"warn","message":"newly created schema doesn't contain the following constraints:\ntable: public.uuid_table,\"UNIQUE KEY `id` (`id`)\""}
 {"level":"info","message":"after recreating table, dbTables: {[[public.uuid_table public.uuid_table]] [] []}"}
 {"level":"info","message":"verifying common tables"}
 {"level":"info","message":"establishing snapshot"}
