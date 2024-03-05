@@ -2,6 +2,8 @@ package fetch
 
 import (
 	"context"
+	"fmt"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -10,6 +12,11 @@ import (
 	"strings"
 	"testing"
 
+	"cloud.google.com/go/storage"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/cockroachdb/cockroachdb-parser/pkg/util/uuid"
 	"github.com/cockroachdb/datadriven"
 	"github.com/cockroachdb/errors"
@@ -22,7 +29,15 @@ import (
 	"github.com/cockroachdb/molt/utils"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/api/option"
 )
+
+type storeDetails struct {
+	scheme  string
+	host    string
+	subpath string
+	url     *url.URL
+}
 
 var dockerInternalRegex = regexp.MustCompile(`host\.docker\.internal`)
 
@@ -100,6 +115,8 @@ func TestDataDriven(t *testing.T) {
 						flushRows := 0
 						dropAndRecreateSchema := false
 						createFiles := []string{}
+						bucketPath := ""
+						sDetails := storeDetails{}
 
 						for _, cmd := range d.CmdArgs {
 							switch cmd.Key {
@@ -132,6 +149,19 @@ func TestDataDriven(t *testing.T) {
 								flushRows = flushRowsAtoi
 							case "create-files":
 								createFiles = strings.Split(cmd.Vals[0], ",")
+							case "bucket-path":
+								bucketPath = cmd.Vals[0]
+								url, err := url.Parse(bucketPath)
+								require.NoError(t, err)
+								subPath := strings.TrimPrefix(url.Path, "/")
+								host := url.Host
+
+								sDetails = storeDetails{
+									scheme:  url.Scheme,
+									host:    host,
+									subpath: subPath,
+									url:     url,
+								}
 							default:
 								t.Errorf("unknown key %s", cmd.Key)
 							}
@@ -161,6 +191,17 @@ func TestDataDriven(t *testing.T) {
 						}()
 						if direct {
 							src = datablobstorage.NewCopyCRDBDirect(logger, conns[1].(*dbconn.PGConn).Conn)
+						} else if bucketPath != "" {
+							switch sDetails.scheme {
+							case "s3", "S3":
+								sess := createS3Bucket(t, ctx, sDetails)
+								src = datablobstorage.NewS3Store(logger, sess, credentials.Value{}, sDetails.host, sDetails.subpath, true)
+							case "gs", "GS":
+								gcpClient := createGCPBucket(t, ctx, sDetails)
+								src = datablobstorage.NewGCPStore(logger, gcpClient, nil, sDetails.host, sDetails.subpath, true)
+							default:
+								require.Contains(t, []string{"s3", "S3", "gs", "GS"}, sDetails.scheme)
+							}
 						} else {
 							t.Logf("stored in local dir %q", dir)
 
@@ -280,6 +321,43 @@ func createAndWriteDummyData(dir, fileName string) (retErr error) {
 	}
 
 	return nil
+}
+
+func createS3Bucket(t *testing.T, ctx context.Context, sDetails storeDetails) *session.Session {
+	config := &aws.Config{
+		Credentials:      credentials.NewStaticCredentials("test", "test", ""),
+		S3ForcePathStyle: aws.Bool(true),
+		Endpoint:         aws.String("http://s3.localhost.localstack.cloud:4566"),
+		Region:           aws.String("us-east-1"),
+	}
+	sess, err := session.NewSession(config)
+	require.NoError(t, err)
+	s3Cli := s3.New(sess)
+	_, err = s3Cli.CreateBucketWithContext(ctx, &s3.CreateBucketInput{
+		Bucket: aws.String(sDetails.host),
+	})
+	require.NoError(t, err)
+	return sess
+}
+
+func createGCPBucket(t *testing.T, ctx context.Context, sDetails storeDetails) *storage.Client {
+	gcpClient, err := storage.NewClient(ctx,
+		option.WithEndpoint("http://localhost:4443/storage/v1/"),
+		option.WithoutAuthentication(),
+	)
+
+	require.NoError(t, err)
+
+	// Create the test bucket
+	bucket := gcpClient.Bucket(sDetails.host)
+	if _, err := bucket.Attrs(ctx); err == nil {
+		// Skip creating the bucket.
+		fmt.Printf("skipping creation of bucket %s because it already exists\n", sDetails.host)
+		return gcpClient
+	}
+	err = bucket.Create(ctx, "", nil)
+	require.NoError(t, err)
+	return gcpClient
 }
 
 func TestInitStatusEntry(t *testing.T) {
