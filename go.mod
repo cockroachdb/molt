@@ -13,10 +13,10 @@ require (
 	github.com/cockroachdb/datadriven v1.0.3-0.20230801171734-e384cf455877
 	github.com/cockroachdb/errors v1.9.1
 	github.com/go-sql-driver/mysql v1.7.2-0.20230527164328-99976f4f587d
-	github.com/googleapis/google-cloud-go-testing v0.0.0-20210719221736-1c9a4c676720
 	github.com/jackc/pgx/v5 v5.5.1
 	github.com/jstemmer/go-junit-report v1.0.0
 	github.com/lib/pq v1.10.6
+	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pashagolub/pgxmock/v3 v3.3.0
 	github.com/pingcap/tidb v1.1.0-beta.0.20211124132551-4a1b2e9fe5b5
 	github.com/pingcap/tidb/parser v0.0.0-20211124132551-4a1b2e9fe5b5
@@ -90,7 +90,6 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
-	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/onsi/ginkgo/v2 v2.11.0 // indirect
 	github.com/onsi/gomega v1.27.10 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect

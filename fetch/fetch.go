@@ -514,7 +514,7 @@ func fetchTable(
 					}
 				}()
 
-				r, err := importTable(ctx, cfg, targetConn, logger, table.VerifiedTable, e.Resources, testingKnobs, isLocal, isClearContinuationTokenMode, exceptionLog)
+				r, err := importTable(ctx, cfg, targetConn, logger, table.VerifiedTable, e.Resources, isLocal, isClearContinuationTokenMode, exceptionLog)
 				if err != nil {
 					return err
 				}
