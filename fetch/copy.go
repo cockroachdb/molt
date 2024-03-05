@@ -30,6 +30,16 @@ func Copy(
 	isClearContinuationTokenMode bool,
 	exceptionLog *status.ExceptionLog,
 ) (CopyResult, error) {
+	exceptionConn, err := baseConn.Clone(ctx)
+	if err != nil {
+		return CopyResult{}, err
+	}
+	defer func() {
+		if err := exceptionConn.Close(ctx); err != nil {
+			logger.Err(err).Msg("failed to close connection for exception connection")
+		}
+	}()
+
 	dataLogger := moltlogger.GetDataLogger(logger)
 	ret := CopyResult{
 		StartTime: time.Now(),
@@ -61,7 +71,7 @@ func Copy(
 				dataquery.CopyFrom(table, isLocal /*skips header if local */),
 			); err != nil {
 				fileName := path.Base(key)
-				return status.MaybeReportException(ctx, logger, conn, table.Name, err, fileName, status.StageDataLoad, isClearContinuationTokenMode, exceptionLog)
+				return status.MaybeReportException(ctx, logger, exceptionConn.(*dbconn.PGConn).Conn, table.Name, err, fileName, status.StageDataLoad, isClearContinuationTokenMode, exceptionLog)
 			} else {
 				rowsSoFar += int(copyRet.RowsAffected())
 				dataLogger.Info().
