@@ -55,10 +55,11 @@ func (s *gcpStore) CreateFromReader(
 	fileExt string,
 	numRows chan int,
 	testingKnobs testutils.FetchTestingKnobs,
+	shardNum int,
 ) (Resource, error) {
-	key := fmt.Sprintf("%s/part_%08d.%s", table.SafeString(), iteration, fileExt)
+	key := fmt.Sprintf("%s/shard_%02d_part_%08d.%s", table.SafeString(), shardNum, iteration, fileExt)
 	if s.bucketPath != "" {
-		key = fmt.Sprintf("%s/%s/part_%08d.%s", s.bucketPath, table.SafeString(), iteration, fileExt)
+		key = fmt.Sprintf("%s/%s/shard_%02d_part_%08d.%s", s.bucketPath, table.SafeString(), shardNum, iteration, fileExt)
 	}
 
 	s.logger.Debug().Str("file", key).Msgf("creating new file")

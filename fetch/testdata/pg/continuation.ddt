@@ -94,8 +94,8 @@ SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage F
 ----
 [target]:
 fetch_id	schema_name	table_name	message	sql_state	file_name	stage
-[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl2	duplicate key value violates unique constraint "tbl2_pkey"; Key (id)=(0) already exists.	23505	part_00000001.csv	data_load
-[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) already exists.	23505	part_00000001.csv	data_load
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl2	duplicate key value violates unique constraint "tbl2_pkey"; Key (id)=(0) already exists.	23505	shard_01_part_00000001.csv	data_load
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) already exists.	23505	shard_01_part_00000001.csv	data_load
 tag: SELECT 2
 
 # Baseline number of fetch entries.
@@ -129,8 +129,8 @@ SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage F
 ----
 [target]:
 fetch_id	schema_name	table_name	message	sql_state	file_name	stage
-[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl2	temporary	23505	part_00000001.csv	data_load
-[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) already exists.	23505	part_00000001.csv	data_load
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl2	temporary	23505	shard_01_part_00000001.csv	data_load
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) already exists.	23505	shard_01_part_00000001.csv	data_load
 tag: SELECT 2
 
 # Run this continuation test first because it doesn't clear the exceptions log table.
@@ -174,8 +174,8 @@ SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage F
 ----
 [target]:
 fetch_id	schema_name	table_name	message	sql_state	file_name	stage
-[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl2	duplicate key value violates unique constraint "tbl2_pkey"; Key (id)=(0) already exists.	23505	part_00000001.csv	data_load
-[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) already exists.	23505	part_00000001.csv	data_load
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl2	duplicate key value violates unique constraint "tbl2_pkey"; Key (id)=(0) already exists.	23505	shard_01_part_00000001.csv	data_load
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) already exists.	23505	shard_01_part_00000001.csv	data_load
 tag: SELECT 2
 
 ## Test that when running continuation mode with specific table, when it succeeds, we remove that token.
@@ -190,7 +190,7 @@ SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage F
 ----
 [target]:
 fetch_id	schema_name	table_name	message	sql_state	file_name	stage
-[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) already exists.	23505	part_00000001.csv	data_load
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) already exists.	23505	shard_01_part_00000001.csv	data_load
 tag: SELECT 1
 
 # Verify that there are no new fetch IDs.
@@ -269,7 +269,7 @@ SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage F
 [target]:
 fetch_id	schema_name	table_name	message	sql_state	file_name	stage
 [212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl2			part_00000001.csv	
-[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) already exists.	23505	part_00000001.csv	data_load
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) already exists.	23505	shard_01_part_00000001.csv	data_load
 tag: SELECT 2
 
 ## Test import-copy only mode with only fetch ID specified wipes all existing tokens.
@@ -387,5 +387,5 @@ SELECT fetch_id, schema_name, table_name, message, sql_state, file_name, stage F
 ----
 [target]:
 fetch_id	schema_name	table_name	message	sql_state	file_name	stage
-[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl2	duplicate key value violates unique constraint "tbl2_pkey"; Key (id)=(0) already exists.	23505	part_00000001.csv	
+[212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl2	duplicate key value violates unique constraint "tbl2_pkey"; Key (id)=(0) already exists.	23505	shard_01_part_00000001.csv	
 tag: SELECT 1

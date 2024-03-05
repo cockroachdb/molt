@@ -171,7 +171,7 @@ func Verify(
 			continue
 		}
 		// Get and first and last of each PK.
-		tableShards, err := shardTable(ctx, conns[0], tbl, reporter, opts.tableSplits)
+		tableShards, err := ShardTable(ctx, conns[0], tbl, reporter, opts.tableSplits)
 		if err != nil {
 			return errors.Wrapf(err, "error splitting tables")
 		}

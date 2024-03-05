@@ -12,6 +12,7 @@ import (
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
 	"github.com/cockroachdb/molt/fetch/dataexport"
 	"github.com/cockroachdb/molt/testutils"
+	"github.com/cockroachdb/molt/verify/rowverify"
 	"github.com/rs/zerolog"
 	"golang.org/x/sync/errgroup"
 )
@@ -39,6 +40,7 @@ func exportTable(
 	sqlSrc dataexport.Source,
 	datasource datablobstorage.Store,
 	table dbtable.VerifiedTable,
+	shard rowverify.TableShard,
 	testingKnobs testutils.FetchTestingKnobs,
 ) (exportResult, error) {
 	importFileExt := "csv"
@@ -67,7 +69,7 @@ func exportTable(
 		}
 		return errors.CombineErrors(
 			func() error {
-				if err := sqlSrcConn.Export(cancellableCtx, sqlWrite, table); err != nil {
+				if err := sqlSrcConn.Export(cancellableCtx, sqlWrite, table, shard); err != nil {
 					return errors.CombineErrors(err, sqlWrite.CloseWithError(err))
 				}
 				return sqlWrite.Close()
@@ -80,7 +82,7 @@ func exportTable(
 	resourceWG.SetLimit(1)
 	itNum := 0
 	// Errors must be buffered, as pipe can exit without taking the error channel.
-	pipe := newCSVPipe(sqlRead, logger, cfg.FlushSize, cfg.FlushRows, func(numRowsCh chan int) (io.WriteCloser, error) {
+	pipe := newCSVPipe(sqlRead, logger, cfg.FlushSize, cfg.FlushRows, shard.ShardNum, func(numRowsCh chan int) (io.WriteCloser, error) {
 		if err := resourceWG.Wait(); err != nil {
 			// We need to check if the last iteration saw any error when creating
 			// resource from reader. If so, just exit the current iteration.
@@ -95,7 +97,7 @@ func exportTable(
 		resourceWG.Go(func() error {
 			itNum++
 			if err := func() error {
-				resource, err := datasource.CreateFromReader(ctx, fRW, table, itNum, importFileExt, numRowsCh, testingKnobs)
+				resource, err := datasource.CreateFromReader(ctx, fRW, table, itNum, importFileExt, numRowsCh, testingKnobs, shard.ShardNum)
 				if err != nil {
 					return err
 				}

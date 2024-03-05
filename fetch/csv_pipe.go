@@ -23,6 +23,7 @@ type csvPipe struct {
 	currSize  int
 	currRows  int
 	numRows   int
+	shardNum  int
 	numRowsCh chan int
 	newWriter func(numRowsCh chan int) (io.WriteCloser, error)
 
@@ -34,6 +35,7 @@ func newCSVPipe(
 	logger zerolog.Logger,
 	flushSize int,
 	flushRows int,
+	shardNum int,
 	newWriter func(numRowsCh chan int) (io.WriteCloser, error),
 ) *csvPipe {
 	return &csvPipe{
@@ -41,6 +43,7 @@ func newCSVPipe(
 		logger:    logger,
 		flushSize: flushSize,
 		flushRows: flushRows,
+		shardNum:  shardNum,
 		numRowsCh: make(chan int, 1),
 		newWriter: newWriter,
 	}
@@ -73,6 +76,7 @@ func (p *csvPipe) Pipe(tn dbtable.Name) error {
 			dataLogger.Info().
 				Str("table", tn.SafeString()).
 				Int("num_rows", p.numRows).
+				Int("shard", p.shardNum).
 				Msgf("row import status")
 		}
 		for _, s := range record {

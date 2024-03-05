@@ -30,6 +30,7 @@ func (c *copyCRDBDirect) CreateFromReader(
 	fileExt string,
 	numRows chan int,
 	testingKnobs testutils.FetchTestingKnobs,
+	shardNum int,
 ) (Resource, error) {
 	// Drain the channel so we don't block.
 	go func() {

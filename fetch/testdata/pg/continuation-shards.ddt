@@ -1,0 +1,101 @@
+exec all
+CREATE TABLE tbl1(id INT PRIMARY KEY, t TEXT)
+----
+[source] CREATE TABLE
+[target] CREATE TABLE
+
+
+exec source
+INSERT INTO tbl1 VALUES (11, 'aaa'), (22, 'bb b'), (33, 'ééé'), (44, '🫡🫡🫡'), (55, '娜娜'), (66, 'Лукас'), (77, 'ルカス')
+----
+[source] INSERT 0 7
+
+# Run fetch to generate files.
+fetch live shards=4 store-dir=continuation-shards-test
+----
+
+query all
+SELECT * FROM tbl1
+----
+[source]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+[target]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+
+# Create new fetch that has an ID that we can control so we can control args passed in later.
+exec target
+INSERT INTO _molt_fetch_status (id, name, source_dialect) VALUES('d44762e5-6f70-43f8-8e15-58b4de10a007', 'dummy_run', 'PostgreSQL') RETURNING id
+----
+[target] INSERT 0 1
+
+# Make it so that the exception id is deterministic for future steps.
+exec target
+INSERT INTO _molt_fetch_exceptions (fetch_id, schema_name, table_name, file_name, sql_state, message, command, stage, time) VALUES ('d44762e5-6f70-43f8-8e15-58b4de10a007', 'public', 'tbl1', 'shard_02_part_00000001.csv', '', '', '', '', now())
+----
+[target] INSERT 0 1
+
+exec target
+truncate tbl1
+----
+[target] TRUNCATE
+
+# Verify tbl1 is truncated on the target side.
+query all
+SELECT * FROM tbl1
+----
+[source]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+[target]:
+id	t
+tag: SELECT 0
+
+# Run fetch from the fetchID which starts at shard 2
+fetch live cleanup-dir store-dir=continuation-shards-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007
+----
+
+# Verify tbl1 on the target only has rows 3-7 since shard 2 starts from row 3.
+query all
+SELECT * FROM tbl1
+----
+[source]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+[target]:
+id	t
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 5
