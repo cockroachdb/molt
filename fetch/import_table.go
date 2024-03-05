@@ -139,6 +139,16 @@ func importTable(
 	isClearContinuationTokenMode bool,
 	exceptionLog *status.ExceptionLog,
 ) (importResult, error) {
+	exceptionConn, err := baseConn.Clone(ctx)
+	if err != nil {
+		return importResult{}, err
+	}
+	defer func() {
+		if err := exceptionConn.Close(ctx); err != nil {
+			logger.Err(err).Msg("failed to close connection for exception connection")
+		}
+	}()
+
 	ret := importResult{
 		StartTime: time.Now(),
 	}
@@ -183,7 +193,7 @@ func importTable(
 		file, err := importWithBisect(ctx, kvOptions, table, logger, conn, locBatch)
 		if err != nil {
 			fileName := status.ExtractFileNameFromErr(file)
-			pgErr := status.MaybeReportException(ctx, logger, baseConn.(*dbconn.PGConn).Conn, table.Name, err, fileName,
+			pgErr := status.MaybeReportException(ctx, logger, exceptionConn.(*dbconn.PGConn).Conn, table.Name, err, fileName,
 				status.StageDataLoad, isClearContinuationTokenMode, exceptionLog)
 			return ret, errors.Wrap(pgErr, "error importing data")
 		}
