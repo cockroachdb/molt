@@ -212,10 +212,6 @@ func Fetch(
 	defer func() {
 		if retErr != nil {
 			fetchID := fetchStatus.ID.String()
-			if !IsClearContinuationTokenMode(cfg) && cfg.FetchID != "" {
-				fetchID = cfg.FetchID
-			}
-
 			logger.Info().
 				Str("fetch_id", utils.MaybeFormatFetchID(cfg.TestOnly, fetchID)).Msg("continue from this fetch ID")
 		}
@@ -344,19 +340,15 @@ func Fetch(
 }
 
 func truncateTable(
-	ctx context.Context, logger zerolog.Logger, table tableverify.Result, conns dbconn.OrderedConns,
+	ctx context.Context,
+	logger zerolog.Logger,
+	table tableverify.Result,
+	truncateTargetTableConn dbconn.Conn,
 ) error {
-	truncateTargetTableConn, err := conns[1].Clone(ctx)
-	if err != nil {
-		return errors.Wrap(err, "unable to clone a connection to truncate the table on the target db")
-	}
 	logger.Info().Msgf("truncating table")
-	_, err = truncateTargetTableConn.(*dbconn.PGConn).Conn.Exec(ctx, "TRUNCATE TABLE "+table.SafeString())
+	_, err := truncateTargetTableConn.(*dbconn.PGConn).Conn.Exec(ctx, "TRUNCATE TABLE "+table.SafeString())
 	if err != nil {
 		return errors.Wrap(err, "failed executing the TRUNCATE TABLE statement")
-	}
-	if err := truncateTargetTableConn.Close(ctx); err != nil {
-		return errors.Wrap(err, "unable to close the connection that is used to truncate the table on the target db")
 	}
 	logger.Info().Msgf("finished truncating table")
 	return nil
@@ -392,9 +384,20 @@ func fetchTable(
 		return nil
 	}
 
+	targetTableConnCopy, err := conns[1].Clone(ctx)
+	if err != nil {
+		return errors.Wrap(err, "unable to clone the target table connection")
+	}
+	defer func() {
+		err := targetTableConnCopy.Close(ctx)
+		if err != nil {
+			logger.Err(err).Msg("failed to close connection to copy")
+		}
+	}()
+
 	// Truncate table on the target side, if applicable.
 	if cfg.Truncate && !IsImportCopyOnlyMode(cfg) {
-		if err := truncateTable(ctx, logger, table, conns); err != nil {
+		if err := truncateTable(ctx, logger, table, targetTableConnCopy); err != nil {
 			return err
 		}
 	} else if cfg.Truncate && IsImportCopyOnlyMode(cfg) {
@@ -466,10 +469,6 @@ func fetchTable(
 	fetchmetrics.TableExportDuration.WithLabelValues(table.SafeString()).Set(float64(exportDuration.Milliseconds()))
 
 	if blobStore.CanBeTarget() {
-		targetConn, err := conns[1].Clone(ctx)
-		if err != nil {
-			return err
-		}
 		var importDuration time.Duration
 
 		// Make sure this is outside the closure below so that retErr is assigned to the error properly.
@@ -478,7 +477,7 @@ func fetchTable(
 		// the continuation token because it's no longer relevant.
 		defer func() {
 			if retErr == nil && !isClearContinuationTokenMode && exceptionLog != nil {
-				targetPgConn, valid := conns[1].(*dbconn.PGConn)
+				targetPgConn, valid := targetTableConnCopy.(*dbconn.PGConn)
 				if !valid {
 					retErr = errors.New("failed to assert conn as a pgconn")
 				}
@@ -504,7 +503,7 @@ func fetchTable(
 			if !cfg.Live {
 				go func() {
 					err := reportImportTableProgress(ctx,
-						targetConn,
+						targetTableConnCopy,
 						logger,
 						table.VerifiedTable,
 						time.Now(),
@@ -514,13 +513,13 @@ func fetchTable(
 					}
 				}()
 
-				r, err := importTable(ctx, cfg, targetConn, logger, table.VerifiedTable, e.Resources, isLocal, isClearContinuationTokenMode, exceptionLog)
+				r, err := importTable(ctx, cfg, targetTableConnCopy, logger, table.VerifiedTable, e.Resources, isLocal, isClearContinuationTokenMode, exceptionLog)
 				if err != nil {
 					return err
 				}
 				importDuration = utils.MaybeFormatDurationForTest(cfg.TestOnly, r.EndTime.Sub(r.StartTime))
 			} else {
-				r, err := Copy(ctx, targetConn, logger, table.VerifiedTable, e.Resources, isLocal, isClearContinuationTokenMode, exceptionLog)
+				r, err := Copy(ctx, targetTableConnCopy, logger, table.VerifiedTable, e.Resources, isLocal, isClearContinuationTokenMode, exceptionLog)
 				if err != nil {
 					return err
 				}
@@ -528,10 +527,7 @@ func fetchTable(
 			}
 			return nil
 		}(); err != nil {
-			return errors.CombineErrors(err, targetConn.Close(ctx))
-		}
-		if err := targetConn.Close(ctx); err != nil {
-			return err
+			return errors.CombineErrors(err, targetTableConnCopy.Close(ctx))
 		}
 
 		netDuration := utils.MaybeFormatDurationForTest(cfg.TestOnly, time.Since(tableStartTime))
@@ -591,9 +587,9 @@ func initStatusEntry(
 		SourceDialect: dialect,
 	}
 
-	// This is the case where we have a continuation for a specific table
-	// and we want to "reuse the last run" as the current one.
-	if !IsClearContinuationTokenMode(cfg) && cfg.FetchID != "" {
+	// This is the case where we have continuation tokens.
+	// and we want to "reuse the last fetch run" as the current one.
+	if !IsClearContinuationTokenMode(cfg) {
 		id, err := uuid.FromString(cfg.FetchID)
 		if err != nil {
 			return nil, err
@@ -648,13 +644,6 @@ func IsImportCopyOnlyMode(cfg Config) bool {
 // from the _molt_fetch_exceptions table. This is to ensure that there is only
 // ever one set of active tokens at a time.
 func IsClearContinuationTokenMode(cfg Config) bool {
-	trimmedFetchID := strings.TrimSpace(cfg.FetchID)
-	trimmedContToken := strings.TrimSpace(cfg.ContinuationToken)
-
-	// First condition: fresh fetch run without continuation; second condition: fetch run with continuation
-	// but of all tokens with a fetch ID, which means we want to update existing tokens.
-	if trimmedFetchID == "" || (trimmedFetchID != "" && trimmedContToken == "") {
-		return true
-	}
-	return false
+	// Condition: fresh fetch run without continuation.
+	return strings.TrimSpace(cfg.FetchID) == ""
 }
