@@ -183,7 +183,7 @@ func (s *s3Store) ListFromContinuationPoint(
 ) ([]Resource, error) {
 	key, prefix := getKeyAndPrefix(fileName, s.bucketPath, table)
 	s3client := s3.New(s.session)
-	return listFromContinuationPointAWS(ctx, s3client, key, prefix, s)
+	return listFromContinuationPointAWS(ctx, s3client, key, prefix, s, 1000 /* maxKeys */)
 }
 
 // listFromContinuationPoint is a helper for listFromContinuationPoint
@@ -192,22 +192,29 @@ func (s *s3Store) ListFromContinuationPoint(
 // as part of the function signature. The helper will make the API call to S3 and
 // create the s3Resource objects that Import or Copy will use.
 func listFromContinuationPointAWS(
-	ctx context.Context, s3Client s3iface.S3API, key, prefix string, s3Store *s3Store,
+	ctx context.Context, s3Client s3iface.S3API, key, prefix string, s3Store *s3Store, maxKeys int64,
 ) ([]Resource, error) {
 	// Note: There is a StartAfter parameter in ListObjectV2Input
 	// but it is non inclusive of the provided key so we can't use it as we
 	// need to include the file we are starting from.
-	s3Objects, err := s3Client.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
-		Bucket: aws.String(s3Store.bucket),
-		Prefix: aws.String(prefix),
-	})
-	if err != nil {
+	params := &s3.ListObjectsV2Input{
+		Bucket:  aws.String(s3Store.bucket),
+		Prefix:  aws.String(prefix),
+		MaxKeys: aws.Int64(maxKeys),
+	}
+	contents := make([]*s3.Object, 0)
+	if err := s3Client.ListObjectsV2PagesWithContext(ctx, params, func(page *s3.ListObjectsV2Output, lastPage bool) bool {
+		contents = append(contents, page.Contents...)
+		return !lastPage
+	}); err != nil {
 		return nil, err
 	}
 
 	g, _ := errgroup.WithContext(ctx)
-	resources := make([]Resource, len(s3Objects.Contents))
-	for i, obj := range s3Objects.Contents {
+	// Setting to avoid AWS rate limit
+	g.SetLimit(500)
+	resources := make([]Resource, len(contents))
+	for i, obj := range contents {
 		curI := i
 		curObj := obj
 		// Find the key we want to start at. Because we name the files
@@ -217,7 +224,7 @@ func listFromContinuationPointAWS(
 		// fetch/public.inventory/part_00000005.tar.gz is >= to key meaning,
 		// it is a file we need to include.
 		g.Go(func() error {
-			objResp, err := s3Client.GetObject(&s3.GetObjectInput{
+			objResp, err := s3Client.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
 				Bucket: aws.String(s3Store.bucket),
 				Key:    aws.String(*curObj.Key),
 			})
@@ -239,7 +246,6 @@ func listFromContinuationPointAWS(
 			// Continue even if the integer conversion or metadata get fails because
 			// file is likely still fine, but metadata was not updated properly.
 			// Log to let user know.
-
 			if aws.StringValue(curObj.Key) >= key && utils.MatchesFileConvention(aws.StringValue(curObj.Key)) {
 				resources[curI] = &s3Resource{
 					key:     aws.StringValue(curObj.Key),
@@ -256,7 +262,6 @@ func listFromContinuationPointAWS(
 	if err := g.Wait(); err != nil {
 		return nil, err
 	}
-
 	return removeNilResources(resources), nil
 }
 
@@ -267,7 +272,6 @@ func removeNilResources(input []Resource) []Resource {
 			output = append(output, res)
 		}
 	}
-
 	return output
 }
 

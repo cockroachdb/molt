@@ -11,7 +11,6 @@ import (
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/cockroachdb/molt/testutils"
 	"github.com/cockroachdb/molt/utils"
-	"github.com/googleapis/google-cloud-go-testing/storage/stiface"
 	"github.com/rs/zerolog"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/iterator"
@@ -128,11 +127,11 @@ func (s *gcpStore) ListFromContinuationPoint(
 	ctx context.Context, table dbtable.VerifiedTable, fileName string,
 ) ([]Resource, error) {
 	key, prefix := getKeyAndPrefix(fileName, s.bucketPath, table)
-	return listFromContinuationPointGCP(ctx, stiface.AdaptClient(s.client), key, prefix, s.bucket, s)
+	return listFromContinuationPointGCP(ctx, s.client, key, prefix, s.bucket, s)
 }
 
 func listFromContinuationPointGCP(
-	ctx context.Context, client stiface.Client, key, prefix, bucket string, gcpStore *gcpStore,
+	ctx context.Context, client *storage.Client, key, prefix, bucket string, gcpStore *gcpStore,
 ) ([]Resource, error) {
 	it := client.Bucket(bucket).Objects(ctx, &storage.Query{
 		Prefix: prefix,
@@ -144,6 +143,7 @@ func listFromContinuationPointGCP(
 	})
 
 	resources := []Resource{}
+	// GCP's iterator paginates by default so no need to handle here
 	for {
 		if attrs, err := it.Next(); err != nil {
 			if err == iterator.Done {

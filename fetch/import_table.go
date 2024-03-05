@@ -19,7 +19,6 @@ import (
 	"github.com/cockroachdb/molt/fetch/status"
 	"github.com/cockroachdb/molt/moltlogger"
 	"github.com/cockroachdb/molt/retry"
-	"github.com/cockroachdb/molt/testutils"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/rs/zerolog"
@@ -136,7 +135,6 @@ func importTable(
 	logger zerolog.Logger,
 	table dbtable.VerifiedTable,
 	resources []datablobstorage.Resource,
-	testingKnobs testutils.FetchTestingKnobs,
 	isLocal bool,
 	isClearContinuationTokenMode bool,
 	exceptionLog *status.ExceptionLog,

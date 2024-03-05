@@ -18,9 +18,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Start Databases
+      - name: Start Dependencies
         working-directory: .github
-        run: docker-compose up -d cockroachdb cockroachdbtarget mysql postgresql
+        run: docker-compose up -d
 
       # Just cache based on job and go.sum contents.
       - name: Write cache key
