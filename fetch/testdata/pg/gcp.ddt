@@ -1,0 +1,143 @@
+exec all
+CREATE TABLE tbl1(id INT PRIMARY KEY, t TEXT)
+----
+[source] CREATE TABLE
+[target] CREATE TABLE
+
+exec source
+INSERT INTO tbl1 VALUES (1, 'aaa'), (2, 'bb b'), (3, 'ééé'), (4, '🫡🫡🫡'), (5, '娜娜'), (6, 'Лукас'), (7, 'ルカス')
+----
+[source] INSERT 0 7
+
+exec all
+CREATE TABLE tbl2(id INT PRIMARY KEY, t TEXT)
+----
+[source] CREATE TABLE
+[target] CREATE TABLE
+
+exec source
+INSERT INTO tbl2 VALUES (11, 'aaa'), (22, 'bb b'), (33, 'ééé'), (44, '🫡🫡🫡'), (55, '娜娜'), (66, 'Лукас'), (77, 'ルカス')
+----
+[source] INSERT 0 7
+
+fetch bucket-path=gs://molt-gcp-test-again/testing
+----
+
+query all
+SELECT * FROM tbl1
+----
+[source]:
+id	t
+1	aaa
+2	bb b
+3	ééé
+4	🫡🫡🫡
+5	娜娜
+6	Лукас
+7	ルカス
+tag: SELECT 7
+[target]:
+id	t
+1	aaa
+2	bb b
+3	ééé
+4	🫡🫡🫡
+5	娜娜
+6	Лукас
+7	ルカス
+tag: SELECT 7
+
+query all
+SELECT * FROM tbl2
+----
+[source]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+[target]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+
+## Test continuation with integration to cloud store.
+# Create new fetch that has an ID that we can control so we can control args passed in later.
+exec target
+INSERT INTO _molt_fetch_status (id, name, source_dialect) VALUES('d44762e5-6f70-43f8-8e15-58b4de10a007', 'dummy_run', 'PostgreSQL') RETURNING id
+----
+[target] INSERT 0 1
+
+# Insert an entry so that tbl1 entry is properly filled. Prev fetch wiped out tokens.
+exec target
+INSERT INTO _molt_fetch_exceptions (fetch_id, schema_name, table_name, file_name, sql_state, message, command, stage, time) VALUES ('d44762e5-6f70-43f8-8e15-58b4de10a007', 'public', 'tbl1', 'part_00000001.csv', '', '', '', '', now())
+----
+[target] INSERT 0 1
+
+exec target
+TRUNCATE tbl1;
+----
+[target] TRUNCATE
+
+exec target
+TRUNCATE tbl2;
+----
+[target] TRUNCATE
+
+
+# Run continuation.
+fetch bucket-path=gs://molt-gcp-test-again/testing fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007
+----
+
+# Table 1 should have all the data.
+query all
+SELECT * FROM tbl1
+----
+[source]:
+id	t
+1	aaa
+2	bb b
+3	ééé
+4	🫡🫡🫡
+5	娜娜
+6	Лукас
+7	ルカス
+tag: SELECT 7
+[target]:
+id	t
+1	aaa
+2	bb b
+3	ééé
+4	🫡🫡🫡
+5	娜娜
+6	Лукас
+7	ルカス
+tag: SELECT 7
+
+# Table 2 should have no data because no continuation token tied to this.
+query all
+SELECT * FROM tbl2
+----
+[source]:
+id	t
+11	aaa
+22	bb b
+33	ééé
+44	🫡🫡🫡
+55	娜娜
+66	Лукас
+77	ルカス
+tag: SELECT 7
+[target]:
+id	t
+tag: SELECT 0

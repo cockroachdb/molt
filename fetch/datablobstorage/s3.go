@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"runtime"
 	"strconv"
 	"sync"
 
@@ -49,7 +50,12 @@ type s3Resource struct {
 
 func (s *s3Resource) ImportURL() (string, error) {
 	if s.store.useLocalInfra {
-		return fmt.Sprintf("http://localstack:4566/%s/%s", s.store.bucket, s.key), nil
+		host := "localhost"
+		if runtime.GOOS == "darwin" {
+			host = "host.docker.internal"
+		}
+
+		return fmt.Sprintf("http://%s:4566/%s/%s", host, s.store.bucket, s.key), nil
 
 	}
 	return fmt.Sprintf(

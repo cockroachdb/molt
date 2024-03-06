@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"runtime"
 	"strconv"
 
 	"cloud.google.com/go/storage"
@@ -201,8 +202,14 @@ type gcpResource struct {
 
 func (r *gcpResource) ImportURL() (string, error) {
 	if r.store.useLocalInfra {
+		host := "localhost"
+		if runtime.GOOS == "darwin" {
+			host = "host.docker.internal"
+		}
+
 		return fmt.Sprintf(
-			"http://fakegcs:4443/download/storage/v1/b/%s/o/%s",
+			"http://%s:4443/download/storage/v1/b/%s/o/%s",
+			host,
 			r.store.bucket,
 			r.key,
 		), nil
