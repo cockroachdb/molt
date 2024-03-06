@@ -145,7 +145,7 @@ func Verify(
 	}
 
 	// Grab columns for each table on both sides.
-	tbls, err := tableverify.VerifyCommonTables(ctx, conns, dbTables.Verified)
+	tbls, err := tableverify.VerifyCommonTables(ctx, conns, logger, dbTables.Verified)
 	if err != nil {
 		return err
 	}

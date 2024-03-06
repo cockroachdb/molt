@@ -13,6 +13,7 @@ import (
 	"github.com/cockroachdb/molt/verify/inconsistency"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/lib/pq/oid"
+	"github.com/rs/zerolog"
 )
 
 type Result struct {
@@ -22,7 +23,10 @@ type Result struct {
 }
 
 func VerifyCommonTables(
-	ctx context.Context, conns dbconn.OrderedConns, allTables [][2]dbtable.DBTable,
+	ctx context.Context,
+	conns dbconn.OrderedConns,
+	logger zerolog.Logger,
+	allTables [][2]dbtable.DBTable,
 ) ([]Result, error) {
 	var ret []Result
 
@@ -31,7 +35,7 @@ func VerifyCommonTables(
 		if err != nil {
 			return nil, err
 		}
-		columns, err := getColumnsForTables(ctx, conns, cmpTables)
+		columns, err := getColumnsForTables(ctx, conns, logger, cmpTables)
 		if err != nil {
 			return nil, err
 		}

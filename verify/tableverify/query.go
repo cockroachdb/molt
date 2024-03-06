@@ -12,6 +12,7 @@ import (
 	"github.com/cockroachdb/molt/mysqlconv"
 	"github.com/cockroachdb/molt/oracleconv"
 	"github.com/lib/pq/oid"
+	"github.com/rs/zerolog"
 )
 
 type Column struct {
@@ -21,7 +22,9 @@ type Column struct {
 	Collation sql.NullString
 }
 
-func GetColumns(ctx context.Context, conn dbconn.Conn, table dbtable.DBTable) ([]Column, error) {
+func GetColumns(
+	ctx context.Context, conn dbconn.Conn, table dbtable.DBTable, logger zerolog.Logger,
+) ([]Column, error) {
 	var ret []Column
 
 	switch conn := conn.(type) {
@@ -131,7 +134,7 @@ ORDER BY ordinal_position`,
 			}
 			var cm Column
 			cm.Name = tree.Name(strings.ToLower(cn))
-			typeOid, err := mysqlconv.DataTypeToOID(dt, ct)
+			typeOid, err := mysqlconv.DataTypeToOID(dt, logger)
 			if err != nil {
 				return ret, err
 			}
@@ -153,12 +156,12 @@ ORDER BY ordinal_position`,
 }
 
 func getColumnsForTables(
-	ctx context.Context, conns dbconn.OrderedConns, tbls [2]dbtable.DBTable,
+	ctx context.Context, conns dbconn.OrderedConns, logger zerolog.Logger, tbls [2]dbtable.DBTable,
 ) ([2][]Column, error) {
 	var ret [2][]Column
 	for i, conn := range conns {
 		var err error
-		ret[i], err = GetColumns(ctx, conn, tbls[i])
+		ret[i], err = GetColumns(ctx, conn, tbls[i], logger)
 		if err != nil {
 			return ret, err
 		}
