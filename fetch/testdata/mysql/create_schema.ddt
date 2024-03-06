@@ -1,0 +1,349 @@
+create-schema-stmt test_table_multi_pk
+CREATE TABLE test_table_multi_pk (
+    integer_col INT,
+    smallint_col SMALLINT,
+    bigint_col BIGINT,
+    decimal_col DECIMAL(10,2) CHECK (decimal_col <= 10),
+    float_col FLOAT UNIQUE,
+    double_col DOUBLE,
+    bit_col BIT,
+    date_col DATE,
+    datetime_col DATETIME,
+    timestamp_col TIMESTAMP,
+    time_col TIME,
+    char_col CHAR(10),
+    varchar_col VARCHAR(255),
+    binary_col BINARY(10),
+    varbinary_col VARBINARY(255),
+    blob_col BLOB,
+    text_col TEXT,
+    mediumtext_col MEDIUMTEXT,
+    longtext_col LONGTEXT,
+    json_col JSON,
+    enum_col ENUM('value1', 'value2', 'value3'),
+    PRIMARY KEY (integer_col, smallint_col)
+);
+----
+CREATE TYPE IF NOT EXISTS fetch_mysql_create_schema_test_table_multi_pk_enum_col_enum AS ENUM ('value1','value2','value3'); CREATE TABLE test_table_multi_pk (integer_col INT4 NOT NULL, smallint_col INT2 NOT NULL, bigint_col INT8, decimal_col DECIMAL(10,2), float_col FLOAT4, double_col FLOAT8, bit_col VARBIT, date_col DATE, datetime_col TIMESTAMP(0), timestamp_col TIMESTAMPTZ(0), time_col TIME(0), char_col VARCHAR, varchar_col VARCHAR, binary_col BYTES, varbinary_col BYTES, blob_col BYTES, text_col STRING, mediumtext_col STRING, longtext_col STRING, json_col JSONB, enum_col fetch_mysql_create_schema_test_table_multi_pk_enum_col_enum, CONSTRAINT "primary" PRIMARY KEY (integer_col, smallint_col))
+
+create-schema-stmt test_table
+CREATE TABLE test_table (
+    integer_col INT PRIMARY KEY,
+    smallint_col SMALLINT,
+    bigint_col BIGINT NOT NULL,
+    decimal_col DECIMAL(10,2),
+    float_col FLOAT,
+    double_col DOUBLE,
+    bit_col BIT NOT NULL,
+    date_col DATE,
+    datetime_col DATETIME,
+    timestamp_col TIMESTAMP,
+    time_col TIME NOT NULL,
+    char_col CHAR(10),
+    varchar_col VARCHAR(255),
+    binary_col BINARY(10) UNIQUE,
+    varbinary_col VARBINARY(255),
+    blob_col BLOB,
+    text_col TEXT NOT NULL,
+    mediumtext_col MEDIUMTEXT,
+    longtext_col LONGTEXT,
+    json_col JSON,
+    enum_col ENUM('value1', 'value2', 'value3') DEFAULT 'value2'
+);
+----
+CREATE TYPE IF NOT EXISTS fetch_mysql_create_schema_test_table_enum_col_enum AS ENUM ('value1','value2','value3'); CREATE TABLE test_table (integer_col INT4 NOT NULL PRIMARY KEY, smallint_col INT2, bigint_col INT8 NOT NULL, decimal_col DECIMAL(10,2), float_col FLOAT4, double_col FLOAT8, bit_col VARBIT NOT NULL, date_col DATE, datetime_col TIMESTAMP(0), timestamp_col TIMESTAMPTZ(0), time_col TIME(0) NOT NULL, char_col VARCHAR, varchar_col VARCHAR, binary_col BYTES, varbinary_col BYTES, blob_col BYTES, text_col STRING NOT NULL, mediumtext_col STRING, longtext_col STRING, json_col JSONB, enum_col fetch_mysql_create_schema_test_table_enum_col_enum)
+
+create-schema-stmt test_table_set_col
+CREATE TABLE test_table_set_col (
+    integer_col INT PRIMARY KEY,
+    set_col SET('value1', 'value2', 'value3')
+);
+----
+failed to get crdb type from mysql type set for column test_table_set_col.set_col: Unsupported column type set
+
+exec source
+CREATE TABLE tenants (tenant_id integer PRIMARY KEY);
+----
+[source] 0 rows affected
+
+exec source
+CREATE TABLE users (
+					tenant_id integer REFERENCES tenants ON DELETE CASCADE,
+					user_id integer NOT NULL UNIQUE,
+					age integer CHECK (age > 18),
+					PRIMARY KEY (tenant_id, user_id)
+				);
+----
+[source] 0 rows affected
+
+
+create-schema-stmt posts show-dropped-constraints=true
+CREATE TABLE posts (
+    tenant_id INTEGER,
+    post_id INTEGER NOT NULL,
+    author_id INTEGER UNIQUE,
+    number integer CHECK (number > 10) UNIQUE,
+    PRIMARY KEY (post_id),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(tenant_id) ON DELETE RESTRICT,
+    FOREIGN KEY (tenant_id, author_id) REFERENCES users(tenant_id, user_id) ON DELETE SET NULL
+);
+----
+CREATE TABLE posts (tenant_id INT4, post_id INT4 NOT NULL PRIMARY KEY, author_id INT4, number INT4)
+------ DROPPED CONSTRAINTS ------
+UNIQUE KEY `author_id` (`author_id`)
+UNIQUE KEY `number` (`number`)
+CONSTRAINT `posts_ibfk_1` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`tenant_id`) ON DELETE RESTRICT
+CONSTRAINT `posts_ibfk_2` FOREIGN KEY (`tenant_id`, `author_id`) REFERENCES `users` (`tenant_id`, `user_id`) ON DELETE SET NULL
+CONSTRAINT `posts_chk_1` CHECK ((`number` > 10))
+
+
+create-schema-stmt table_with_column_indexes show-dropped-constraints=true
+CREATE TABLE IF NOT EXISTS `table_with_column_indexes` (
+  `id` INT(10) NOT NULL PRIMARY KEY,
+  `amount` DECIMAL(10,2) NOT NULL,
+  `unique_id` INT NOT NULL UNIQUE,
+  `unique_key_id` INT NOT NULL,
+  `some_index_key` INT,
+  `desc` VARCHAR(100),
+  `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `updated_at_reverse` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NULL,
+  UNIQUE KEY `unique_key_id` (`unique_key_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+----
+CREATE TABLE table_with_column_indexes (id INT4 NOT NULL PRIMARY KEY, amount DECIMAL(10,2) NOT NULL, unique_id INT4 NOT NULL, unique_key_id INT4 NOT NULL, some_index_key INT4, "desc" VARCHAR, updated_at TIMESTAMPTZ(0), updated_at_reverse TIMESTAMPTZ(0))
+------ DROPPED CONSTRAINTS ------
+UNIQUE KEY `unique_id` (`unique_id`)
+UNIQUE KEY `unique_key_id` (`unique_key_id`)
+
+
+create-schema-stmt table_with_def_level_indexes show-dropped-constraints=true
+CREATE TABLE table_with_def_level_indexes (
+    id int,
+    a INT NOT NULL,
+    b INT NOT NULL,
+    INDEX (a),
+    UNIQUE INDEX b_uniq (a, b),
+    PRIMARY KEY (id)
+)
+----
+CREATE TABLE table_with_def_level_indexes (id INT4 NOT NULL PRIMARY KEY, a INT4 NOT NULL, b INT4 NOT NULL)
+------ DROPPED CONSTRAINTS ------
+UNIQUE KEY `b_uniq` (`a`,`b`)
+
+
+
+create-schema-stmt table_with_def_level_indexes show-dropped-constraints=true
+CREATE TABLE table_with_def_level_indexes (
+    id INT,
+    a INT NOT NULL,
+    b INT NOT NULL,
+    INDEX (b, a) USING BTREE,
+    UNIQUE INDEX b_uniq (a, b),
+    PRIMARY KEY (id)
+);
+----
+CREATE TABLE table_with_def_level_indexes (id INT4 NOT NULL PRIMARY KEY, a INT4 NOT NULL, b INT4 NOT NULL)
+------ DROPPED CONSTRAINTS ------
+UNIQUE KEY `b_uniq` (`a`,`b`)
+
+
+exec source
+CREATE TABLE other_table (id INT PRIMARY KEY, a INT, b INT);
+----
+[source] 0 rows affected
+
+exec source
+CREATE TABLE other_table_2 (id INT PRIMARY KEY, a INT, b INT);
+----
+[source] 0 rows affected
+
+exec source
+CREATE TABLE other_table_3 (id INT PRIMARY KEY, a INT, b INT);
+----
+[source] 0 rows affected
+
+exec source
+DROP DATABASE IF EXISTS other_db;
+----
+[source] 0 rows affected
+
+exec source
+CREATE DATABASE other_db;
+----
+[source] 1 rows affected
+
+exec source
+CREATE TABLE other_db.other_table_4 (id INT PRIMARY KEY, a INT, b INT);
+----
+[source] 0 rows affected
+
+exec source
+CREATE INDEX idx_b_a ON other_table(b, a);
+----
+[source] 0 rows affected
+
+exec source
+CREATE INDEX idx_a_b ON other_table_2(a, b);
+----
+[source] 0 rows affected
+
+exec source
+CREATE INDEX idx_a_b ON other_table_3(a, b);
+----
+[source] 0 rows affected
+
+exec source
+CREATE INDEX idx4_a_b ON other_db.other_table_4(a, b);
+----
+[source] 0 rows affected
+
+
+create-schema-stmt table_with_fk show-dropped-constraints=true
+CREATE TABLE table_with_fk (
+    id INT,
+    a INT,
+    b INT,
+    CONSTRAINT s FOREIGN KEY (b, a) REFERENCES other_table(b, a) MATCH FULL, -- changed order to match index
+    FOREIGN KEY (a, b) REFERENCES other_table_2(a, b) MATCH SIMPLE ON DELETE RESTRICT ON UPDATE SET NULL,
+    CONSTRAINT fk3 FOREIGN KEY (a, b) REFERENCES other_table_3(a, b) MATCH partial ON DELETE SET DEFAULT,
+    CONSTRAINT fk4 FOREIGN KEY (a, b) REFERENCES other_db.other_table_4(a, b) ON UPDATE CASCADE,
+    c INT REFERENCES other_db.other_table_4 ON UPDATE CASCADE,
+    PRIMARY KEY (id)
+);
+----
+CREATE TABLE table_with_fk (id INT4 NOT NULL PRIMARY KEY, a INT4, b INT4, c INT4)
+------ DROPPED CONSTRAINTS ------
+CONSTRAINT `fk3` FOREIGN KEY (`a`, `b`) REFERENCES `other_table_3` (`a`, `b`) ON DELETE SET DEFAULT
+CONSTRAINT `fk4` FOREIGN KEY (`a`, `b`) REFERENCES `other_db`.`other_table_4` (`a`, `b`) ON UPDATE CASCADE
+CONSTRAINT `s` FOREIGN KEY (`b`, `a`) REFERENCES `other_table` (`b`, `a`)
+CONSTRAINT `table_with_fk_ibfk_1` FOREIGN KEY (`a`, `b`) REFERENCES `other_table_2` (`a`, `b`) ON DELETE RESTRICT ON UPDATE SET NULL
+
+
+create-schema-stmt timestamp_table
+CREATE TABLE timestamp_table (
+    id INT PRIMARY KEY,
+    dt DATETIME,
+    dt2 DATETIME(2),
+    tz TIMESTAMP,
+    tz2 TIMESTAMP(4)
+)
+----
+CREATE TABLE timestamp_table (id INT4 NOT NULL PRIMARY KEY, dt TIMESTAMP(0), dt2 TIMESTAMP(2), tz TIMESTAMPTZ(0), tz2 TIMESTAMPTZ(4))
+
+create-schema-stmt blob_table
+CREATE TABLE blob_table (
+    a BLOB,
+    b TINYBLOB,
+    c MEDIUMBLOB,
+    d LONGBLOB
+);
+----
+CREATE TABLE blob_table (a BYTES, b BYTES, c BYTES, d BYTES)
+
+create-schema-stmt decimal_table
+CREATE TABLE decimal_table (
+    id INT PRIMARY KEY,
+    d DECIMAL(10, 2),
+    f DECIMAL
+)
+----
+CREATE TABLE decimal_table (id INT4 NOT NULL PRIMARY KEY, d DECIMAL(10,2), f DECIMAL(10))
+
+create-schema-stmt t1
+CREATE TABLE t1 (
+    col1 VARCHAR(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+)
+----
+CREATE TABLE t1 (col1 VARCHAR)
+
+
+create-schema-stmt myset
+CREATE TABLE myset (
+  id INT PRIMARY KEY,
+  col SET('a', 'b', 'c', 'd')
+);
+----
+failed to get crdb type from mysql type set for column myset.col: Unsupported column type set
+
+# Test geometry
+create-schema-stmt geom
+CREATE TABLE geom (
+    p POINT,
+    g GEOMETRY,
+    mp MULTIPOINT
+);
+----
+CREATE TABLE geom (p GEOMETRY(POINT), g GEOMETRY, mp GEOMETRY(MULTIPOINT))
+
+# Test binary
+create-schema-stmt bintable
+CREATE TABLE bintable (
+  c BINARY(3)
+);
+----
+CREATE TABLE bintable (c BYTES)
+
+# Check constraints.
+create-schema-stmt checktable
+CREATE TABLE checktable (
+    a INT CHECK (a > 0),
+    a2 INT CONSTRAINT cons_name CHECK (a2 < 0),
+    CHECK (a + a2 = 0),
+    CONSTRAINT standalone_cons_name CHECK (a - a2 = 0)
+)
+----
+CREATE TABLE checktable (a INT4, a2 INT4)
+
+# Test invalid DECIMAL precision.
+create-schema-stmt decimaltable expect-error
+CREATE TABLE decimaltable (
+    d DECIMAL(1, 10)
+)
+----
+Error 1427 (42000): For float(M,D), double(M,D) or decimal(M,D), M must be >= D (column 'd').
+
+# Test unsupported column options.
+create-schema-stmt unsupported_col_opts
+CREATE TABLE unsupported_col_opts (
+    a INT COLUMN_FORMAT FIXED STORAGE DISK
+)
+----
+CREATE TABLE unsupported_col_opts (a INT4)
+
+# Test comments on columns.
+create-schema-stmt col_with_comment
+CREATE TABLE col_with_comment (
+    comm TEXT COMMENT 'i am a goat'
+);
+----
+CREATE TABLE col_with_comment (comm STRING)
+
+
+# Test computed columns.
+create-schema-stmt computed_col
+CREATE TABLE computed_col (
+    a TEXT AS ('bob') STORED,
+    b INT AS (1 + 2) VIRTUAL,
+    c TEXT AS ('cat')
+)
+----
+CREATE TABLE computed_col (a STRING, b INT4, c STRING)
+
+# Index expressions.
+# SCT support index creation, but not support for MOLT schema creation so far.
+# SCT result:
+# CREATE TABLE t (
+#    a INT4, b INT4, t STRING,
+#    INDEX ((a + 1) ASC, (b + 1) DESC, a),
+#    INVERTED INDEX (t gin_trgm_ops)
+#  )
+create-schema-stmt indextable
+CREATE TABLE indextable (
+    a INT,
+    b INT,
+    t TEXT,
+    KEY my_key ((a + 1) ASC, (b + 1) DESC, a),
+    FULLTEXT KEY idx_t (t)
+);
+----
+CREATE TABLE indextable (a INT4, b INT4, t STRING)
