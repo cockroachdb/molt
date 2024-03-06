@@ -199,7 +199,7 @@ func TestFailedWriteToStore(t *testing.T) {
 
 							require.NoError(t, err)
 
-							tables, err := tableverify.VerifyCommonTables(ctx, conns, dbTables.Verified)
+							tables, err := tableverify.VerifyCommonTables(ctx, conns, logger, dbTables.Verified)
 							require.NoError(t, err)
 							require.Equal(t, 1, len(tables))
 							verifiedTable := tables[0].VerifiedTable

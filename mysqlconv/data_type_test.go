@@ -12,6 +12,7 @@ import (
 	"github.com/cockroachdb/molt/testutils"
 	"github.com/pingcap/tidb/parser"
 	"github.com/pingcap/tidb/parser/ast"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 )
 
@@ -51,7 +52,7 @@ WHERE table_schema = database() AND table_name = ? ORDER BY ORDINAL_POSITION`,
 					var dt string
 					var cn string
 					require.NoError(t, rows.Scan(&cn, &dt, &ct))
-					oid, err := DataTypeToOID(dt, ct)
+					oid, err := DataTypeToOID(dt, zerolog.Nop())
 					require.NoError(t, err)
 					str := fmt.Sprintf("(non-standard) %d", oid)
 					if typ, ok := types.OidToType[oid]; ok {

@@ -191,7 +191,7 @@ func Fetch(
 	}
 
 	logger.Info().Msgf("verifying common tables")
-	tables, err := tableverify.VerifyCommonTables(ctx, conns, dbTables.Verified)
+	tables, err := tableverify.VerifyCommonTables(ctx, conns, logger, dbTables.Verified)
 	if err != nil {
 		return err
 	}
