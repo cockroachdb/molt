@@ -96,6 +96,55 @@ func TestDataDriven(t *testing.T) {
 					d.CmdArgs = args
 
 					switch d.Cmd {
+					case "create-schema-stmt":
+						if len(d.CmdArgs) == 0 {
+							t.Errorf("table filter not specified")
+						}
+						showDroppedConstraints := false
+						for _, arg := range d.CmdArgs {
+							if arg.Key == "show-dropped-constraints" && arg.Vals[0] == "true" {
+								showDroppedConstraints = true
+							}
+						}
+						return func() string {
+							var stmts []string
+							tableName := d.CmdArgs[0]
+							_, createTableErr := testutils.ExecConnQuery(ctx, d.Input, conns[0])
+							if createTableErr != nil {
+								if expectError {
+									stmts = append(stmts, createTableErr.Error())
+									return strings.Join(stmts, "\n")
+								}
+								require.NoError(t, createTableErr)
+							}
+
+							defer func() {
+								_, dropTableErr := testutils.ExecConnQuery(ctx, fmt.Sprintf(`DROP TABLE IF EXISTS %s`, tableName.String()), conns[0])
+								require.NoError(t, dropTableErr)
+							}()
+							tableFilter := utils.FilterConfig{TableFilter: tableName.String()}
+							missingTables, err := getFilteredMissingTables(ctx, conns, tableFilter)
+							require.NoError(t, err)
+
+							for _, missingTable := range missingTables {
+								stmt, err := GetCreateTableStmt(ctx, logger, conns[0], missingTable.DBTable)
+								if err != nil {
+									stmts = append(stmts, err.Error())
+								} else {
+									stmts = append(stmts, stmt)
+								}
+								if showDroppedConstraints {
+									stmts = append(stmts, `------ DROPPED CONSTRAINTS ------`)
+									droppedConstraints, err := GetConstraints(ctx, logger, conns[0], missingTable.DBTable)
+									if err != nil {
+										stmts = append(stmts, err.Error())
+									} else {
+										stmts = append(stmts, droppedConstraints...)
+									}
+								}
+							}
+							return strings.Join(stmts, "\n")
+						}()
 					case "exec":
 						return testutils.ExecConnTestdata(t, d, conns)
 					case "query":
