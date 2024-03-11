@@ -24,7 +24,7 @@ SELECT table_name, message, sql_state, file_name, stage FROM _molt_fetch_excepti
 ----
 [target]:
 table_name	message	sql_state	file_name	stage
-null_text	null value in column "t" violates not-null constraint; 	23502	part_00000001.csv	data_load
+null_text	null value in column "t" violates not-null constraint; 	23502	shard_01_part_00000001.csv	data_load
 tag: SELECT 1
 
 # Clean up from the previous tests
@@ -71,7 +71,7 @@ SELECT table_name, message, sql_state, file_name, stage FROM _molt_fetch_excepti
 ----
 [target]:
 table_name	message	sql_state	file_name	stage
-dependent	insert on table "dependent" violates foreign key constraint "dependent_fid_fkey"; Key (fid)=(0) is not present in table "dependency".	23503	part_00000001.csv	data_load
+dependent	insert on table "dependent" violates foreign key constraint "dependent_fid_fkey"; Key (fid)=(0) is not present in table "dependency".	23503	shard_01_part_00000001.csv	data_load
 tag: SELECT 1
 
 # Clean up from the previous tests
@@ -112,7 +112,7 @@ SELECT table_name, message, sql_state, file_name, stage FROM _molt_fetch_excepti
 ----
 [target]:
 table_name	message	sql_state	file_name	stage
-unique_field	duplicate key value violates unique constraint "unique_field_t_key"; Key (t)=('1') already exists.	23505	part_00000001.csv	data_load
+unique_field	duplicate key value violates unique constraint "unique_field_t_key"; Key (t)=('1') already exists.	23505	shard_01_part_00000001.csv	data_load
 tag: SELECT 1
 
 exec all
@@ -146,5 +146,5 @@ SELECT table_name, message, sql_state, file_name, stage FROM _molt_fetch_excepti
 ----
 [target]:
 table_name	message	sql_state	file_name	stage
-check_field	failed to satisfy CHECK constraint (val > 0:::DECIMAL); 	23514	part_00000001.csv	data_load
+check_field	failed to satisfy CHECK constraint (val > 0:::DECIMAL); 	23514	shard_01_part_00000001.csv	data_load
 tag: SELECT 1

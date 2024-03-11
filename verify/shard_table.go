@@ -23,7 +23,7 @@ import (
 	"github.com/pingcap/tidb/parser/model"
 )
 
-func shardTable(
+func ShardTable(
 	ctx context.Context,
 	truthConn dbconn.Conn,
 	tbl tableverify.Result,
@@ -36,53 +36,53 @@ func shardTable(
 	if numSplits > 1 {
 		ret := make([]rowverify.TableShard, 0, numSplits)
 		// For now, be dumb and split only the first column.
-		min, err := getTableExtremes(ctx, truthConn, tbl, true)
+		minE, err := getTableExtremes(ctx, truthConn, tbl, true)
 		if err != nil {
 			return nil, errors.Wrapf(err, "cannot get minimum of %s.%s", tbl.Schema, tbl.Table)
 		}
-		max, err := getTableExtremes(ctx, truthConn, tbl, false)
+		maxE, err := getTableExtremes(ctx, truthConn, tbl, false)
 		if err != nil {
 			return nil, errors.Wrapf(err, "cannot get maximum of %s.%s", tbl.Schema, tbl.Table)
 		}
 		var nextMin tree.Datums
-		if !(len(min) == 0 || len(max) == 0 || len(min) != len(max)) {
+		if !(len(minE) == 0 || len(maxE) == 0 || len(minE) != len(maxE)) {
 			splittable := true
 		splitLoop:
 			for splitNum := 1; splitNum <= numSplits; splitNum++ {
 				var nextMax tree.Datums
 				if splitNum < numSplits {
 					// For now, split by only first column of PK.
-					switch min[0].ResolvedType().Family() {
+					switch minE[0].ResolvedType().Family() {
 					case types.IntFamily:
-						minVal := int64(*min[0].(*tree.DInt))
-						maxVal := int64(*max[0].(*tree.DInt))
+						minVal := int64(*minE[0].(*tree.DInt))
+						maxVal := int64(*maxE[0].(*tree.DInt))
 						valRange := maxVal - minVal
 						if valRange <= 0 {
 							splittable = false
 							break splitLoop
 						}
-						splitVal := minVal + ((valRange / int64(numSplits)) * int64(splitNum))
+						splitVal := minVal + (max((valRange/int64(numSplits)), 1) * int64(splitNum))
 						nextMax = append(nextMax, tree.NewDInt(tree.DInt(splitVal)))
 					case types.FloatFamily:
-						minVal := float64(*min[0].(*tree.DFloat))
-						maxVal := float64(*max[0].(*tree.DFloat))
+						minVal := float64(*minE[0].(*tree.DFloat))
+						maxVal := float64(*maxE[0].(*tree.DFloat))
 						valRange := maxVal - minVal
 						if valRange <= 0 || math.IsNaN(valRange) || math.IsInf(valRange, 0) {
 							splittable = false
 							break splitLoop
 						}
-						splitVal := minVal + ((valRange / float64(numSplits)) * float64(splitNum))
+						splitVal := minVal + (max((valRange/float64(numSplits)), 1) * float64(splitNum))
 						nextMax = append(nextMax, tree.NewDFloat(tree.DFloat(splitVal)))
 					case types.UuidFamily:
 						// Use the high ranges to divide.
-						minVal := min[0].(*tree.DUuid).UUID.ToUint128().Hi
-						maxVal := max[0].(*tree.DUuid).UUID.ToUint128().Hi
+						minVal := minE[0].(*tree.DUuid).UUID.ToUint128().Hi
+						maxVal := maxE[0].(*tree.DUuid).UUID.ToUint128().Hi
 						valRange := maxVal - minVal
 						if valRange <= 0 {
 							splittable = false
 							break splitLoop
 						}
-						splitVal := minVal + ((valRange / uint64(numSplits)) * uint64(splitNum))
+						splitVal := minVal + (max((valRange/uint64(numSplits)), 1) * uint64(splitNum))
 						nextMax = append(nextMax, &tree.DUuid{UUID: uuid.FromUint128(uint128.Uint128{Hi: splitVal})})
 					default:
 						splittable = false
@@ -111,13 +111,15 @@ func shardTable(
 		},
 	}
 	if numSplits != 1 {
-		reporter.Report(inconsistency.StatusReport{
-			Info: fmt.Sprintf(
-				"unable to identify a split for primary key %s.%s, defaulting to a full scan",
-				tbl.Schema,
-				tbl.Table,
-			),
-		})
+		if reporter != nil {
+			reporter.Report(inconsistency.StatusReport{
+				Info: fmt.Sprintf(
+					"unable to identify a split for primary key %s.%s, defaulting to a full scan",
+					tbl.Schema,
+					tbl.Table,
+				),
+			})
+		}
 	}
 	return ret, nil
 }

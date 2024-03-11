@@ -166,6 +166,7 @@ func TestDataDriven(t *testing.T) {
 						createFiles := []string{}
 						bucketPath := ""
 						sDetails := storeDetails{}
+						numShards := 1
 
 						for _, cmd := range d.CmdArgs {
 							switch cmd.Key {
@@ -211,6 +212,10 @@ func TestDataDriven(t *testing.T) {
 									subpath: subPath,
 									url:     url,
 								}
+							case "shards":
+								s := cmd.Vals[0]
+								numShards, err = strconv.Atoi(s)
+								require.NoError(t, err)
 							default:
 								t.Errorf("unknown key %s", cmd.Key)
 							}
@@ -286,6 +291,7 @@ func TestDataDriven(t *testing.T) {
 								ContinuationFileName: overrideFile,
 								FlushRows:            flushRows,
 								NonInteractive:       true,
+								Shards:               numShards,
 							},
 							logger,
 							conns,

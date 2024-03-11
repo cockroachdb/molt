@@ -3,6 +3,7 @@ package fetch
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 	"sync"
 	"time"
@@ -20,7 +21,9 @@ import (
 	"github.com/cockroachdb/molt/molttelemetry"
 	"github.com/cockroachdb/molt/testutils"
 	"github.com/cockroachdb/molt/utils"
+	"github.com/cockroachdb/molt/verify"
 	"github.com/cockroachdb/molt/verify/dbverify"
+	"github.com/cockroachdb/molt/verify/rowverify"
 	"github.com/cockroachdb/molt/verify/tableverify"
 	"github.com/jackc/pgx/v5"
 	"github.com/prometheus/client_golang/prometheus"
@@ -34,6 +37,7 @@ type Config struct {
 	Cleanup              bool
 	Live                 bool
 	Concurrency          int
+	Shards               int
 	FetchID              string
 	ContinuationToken    string
 	ContinuationFileName string
@@ -291,6 +295,17 @@ func Fetch(
 					return nil
 				}
 
+				// Get and first and last of each PK.
+				shardClone, err := conns[0].Clone(ctx)
+				if err != nil {
+					return err
+				}
+				defer shardClone.Close(ctx)
+				tableShards, err := verify.ShardTable(ctx, shardClone, table, nil, cfg.Shards)
+				if err != nil {
+					return errors.Wrapf(err, "error splitting tables")
+				}
+
 				var relevantExceptionLog *status.ExceptionLog
 				if v, ok := exceptionLogMapping[table.SafeString()]; ok {
 					relevantExceptionLog = v
@@ -301,7 +316,7 @@ func Fetch(
 				// 2. When the fetch ID is passed in and exception log is not nil, which means it is a table we want to continue from.
 				// This means we want to skip if we are trying to continue but there is no entry that specifies where to continue from.
 				if (cfg.FetchID != "" && relevantExceptionLog != nil) || (cfg.FetchID == "") {
-					if err := fetchTable(ctx, cfg, logger, conns, blobStore, sqlSrc, table, relevantExceptionLog, isClearContinuationTokenMode, testingKnobs); err != nil {
+					if err := fetchTable(ctx, cfg, logger, conns, blobStore, sqlSrc, table, tableShards, relevantExceptionLog, isClearContinuationTokenMode, testingKnobs); err != nil {
 						return err
 					}
 				} else {
@@ -365,6 +380,7 @@ func fetchTable(
 	blobStore datablobstorage.Store,
 	sqlSrc dataexport.Source,
 	table tableverify.Result,
+	shards []rowverify.TableShard,
 	exceptionLog *status.ExceptionLog,
 	isClearContinuationTokenMode bool,
 	testingKnobs testutils.FetchTestingKnobs,
@@ -411,11 +427,32 @@ func fetchTable(
 	// this means that we want to export the table because it means
 	// we want export + copy mode.
 	if exceptionLog == nil || cfg.FetchID == "" {
-		er, err := exportTable(ctx, cfg, logger, sqlSrc, blobStore, table.VerifiedTable, testingKnobs)
-		if err != nil {
+		// Set up the upper and lower bounds for start/end min max comparisons
+		e.StartTime = time.Unix(math.MaxInt, 0)
+		e.EndTime = time.Unix(math.MinInt, 0)
+		orderedResults := make([]exportResult, len(shards))
+		wg, _ := errgroup.WithContext(ctx)
+		for i, s := range shards {
+			it, sh := i, s
+			wg.Go(func() error {
+				er, err := exportTable(ctx, cfg, logger, sqlSrc, blobStore, table.VerifiedTable, sh, testingKnobs)
+				if err != nil {
+					return err
+				}
+				orderedResults[it] = er
+				return nil
+			})
+		}
+		if err = wg.Wait(); err != nil {
 			return err
 		}
-		e = er
+		for _, er := range orderedResults {
+			e.StartTime = time.Unix(min(e.StartTime.Unix(), er.StartTime.Unix()), 0)
+			e.EndTime = time.Unix(max(e.EndTime.Unix(), er.EndTime.Unix()), 0)
+			e.NumRows += er.NumRows
+			e.Resources = append(e.Resources, er.Resources...)
+		}
+
 	} else {
 		if exceptionLog.FileName == "" {
 			logger.Warn().Msgf("skipping table %s because no file name is present in the exception log", table.SafeString())
@@ -435,7 +472,6 @@ func fetchTable(
 			return errors.Newf("exported resources for table %s is empty, please make sure you did not accidentally delete from the intermediate store", table.SafeString())
 		}
 	}
-
 	// We actually need to skip the cleanup for something that has an error
 	// On a continuation run we can cleanup so long as it's successful.
 	if cfg.Cleanup {

@@ -25,4 +25,4 @@ go.work
 task.log
 *.log
 .vscode/
-fetch/continuation-test/
+fetch/continuation-**

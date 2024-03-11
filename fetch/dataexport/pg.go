@@ -8,7 +8,8 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/dbtable"
-	"github.com/cockroachdb/molt/fetch/internal/dataquery"
+	"github.com/cockroachdb/molt/rowiterator"
+	"github.com/cockroachdb/molt/verify/rowverify"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -113,16 +114,28 @@ type pgSourceConn struct {
 }
 
 func (p *pgSourceConn) Export(
-	ctx context.Context, writer io.Writer, table dbtable.VerifiedTable,
+	ctx context.Context, writer io.Writer, table dbtable.VerifiedTable, shard rowverify.TableShard,
 ) error {
-	if _, err := p.tx.Conn().PgConn().CopyTo(
-		ctx,
-		writer,
-		dataquery.NewPGCopyTo(table),
-	); err != nil {
-		return err
-	}
-	return nil
+	return scanWithRowIterator(ctx, p.src.settings, p.conn, writer, rowiterator.ScanTable{
+		Table: rowiterator.Table{
+			Name:              table.Name,
+			ColumnNames:       table.Columns,
+			ColumnOIDs:        table.ColumnOIDs[0],
+			PrimaryKeyColumns: table.PrimaryKeyColumns,
+		},
+		StartPKVals: shard.StartPKVals,
+		EndPKVals:   shard.EndPKVals,
+	})
+	// TODO: Figure out if we can still use CopyTo with a select clause
+	// or if doing chunked selects we no longer need the benefit of CopyTo.
+
+	// if _, err := p.tx.Conn().PgConn().CopyTo(
+	// 	ctx,
+	// 	writer,
+	// 	dataquery.NewPGCopyTo(table),
+	// ); err != nil {
+	// 	return err
+	// }
 }
 
 func (p *pgSourceConn) Close(ctx context.Context) error {

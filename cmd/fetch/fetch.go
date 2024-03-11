@@ -250,6 +250,12 @@ func Command() *cobra.Command {
 		4,
 		"Number of tables to move at a time.",
 	)
+	cmd.PersistentFlags().IntVar(
+		&cfg.Shards,
+		"shards",
+		4,
+		"Number of shards to use for data export.",
+	)
 	cmd.PersistentFlags().StringVar(
 		&bucketPath,
 		"bucket-path",

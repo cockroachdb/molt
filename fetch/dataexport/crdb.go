@@ -8,6 +8,7 @@ import (
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/cockroachdb/molt/rowiterator"
+	"github.com/cockroachdb/molt/verify/rowverify"
 )
 
 type crdbSource struct {
@@ -48,7 +49,7 @@ type crdbSourceConn struct {
 }
 
 func (c *crdbSourceConn) Export(
-	ctx context.Context, writer io.Writer, table dbtable.VerifiedTable,
+	ctx context.Context, writer io.Writer, table dbtable.VerifiedTable, shard rowverify.TableShard,
 ) error {
 	return scanWithRowIterator(ctx, c.src.settings, c.conn, writer, rowiterator.ScanTable{
 		Table: rowiterator.Table{
@@ -57,7 +58,9 @@ func (c *crdbSourceConn) Export(
 			ColumnOIDs:        table.ColumnOIDs[0],
 			PrimaryKeyColumns: table.PrimaryKeyColumns,
 		},
-		AOST: &c.src.aost,
+		AOST:        &c.src.aost,
+		StartPKVals: shard.StartPKVals,
+		EndPKVals:   shard.EndPKVals,
 	})
 }
 

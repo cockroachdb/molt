@@ -165,6 +165,7 @@ multiline part"
 				zerolog.New(os.Stdout),
 				tc.flushSize,
 				tc.flushRows,
+				1,
 				func(numRows chan int) (io.WriteCloser, error) {
 					// We need the Wait() here to ensure the numRows are pushed
 					// in the correct order one by one.

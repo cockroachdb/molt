@@ -98,6 +98,7 @@ func (l *localStore) CreateFromReader(
 	fileExt string,
 	numRows chan int,
 	testingKnobs testutils.FetchTestingKnobs,
+	shardNum int,
 ) (Resource, error) {
 	baseDir := path.Join(l.basePath, table.SafeString())
 	if err := os.MkdirAll(baseDir, os.ModePerm); err != nil {
@@ -106,7 +107,7 @@ func (l *localStore) CreateFromReader(
 	if testingKnobs.FailedWriteToBucket.FailedBeforeReadFromPipe {
 		return nil, errors.New(LocalWriterMockErrMsg)
 	}
-	p := path.Join(baseDir, fmt.Sprintf("part_%08d.%s", iteration, fileExt))
+	p := path.Join(baseDir, fmt.Sprintf("shard_%02d_part_%08d.%s", shardNum, iteration, fileExt))
 	logger := l.logger.With().Str("path", p).Logger()
 	logger.Debug().Msgf("creating file")
 	f, err := os.Create(p)
