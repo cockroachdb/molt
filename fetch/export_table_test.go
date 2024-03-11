@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cockroachdb/cockroachdb-parser/pkg/sql/sem/tree"
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/fetch/datablobstorage"
@@ -13,6 +14,7 @@ import (
 	"github.com/cockroachdb/molt/testutils"
 	"github.com/cockroachdb/molt/utils"
 	"github.com/cockroachdb/molt/verify/dbverify"
+	"github.com/cockroachdb/molt/verify/rowverify"
 	"github.com/cockroachdb/molt/verify/tableverify"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
@@ -219,6 +221,11 @@ func TestFailedWriteToStore(t *testing.T) {
 								sqlSrc,
 								dataSrc,
 								verifiedTable,
+								rowverify.TableShard{
+									ShardNum:    1,
+									StartPKVals: []tree.Datum{tree.NewDInt(tree.DInt(1))},
+									EndPKVals:   []tree.Datum{},
+								},
 								tb.FetchTestingKnobs,
 							)
 

@@ -10,6 +10,7 @@ import (
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/cockroachdb/molt/rowiterator"
+	"github.com/cockroachdb/molt/verify/rowverify"
 )
 
 const GTIDHelpInstructions = `please ensure that you have GTID-based replication enabled`
@@ -76,7 +77,7 @@ type mysqlConn struct {
 }
 
 func (m *mysqlConn) Export(
-	ctx context.Context, writer io.Writer, table dbtable.VerifiedTable,
+	ctx context.Context, writer io.Writer, table dbtable.VerifiedTable, shard rowverify.TableShard,
 ) error {
 	return scanWithRowIterator(ctx, m.src.settings, m.conn, writer, rowiterator.ScanTable{
 		Table: rowiterator.Table{
@@ -85,6 +86,8 @@ func (m *mysqlConn) Export(
 			ColumnOIDs:        table.ColumnOIDs[0],
 			PrimaryKeyColumns: table.PrimaryKeyColumns,
 		},
+		StartPKVals: shard.StartPKVals,
+		EndPKVals:   shard.EndPKVals,
 	})
 }
 

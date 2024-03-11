@@ -34,14 +34,14 @@ INSERT INTO test_table VALUES (2)
 
 verify splits=4
 ----
-{"level":"info","message":"starting verify on public.test_table, shard 1/4, range: [<beginning> - 1)"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":0,"num_success":0,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 1/4)"}
-{"level":"info","message":"starting verify on public.test_table, shard 2/4, range: [1 - 1)"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":0,"num_success":0,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 2/4)"}
-{"level":"info","message":"starting verify on public.test_table, shard 3/4, range: [1 - 1)"}
+{"level":"info","message":"starting verify on public.test_table, shard 1/4, range: [<beginning> - 2)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":1,"num_success":1,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 1/4)"}
+{"level":"info","message":"starting verify on public.test_table, shard 2/4, range: [2 - 3)"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":1,"num_success":1,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 2/4)"}
+{"level":"info","message":"starting verify on public.test_table, shard 3/4, range: [3 - 4)"}
 {"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":0,"num_success":0,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 3/4)"}
-{"level":"info","message":"starting verify on public.test_table, shard 4/4, range: [1 - <end>]"}
-{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":2,"num_success":2,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 4/4)"}
+{"level":"info","message":"starting verify on public.test_table, shard 4/4, range: [4 - <end>]"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"test_table","num_truth_rows":0,"num_success":0,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.test_table (shard 4/4)"}
 
 # UUIDs
 exec all

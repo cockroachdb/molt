@@ -10,6 +10,7 @@ import (
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/cockroachdb/molt/rowiterator"
+	"github.com/cockroachdb/molt/verify/rowverify"
 )
 
 type Source interface {
@@ -19,7 +20,7 @@ type Source interface {
 }
 
 type SourceConn interface {
-	Export(ctx context.Context, writer io.Writer, table dbtable.VerifiedTable) error
+	Export(ctx context.Context, writer io.Writer, table dbtable.VerifiedTable, shard rowverify.TableShard) error
 	Close(ctx context.Context) error
 }
 
@@ -66,13 +67,15 @@ func scanWithRowIterator(
 		datums := it.Next(ctx)
 		var fmtFlags tree.FmtFlags
 		for _, d := range datums {
+			// FmtPgwireText is needed so that null columns get written as "" instead of string NULL
+			// which happens inside f.FormatNode for type dNull datums.
 			switch d.(type) {
 			case *tree.DFloat:
 				// With tree.FmtParsableNumerics, negative value will be bracketed, making it unable to be imported from
 				// csv.
-				fmtFlags = tree.FmtExport
+				fmtFlags = tree.FmtExport | tree.FmtPgwireText
 			default:
-				fmtFlags = tree.FmtExport | tree.FmtParsableNumerics
+				fmtFlags = tree.FmtExport | tree.FmtParsableNumerics | tree.FmtPgwireText
 			}
 			f := tree.NewFmtCtx(fmtFlags)
 			f.FormatNode(d)

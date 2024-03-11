@@ -286,6 +286,7 @@ func TestDataDriven(t *testing.T) {
 								ContinuationFileName: overrideFile,
 								FlushRows:            flushRows,
 								NonInteractive:       true,
+								Shards:               1,
 							},
 							logger,
 							conns,
