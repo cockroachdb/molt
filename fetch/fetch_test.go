@@ -127,9 +127,15 @@ func TestDataDriven(t *testing.T) {
 							require.NoError(t, err)
 
 							for _, missingTable := range missingTables {
-								stmt, err := GetCreateTableStmt(ctx, logger, conns[0], missingTable.DBTable)
+								srcConn := conns[0]
+								stmt, err := GetCreateTableStmt(ctx, logger, srcConn, missingTable.DBTable)
 								if err != nil {
 									stmts = append(stmts, err.Error())
+									// Somehow we need to recreate the connection, otherwise pg will show "conn busy" error.
+									newConn, err := srcConn.Clone(ctx)
+									require.NoError(t, err)
+									require.NoError(t, srcConn.Close(ctx))
+									conns[0] = newConn
 								} else {
 									stmts = append(stmts, stmt)
 								}

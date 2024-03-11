@@ -115,3 +115,30 @@ CHECK ((number_pg > 10))
 UNIQUE (number_pg)
 FOREIGN KEY (tenant_id, author_id) REFERENCES users(tenant_id, user_id) ON DELETE SET NULL (author_id)
 FOREIGN KEY (tenant_id) REFERENCES tenants(tenant_id) ON DELETE RESTRICT
+
+create-schema-stmt arrtable
+CREATE TABLE arrtable (
+    intarr1  integer[],
+    textmat1  text[]
+);
+----
+CREATE TABLE arrtable (intarr1 INT4[], textmat1 STRING[])
+
+
+create-schema-stmt nestedarrtable
+CREATE TABLE nestedarrtable (
+    intarr2  integer[][],
+    textmat2        text[][]
+);
+----
+failed get columns for target table: public.nestedarrtable: original column intarr2 of table public.nestedarrtable is nested array, which is currently not supported by CockroachDB
+See also: https://github.com/cockroachdb/cockroach/issues/32552
+
+create-schema-stmt nestedarrtable1
+CREATE TABLE nestedarrtable1 (
+    intarr3  integer[][][],
+    textmat3        text[][][]
+);
+----
+failed get columns for target table: public.nestedarrtable1: original column intarr3 of table public.nestedarrtable1 is nested array, which is currently not supported by CockroachDB
+See also: https://github.com/cockroachdb/cockroach/issues/32552
