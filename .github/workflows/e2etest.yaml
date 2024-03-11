@@ -1,10 +1,10 @@
 name: E2E Tests
 
-# Runs nightly at UTC midnight
 on:
-  schedule:
-    - cron: '0 0 * * *'
-  workflow_dispatch: # Allow manual runs
+  push:
+    branches:
+      - main
+  pull_request:
 
 env:
   GO_VERSION: "1.22"

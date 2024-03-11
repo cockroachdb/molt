@@ -1,0 +1,117 @@
+exec all
+DROP TABLE IF EXISTS employees;
+----
+[source] DROP TABLE
+[target] DROP TABLE
+
+
+create-schema-stmt employees
+CREATE TABLE employees (
+   id INT PRIMARY KEY,
+   unique_id UUID NOT NULL,
+   name VARCHAR(50) NOT NULL,
+   created_at TIMESTAMPTZ,
+   updated_at DATE,
+   is_hired BOOLEAN,
+   age SMALLINT CHECK (age > 18),
+   salary NUMERIC(8, 2),
+   bonus REAL unique
+);
+----
+CREATE TABLE employees (id INT4 NOT NULL PRIMARY KEY, unique_id UUID NOT NULL, name VARCHAR NOT NULL, created_at TIMESTAMPTZ, updated_at DATE, is_hired BOOL, age INT2, salary DECIMAL, bonus FLOAT4)
+
+create-schema-stmt employees
+CREATE TABLE employees (
+   id INT NOT NULL,
+   unique_id UUID NOT NULL,
+   name VARCHAR(50) NOT NULL,
+   created_at TIMESTAMPTZ,
+   updated_at DATE,
+   is_hired BOOLEAN,
+   age SMALLINT CHECK (age > 18),
+   salary NUMERIC(8, 2),
+   bonus REAL unique,
+   CONSTRAINT "primary" PRIMARY KEY (id, unique_id, created_at)
+);
+----
+CREATE TABLE employees (id INT4 NOT NULL, unique_id UUID NOT NULL, name VARCHAR NOT NULL, created_at TIMESTAMPTZ NOT NULL, updated_at DATE, is_hired BOOL, age INT2, salary DECIMAL, bonus FLOAT4, CONSTRAINT "primary" PRIMARY KEY (id, unique_id, created_at))
+
+exec source
+CREATE TABLE department (
+   department_id SERIAL PRIMARY KEY,
+   department_name VARCHAR(50) NOT NULL
+);
+----
+[source] CREATE TABLE
+
+create-schema-stmt employees
+CREATE TABLE employees (
+   employee_id SERIAL PRIMARY KEY,
+   employee_name VARCHAR(50) NOT NULL,
+   department_id INT REFERENCES department(department_id) ON DELETE CASCADE
+);
+----
+CREATE TABLE employees (employee_id INT4 NOT NULL PRIMARY KEY, employee_name VARCHAR NOT NULL, department_id INT4)
+
+create-schema-stmt employees
+CREATE TABLE employees (
+   id SERIAL PRIMARY KEY,
+   name VARCHAR(50) UNIQUE NOT NULL,
+   age INTEGER,
+   address VARCHAR(50) NOT NULL,
+   start_date DATE,
+   end_date DATE,
+   CONSTRAINT check_dates CHECK (start_date <= end_date),  -- Check Constraint
+   CONSTRAINT unique_constraint_name UNIQUE (start_date)  -- Secondary index
+);
+----
+CREATE TABLE employees (id INT4 NOT NULL PRIMARY KEY, name VARCHAR NOT NULL, age INT4, address VARCHAR NOT NULL, start_date DATE, end_date DATE)
+
+exec source
+CREATE TYPE my_enum_type AS ENUM ('value1', 'value2', 'value3');
+----
+[source] CREATE TYPE
+
+create-schema-stmt enum_table
+CREATE TABLE enum_table (
+   id INT NOT NULL PRIMARY KEY,
+   enum_column my_enum_type,
+   other_column1 TEXT
+);
+----
+CREATE TYPE IF NOT EXISTS my_enum_type AS ENUM ('value1', 'value2', 'value3'); CREATE TABLE enum_table (id INT4 NOT NULL PRIMARY KEY, enum_column my_enum_type, other_column1 STRING)
+
+exec source
+CREATE TABLE tenants (tenant_id integer PRIMARY KEY);
+----
+[source] CREATE TABLE
+
+
+exec source
+CREATE TABLE users (
+    tenant_id integer REFERENCES tenants ON DELETE CASCADE,
+    user_id integer NOT NULL UNIQUE,
+    age integer CHECK (age > 18),
+    PRIMARY KEY (tenant_id, user_id)
+);
+----
+[source] CREATE TABLE
+
+
+create-schema-stmt posts show-dropped-constraints=true
+CREATE TABLE posts (
+    tenant_id integer REFERENCES tenants ON DELETE RESTRICT,
+    post_id integer NOT NULL,
+    author_id integer UNIQUE,
+    number_pg integer UNIQUE CHECK (number_pg > 10),
+    PRIMARY KEY (tenant_id, post_id),
+    FOREIGN KEY (tenant_id, author_id) REFERENCES users ON DELETE SET NULL (author_id)
+);
+----
+CREATE TABLE posts (tenant_id INT4 NOT NULL, post_id INT4 NOT NULL, author_id INT4, number_pg INT4, CONSTRAINT "primary" PRIMARY KEY (tenant_id, post_id))
+------ DROPPED CONSTRAINTS ------
+UNIQUE (author_id)
+CHECK ((number_pg > 10))
+UNIQUE (number_pg)
+FOREIGN KEY (tenant_id, author_id) REFERENCES users(tenant_id, user_id) ON DELETE SET NULL (author_id)
+FOREIGN KEY (tenant_id) REFERENCES tenants(tenant_id) ON DELETE RESTRICT
