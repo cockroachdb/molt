@@ -79,6 +79,7 @@ type columnWithType struct {
 	isPrimaryKey    bool
 	udtName         string
 	udtDefinition   string
+	arrDim          int
 	ordinalPosition int
 
 	// mysqlMeta stores the mysql column dedicated information.
@@ -162,6 +163,7 @@ func GetColumnTypes(
     t1.type_oid,
     t1.nullable,
     t1.is_primary_key,
+    t1.arr_dim,
     COALESCE(t2.udt_name, '') AS enum_type,
     COALESCE(t2.udt_def, '') AS enum_type_definition,
     t2.ordinal_position
@@ -185,7 +187,8 @@ FROM (
                 )
             ) THEN true
             ELSE false
-        END AS is_primary_key
+        END AS is_primary_key,
+        a.attndims AS arr_dim
     FROM
         pg_catalog.pg_class c
     JOIN pg_catalog.pg_attribute a ON c.oid = a.attrelid
@@ -275,10 +278,25 @@ ORDER BY
 		}
 		for rows.Next() {
 			newCol := columnWithType{}
-			if err := rows.Scan(&newCol.schemaName, &newCol.tableName, &newCol.columnName, &newCol.dataType, &newCol.typeOid, &newCol.nullable, &newCol.isPrimaryKey, &newCol.udtName, &newCol.udtDefinition, &newCol.ordinalPosition); err != nil {
+			if err := rows.Scan(
+				&newCol.schemaName,
+				&newCol.tableName,
+				&newCol.columnName,
+				&newCol.dataType,
+				&newCol.typeOid,
+				&newCol.nullable,
+				&newCol.isPrimaryKey,
+				&newCol.arrDim,
+				&newCol.udtName,
+				&newCol.udtDefinition,
+				&newCol.ordinalPosition,
+			); err != nil {
 				return nil, errors.Wrap(err, "failed to scan query result to a columnWithType object")
 			}
 			logger.Debug().Msgf("collected column:%s", newCol.String())
+			if newCol.arrDim > 1 {
+				return nil, errors.Newf("original column %s of table %s.%s is nested array, which is currently not supported by CockroachDB\nSee also: https://github.com/cockroachdb/cockroach/issues/32552", newCol.columnName, newCol.schemaName, newCol.tableName)
+			}
 			res = append(res, newCol)
 		}
 	case *dbconn.MySQLConn:
