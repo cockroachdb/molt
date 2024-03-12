@@ -1,0 +1,38 @@
+name: Scale Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  
+
+env:
+  GO_VERSION: "1.22"
+
+jobs:
+  release-cli:
+    runs-on: ubuntu-latest
+    environment: dev
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Setup Golang
+      uses: actions/setup-go@v3
+      with:
+        go-version: ${{ env.GO_VERSION }}
+    - name: 'auth'
+      uses: 'google-github-actions/auth@v1'
+      with:
+        workload_identity_provider: "${{ vars.WORKLOAD_IDENTITY_PROVIDER }}"
+        service_account: "${{ vars.GCP_SERVICE_ACCOUNT }}"
+    - name: 'Set up Google Cloud SDK'
+      uses: 'google-github-actions/setup-gcloud@v1'
+    - name: Create Roachprod
+      run:  ./.github/roachprod create fetch-ci --clouds aws -n 4
+    - name: Destroy Roachprod
+      run: ./.github/roachprod destroy fetch-ci
+
