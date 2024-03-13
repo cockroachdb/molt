@@ -64,8 +64,11 @@ func exportTable(
 	copyWG, _ := errgroup.WithContext(ctx)
 	copyWG.Go(func() error {
 		sqlSrcConn, err := sqlSrc.Conn(ctx)
+		if testingKnobs.FailedEstablishSrcConnForExport {
+			err = errors.Newf("forced error when establishing conn for export")
+		}
 		if err != nil {
-			return err
+			return sqlWrite.CloseWithError(err)
 		}
 		return errors.CombineErrors(
 			func() error {

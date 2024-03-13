@@ -1,0 +1,24 @@
+exec all
+CREATE TABLE foo(a INT PRIMARY KEY);
+----
+[source] CREATE TABLE
+[target] CREATE TABLE
+
+exec source
+INSERT INTO foo (a) SELECT * FROM generate_series(1, 2000);
+----
+[source] INSERT 0 2000
+
+exec source
+ALTER TABLE foo ADD COLUMN b TEXT DEFAULT repeat('Lorem ipsum dolor sit amet, consectetur adipiscing elit. ', 9000);
+----
+[source] ALTER TABLE
+
+exec target
+ALTER TABLE foo ADD COLUMN b TEXT;
+----
+[target] ALTER TABLE
+
+fetch shards=2 failed-conn-export expect-error
+----
+forced error when establishing conn for export
