@@ -162,6 +162,7 @@ func TestDataDriven(t *testing.T) {
 						direct := false
 						compress := false
 						corruptCSVFile := false
+						failedEstablishConnForExport := false
 						fetchId := ""
 						passedInDir := ""
 						cleanup := false
@@ -186,6 +187,8 @@ func TestDataDriven(t *testing.T) {
 								compress = true
 							case "corrupt-csv":
 								corruptCSVFile = true
+							case "failed-conn-export":
+								failedEstablishConnForExport = true
 							case "fetch-id":
 								fetchId = cmd.Vals[0]
 							case "store-dir":
@@ -279,6 +282,9 @@ func TestDataDriven(t *testing.T) {
 						knobs := testutils.FetchTestingKnobs{}
 						if corruptCSVFile {
 							knobs.TriggerCorruptCSVFile = true
+						}
+						if failedEstablishConnForExport {
+							knobs.FailedEstablishSrcConnForExport = true
 						}
 
 						err = Fetch(
