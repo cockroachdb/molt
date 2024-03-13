@@ -11,7 +11,7 @@ INSERT INTO tbl1 VALUES (11, 'aaa'), (22, 'bb b'), (33, 'ééé'), (44, '🫡�
 [source] INSERT 0 7
 
 # Run fetch to generate files.
-fetch live shards=4 store-dir=continuation-shards-test
+fetch useCopy shards=4 store-dir=continuation-shards-test
 ----
 
 query all
@@ -74,7 +74,7 @@ id	t
 tag: SELECT 0
 
 # Run fetch from the fetchID which starts at shard 2
-fetch live cleanup-dir store-dir=continuation-shards-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007
+fetch useCopy cleanup-dir store-dir=continuation-shards-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007
 ----
 
 # Verify tbl1 on the target only has rows 3-7 since shard 2 starts from row 3.

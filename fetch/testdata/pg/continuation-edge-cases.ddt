@@ -74,7 +74,7 @@ tag: SELECT 7
 ## Test that we can continue from data after file 1.
 # Force exception log.
 # Create multiple export files so we can continue from something other than part 1.
-fetch live notruncate expect-error suppress-error store-dir=continuation-test flush-rows=2
+fetch useCopy notruncate expect-error suppress-error store-dir=continuation-test flush-rows=2
 ----
 
 # Create new fetch that has an ID that we can control so we can control args passed in later.
@@ -128,7 +128,7 @@ id	t
 tag: SELECT 0
 
 # Run fetch with continue and verify that it loads the data properly.
-fetch live notruncate store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007
+fetch useCopy notruncate store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007
 ----
 
 # Verify that we get the partial data only after part 1's data (primary key 33 and after).
@@ -166,7 +166,7 @@ TRUNCATE tbl2
 [target] TRUNCATE
 
 ## Test that an invalid file name leads to an error that notes this.
-fetch live notruncate expect-error store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 continuation-token=ab4762e5-6f70-43f8-8e15-58b4de10a007 override-file=wrong_00000003.csv
+fetch useCopy notruncate expect-error store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 continuation-token=ab4762e5-6f70-43f8-8e15-58b4de10a007 override-file=wrong_00000003.csv
 ----
 continuation file name wrong_00000003.csv doesn't match the format part_[\d+]{8}(\.csv|\.tar\.gz)
 
@@ -185,7 +185,7 @@ UPDATE _molt_fetch_exceptions SET id = 'ab4762e5-6f70-43f8-8e15-58b4de10a007' WH
 ## Test that we can get the data from the overrided file and after.
 ## Test that even if irrelevant files with wrong data, it still works and writes the correct data
 ## while skipping erroneous data.
-fetch live notruncate store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 continuation-token=ab4762e5-6f70-43f8-8e15-58b4de10a007 override-file=shard_01_part_00000003.csv create-files=public.tbl1/part_00000000.csv,public.tbl1/invalid.csv cleanup-dir
+fetch useCopy notruncate store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 continuation-token=ab4762e5-6f70-43f8-8e15-58b4de10a007 override-file=shard_01_part_00000003.csv create-files=public.tbl1/part_00000000.csv,public.tbl1/invalid.csv cleanup-dir
 ----
 
 # Verify that we get the partial data only after part 3's data (primary key 55 and after).
@@ -222,7 +222,7 @@ UPDATE _molt_fetch_exceptions SET file_name='' WHERE table_name LIKE 'tbl%'
 [target] UPDATE 1
 
 # Run fetch and verify it fails with file name not found.
-fetch live notruncate expect-error store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 cleanup-dir
+fetch useCopy notruncate expect-error store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 cleanup-dir
 ----
 table public.tbl1 not imported because no file name is present in the exception log
 
@@ -240,11 +240,11 @@ fetch_id	table_name	message	sql_state	file_name	stage
 tag: SELECT 0
 
 # Run fetch and verify it fails with fetch-id with no exception logs.
-fetch live notruncate expect-error store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 cleanup-dir
+fetch useCopy notruncate expect-error store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 cleanup-dir
 ----
 no exception logs that correspond to fetch-id of d44762e5-6f70-43f8-8e15-58b4de10a007
 
 # Run fetch and verify it fails with token with no exception logs.
-fetch live notruncate expect-error store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 continuation-token=d44762e5-6f70-43f8-8e15-58b4de10a007 cleanup-dir
+fetch useCopy notruncate expect-error store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 continuation-token=d44762e5-6f70-43f8-8e15-58b4de10a007 cleanup-dir
 ----
 no exception logs that correspond to continuation-token of d44762e5-6f70-43f8-8e15-58b4de10a007

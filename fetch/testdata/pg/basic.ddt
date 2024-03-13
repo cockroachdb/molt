@@ -76,7 +76,7 @@ INSERT INTO tbl2 VALUES (111, 'aaa'), (333, 'bb b')
 ----
 [source] INSERT 0 2
 
-fetch live
+fetch useCopy
 ----
 
 query all

@@ -72,7 +72,7 @@ id	t
 tag: SELECT 7
 
 # Force exception log.
-fetch live notruncate expect-error suppress-error store-dir=continuation-test
+fetch useCopy notruncate expect-error suppress-error store-dir=continuation-test
 ----
 
 
@@ -135,7 +135,7 @@ tag: SELECT 2
 
 # Run this continuation test first because it doesn't clear the exceptions log table.
 # Run fetch on only one table.
-fetch live expect-error  notruncate store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 continuation-token=011762e5-6f70-43f8-8e15-58b4de10a007
+fetch useCopy expect-error  notruncate store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 continuation-token=011762e5-6f70-43f8-8e15-58b4de10a007
 ----
 ERROR: duplicate key value violates unique constraint "tbl2_pkey" (SQLSTATE 23505)
 
@@ -181,7 +181,7 @@ tag: SELECT 2
 ## Test that when running continuation mode with specific table, when it succeeds, we remove that token.
 # Run this continuation test first because it doesn't clear the exceptions log table.
 # Run fetch on only one table.
-fetch live notruncate store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 continuation-token=011762e5-6f70-43f8-8e15-58b4de10a007
+fetch useCopy notruncate store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007 continuation-token=011762e5-6f70-43f8-8e15-58b4de10a007
 ----
 
 # Ensures there is only one log left since the one for tbl2 got removed.
@@ -275,7 +275,7 @@ tag: SELECT 2
 ## Test import-copy only mode with only fetch ID specified wipes all existing tokens.
 # This mode of fetch with fetch ID specified will automatically truncate the _molt_fetch_exceptions table.
 # Run fetch with continue and verify that it loads the data properly.
-fetch live notruncate store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007
+fetch useCopy notruncate store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007
 ----
 
 # Verify that the continuation worked and that data for both tables is loaded properly.
@@ -376,7 +376,7 @@ fetch_id	schema_name	table_name	message	sql_state	file_name	stage
 [212 71 98 229 111 112 67 248 142 21 88 180 222 16 160 7]	public	tbl2	temp message		part_00000001.csv	
 tag: SELECT 1
 
-fetch live expect-error notruncate cleanup-dir store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007
+fetch useCopy expect-error notruncate cleanup-dir store-dir=continuation-test fetch-id=d44762e5-6f70-43f8-8e15-58b4de10a007
 ----
 ERROR: duplicate key value violates unique constraint "tbl2_pkey" (SQLSTATE 23505)
 

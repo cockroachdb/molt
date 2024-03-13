@@ -82,14 +82,14 @@ INSERT INTO tbl2 VALUES (111, 'aaa'), (333, 'bb b')
 [source] INSERT 0 2
 
 
-# We need this sleep as if not, the fetch live won't catch the latest inserted
+# We need this sleep as if not, the fetch useCopy won't catch the latest inserted
 # rows with 111 and 333.
 exec source
 SELECT pg_sleep(3)
 ----
 [source] SELECT 1
 
-fetch live
+fetch useCopy
 ----
 
 query all

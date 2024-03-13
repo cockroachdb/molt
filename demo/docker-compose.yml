@@ -45,7 +45,7 @@ services:
       --table-handling 'truncate-if-exists'
       --verbosity=2
       --conn-str='root:password@(lms:9043)/defaultdb'
-      --concurrency=3
+      --table-concurrency=3
     depends_on:
       - lms
       - cdcsink

@@ -158,7 +158,7 @@ func TestDataDriven(t *testing.T) {
 					case "fetch":
 						filter := utils.DefaultFilterConfig()
 						truncate := true
-						live := false
+						useCopy := false
 						direct := false
 						compress := false
 						corruptCSVFile := false
@@ -176,8 +176,8 @@ func TestDataDriven(t *testing.T) {
 
 						for _, cmd := range d.CmdArgs {
 							switch cmd.Key {
-							case "live":
-								live = true
+							case "useCopy":
+								useCopy = true
 							case "notruncate":
 								truncate = false
 							case "direct":
@@ -284,7 +284,7 @@ func TestDataDriven(t *testing.T) {
 						err = Fetch(
 							ctx,
 							Config{
-								Live:                     live,
+								UseCopy:                  useCopy,
 								Truncate:                 truncate,
 								DropAndRecreateNewSchema: dropAndRecreateSchema,
 								ExportSettings: dataexport.Settings{

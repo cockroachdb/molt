@@ -35,7 +35,7 @@ id	t
 77	ルカス
 tag: SELECT 7
 
-fetch live notruncate expect-error
+fetch useCopy notruncate expect-error
 ----
 ERROR: duplicate key value violates unique constraint "tbl1_pkey" (SQLSTATE 23505)
 
@@ -56,7 +56,7 @@ tbl1	duplicate key value violates unique constraint "tbl1_pkey"; Key (id)=(11) a
 tag: SELECT 1
 
 # Testing for corrupted CSV.
-fetch live notruncate expect-error corrupt-csv
+fetch useCopy notruncate expect-error corrupt-csv
 ----
 ERROR: read CSV record: record on line 2: wrong number of fields (SQLSTATE 22P04)
 

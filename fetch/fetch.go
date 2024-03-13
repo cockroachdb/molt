@@ -35,8 +35,8 @@ type Config struct {
 	FlushSize            int
 	FlushRows            int
 	Cleanup              bool
-	Live                 bool
-	Concurrency          int
+	UseCopy              bool
+	TableConcurrency     int
 	Shards               int
 	FetchID              string
 	ContinuationToken    string
@@ -88,8 +88,8 @@ func Fetch(
 	if cfg.FlushSize == 0 {
 		cfg.FlushSize = blobStore.DefaultFlushBatchSize()
 	}
-	if cfg.Concurrency == 0 {
-		cfg.Concurrency = 4
+	if cfg.TableConcurrency == 0 {
+		cfg.TableConcurrency = 4
 	}
 
 	if cfg.Cleanup {
@@ -287,7 +287,7 @@ func Fetch(
 
 	workCh := make(chan tableverify.Result)
 	g, _ := errgroup.WithContext(ctx)
-	for i := 0; i < cfg.Concurrency; i++ {
+	for i := 0; i < cfg.TableConcurrency; i++ {
 		g.Go(func() error {
 			for {
 				table, ok := <-workCh
@@ -536,7 +536,7 @@ func fetchTable(
 				isLocal = e.Resources[0].IsLocal()
 			}
 
-			if !cfg.Live {
+			if !cfg.UseCopy {
 				go func() {
 					err := reportImportTableProgress(ctx,
 						targetTableConnCopy,
@@ -597,7 +597,7 @@ func reportTelemetry(
 		}
 	}
 	ingestMethod := "import"
-	if cfg.Live {
+	if cfg.UseCopy {
 		ingestMethod = "copy"
 	}
 	molttelemetry.ReportTelemetryAsync(
