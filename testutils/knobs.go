@@ -5,6 +5,8 @@ type FetchTestingKnobs struct {
 	TriggerCorruptCSVFile bool
 
 	FailedWriteToBucket FailedWriteToBucketKnob
+
+	FailedEstablishSrcConnForExport bool
 }
 
 type FailedWriteToBucketKnob struct {
