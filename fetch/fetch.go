@@ -431,11 +431,11 @@ func fetchTable(
 		e.StartTime = time.Unix(math.MaxInt, 0)
 		e.EndTime = time.Unix(math.MinInt, 0)
 		orderedResults := make([]exportResult, len(shards))
-		wg, _ := errgroup.WithContext(ctx)
+		wg, exportCtx := errgroup.WithContext(ctx)
 		for i, s := range shards {
 			it, sh := i, s
 			wg.Go(func() error {
-				er, err := exportTable(ctx, cfg, logger, sqlSrc, blobStore, table.VerifiedTable, sh, testingKnobs)
+				er, err := exportTable(exportCtx, cfg, logger, sqlSrc, blobStore, table.VerifiedTable, sh, testingKnobs)
 				if err != nil {
 					return err
 				}

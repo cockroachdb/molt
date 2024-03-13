@@ -11,12 +11,14 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"cloud.google.com/go/storage"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/cockroachdb/cockroachdb-parser/pkg/sql/sem/tree"
 	"github.com/cockroachdb/cockroachdb-parser/pkg/util/uuid"
 	"github.com/cockroachdb/datadriven"
 	"github.com/cockroachdb/errors"
@@ -37,6 +39,27 @@ type storeDetails struct {
 	host    string
 	subpath string
 	url     *url.URL
+}
+type compType int
+
+const (
+	none compType = iota
+	longer
+	shorter
+)
+
+type exportFailureCase int
+
+const (
+	noneFailedWhenExport exportFailureCase = iota
+	failedWhenExportDataToPipe
+	failedWhenInitNewWriter
+	failedWhenWriteToCSV
+)
+
+type elapsedComparison struct {
+	elapsed time.Duration
+	comp    compType
 }
 
 var dockerInternalRegex = regexp.MustCompile(`host\.docker\.internal`)
@@ -174,6 +197,15 @@ func TestDataDriven(t *testing.T) {
 						bucketPath := ""
 						sDetails := storeDetails{}
 						numShards := 1
+						elapsedComp := elapsedComparison{}
+						var fetchStartTime time.Time
+						var fetchFinishTime time.Time
+						var failedShardIdx *int
+						var failedIterNum *int
+						var failedRowCnt *int
+						var failedWhenExportType exportFailureCase
+
+						knobs := testutils.FetchTestingKnobs{}
 
 						for _, cmd := range d.CmdArgs {
 							switch cmd.Key {
@@ -225,6 +257,44 @@ func TestDataDriven(t *testing.T) {
 								s := cmd.Vals[0]
 								numShards, err = strconv.Atoi(s)
 								require.NoError(t, err)
+							case "fetch-elapsed":
+								elapsedRequirement := cmd.Vals[0]
+								if strings.HasPrefix(elapsedRequirement, ">") {
+									elapsedComp.comp = longer
+								} else if strings.HasPrefix(elapsedRequirement, "<") {
+									elapsedComp.comp = shorter
+								} else {
+									t.Fatalf("the elapsed comparison must be > or <, but got: %q", cmd.Vals[0])
+								}
+								elapsedComp.elapsed, err = time.ParseDuration(elapsedRequirement[1:])
+								require.NoError(t, err)
+							case "failed-export-type":
+								switch cmd.Vals[0] {
+								case "export-to-pipe":
+									failedWhenExportType = failedWhenExportDataToPipe
+								case "init-new-writer":
+									failedWhenExportType = failedWhenInitNewWriter
+								case "write-to-csv":
+									failedWhenExportType = failedWhenWriteToCSV
+								default:
+									t.Fatalf("export failure type must be one of {export-to-pipe|init-new-writer|write-to-csv}")
+								}
+							case "failed-shard-idx":
+								require.Greater(t, len(cmd.Vals), 0)
+								shardIdx, err := strconv.Atoi(cmd.Vals[0])
+								require.NoError(t, err)
+								failedShardIdx = &shardIdx
+							case "failed-iter-idx":
+								require.Greater(t, len(cmd.Vals), 0)
+								iterIdx, err := strconv.Atoi(cmd.Vals[0])
+								require.NoError(t, err)
+								failedIterNum = &iterIdx
+							case "failed-row-cnt":
+								require.Greater(t, len(cmd.Vals), 0)
+								rowCnt, err := strconv.Atoi(cmd.Vals[0])
+								require.NoError(t, err)
+								failedRowCnt = &rowCnt
+
 							default:
 								t.Errorf("unknown key %s", cmd.Key)
 							}
@@ -279,12 +349,55 @@ func TestDataDriven(t *testing.T) {
 							compressionFlag = compression.GZIP
 						}
 
-						knobs := testutils.FetchTestingKnobs{}
 						if corruptCSVFile {
 							knobs.TriggerCorruptCSVFile = true
 						}
 						if failedEstablishConnForExport {
 							knobs.FailedEstablishSrcConnForExport = true
+						}
+
+						switch failedWhenExportType {
+						case failedWhenExportDataToPipe:
+							if failedShardIdx == nil {
+								t.Fatalf("failed sharded idx is not specified")
+							}
+							knobs.FailedToExportForShard = &testutils.FailedToExportForShardKnob{
+								FailedExportDataToPipeCondition: func(table tree.Name, shardIdx int) bool {
+									if filter.TableFilter != utils.DefaultFilterString && table.String() != filter.TableFilter {
+										return false
+									}
+									return shardIdx == *failedShardIdx
+								},
+							}
+						case failedWhenInitNewWriter:
+							if failedShardIdx == nil {
+								t.Fatalf("failed sharded idx is not specified")
+							}
+							if failedIterNum == nil {
+								t.Fatalf("failed iteration idx is not specified")
+							}
+							knobs.FailedToExportForShard = &testutils.FailedToExportForShardKnob{
+								FailedReadDataFromPipeInitWriterCondition: func(table tree.Name, shardIdx int, itNum int) bool {
+									if filter.TableFilter != utils.DefaultFilterString && table.String() != filter.TableFilter {
+										return false
+									}
+									return shardIdx == *failedShardIdx && itNum == *failedIterNum
+								},
+							}
+						case failedWhenWriteToCSV:
+							knobs.FailedToExportForShard = &testutils.FailedToExportForShardKnob{
+								FailedReadDataFromPipeWriteToCSVWriterCondition: func(table tree.Name, shardIdx int, rowCnt int) bool {
+									if filter.TableFilter != utils.DefaultFilterString && table.String() != filter.TableFilter {
+										return false
+									}
+									return shardIdx == *failedShardIdx && rowCnt == *failedRowCnt
+								},
+							}
+						default:
+						}
+
+						if elapsedComp.elapsed != 0 {
+							fetchStartTime = time.Now()
 						}
 
 						err = Fetch(
@@ -320,6 +433,18 @@ func TestDataDriven(t *testing.T) {
 								require.NoError(t, err)
 							}
 						}()
+
+						if elapsedComp.elapsed != 0 {
+							fetchFinishTime = time.Now()
+							actualElapsed := fetchFinishTime.Sub(fetchStartTime)
+							if elapsedComp.comp == longer {
+								require.GreaterOrEqual(t, actualElapsed, elapsedComp.elapsed)
+							} else if elapsedComp.comp == shorter {
+								require.LessOrEqual(t, actualElapsed, elapsedComp.elapsed)
+							} else {
+								t.Fatalf("elapsed duration comparison must be > or <")
+							}
+						}
 
 						if expectError && !suppressErrorMessage {
 							require.Error(t, err)
