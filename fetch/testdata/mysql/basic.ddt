@@ -58,7 +58,7 @@ INSERT INTO tbl2 VALUES (111, 'aaa'), (333, 'bbb')
 ----
 [source] 2 rows affected
 
-fetch live
+fetch useCopy
 ----
 
 query all

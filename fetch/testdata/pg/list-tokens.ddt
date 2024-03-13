@@ -27,7 +27,7 @@ INSERT INTO tbl2 VALUES (00, 'aaa'), (55, 'bb b'), (66, 'ééé'), (77, '🫡�
 ## Test that we can continue from data after file 1.
 # Force exception log.
 # Create multiple export files so we can continue from something other than part 1.
-fetch live notruncate expect-error suppress-error flush-rows=2
+fetch useCopy notruncate expect-error suppress-error flush-rows=2
 ----
 
 ## Test without limit.

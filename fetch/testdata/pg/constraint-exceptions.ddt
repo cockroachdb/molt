@@ -15,7 +15,7 @@ INSERT INTO null_text(id) VALUES (1), (2)
 ----
 [source] INSERT 0 2
 
-fetch live expect-error
+fetch useCopy expect-error
 ----
 ERROR: null value in column "t" violates not-null constraint (SQLSTATE 23502)
 
@@ -62,7 +62,7 @@ INSERT INTO dependent VALUES (1, 0, 'aaa')
 ----
 [source] INSERT 0 1
 
-fetch live expect-error
+fetch useCopy expect-error
 ----
 failed executing the TRUNCATE TABLE statement: ERROR: "dependency" is referenced by foreign key from table "dependent" (SQLSTATE XXUUU)
 
@@ -103,7 +103,7 @@ INSERT INTO unique_field(id, t) VALUES (1, '1'), (2, '1')
 ----
 [source] INSERT 0 2
 
-fetch live expect-error
+fetch useCopy expect-error
 ----
 ERROR: duplicate key value violates unique constraint "unique_field_t_key" (SQLSTATE 23505)
 
@@ -137,7 +137,7 @@ INSERT INTO check_field(id, val) VALUES (1, 1.1), (2, 0.0)
 ----
 [source] INSERT 0 2
 
-fetch live expect-error
+fetch useCopy expect-error
 ----
 ERROR: failed to satisfy CHECK constraint (val > 0:::DECIMAL) (SQLSTATE 23514)
 

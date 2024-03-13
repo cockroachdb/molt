@@ -153,12 +153,12 @@ It currently supports the following:
 - Pulling a table, uploading CSVs to S3/GCP/local machine and running COPY FROM on Cockroach from that CSV.
 - Pulling a table and running COPY FROM directly onto the CRDB table without an intermediate store.
 
-By default, data is imported using `IMPORT INTO`. You can use `--live` if you
+By default, data is imported using `IMPORT INTO`. You can use `--use-copy` if you
 need target data to be queriable during loading, which uses `COPY FROM` instead.
 
 Data can be truncated automatically if run with `--table-handling 'truncate-if-exists'`. Molt Fetch can also automatically create the new table on the target side if run with `--table-handling 'drop-on-target-and-recreate'`. The user can also manually create the new table schema on the target side, and run with `--table-handling 'none'` (which is the default setting of table handling options).
 
-A PG replication slot can be created for you if you use `pg-logical-replication-slot-name`,
+A PG replication slot can be created for you if you use `pglogical-replication-slot-name`,
 see `--help` for more related flags.
 
 For now, schemas must be identical on both sides. This is verified upfront -
@@ -180,7 +180,7 @@ molt fetch \
   --source 'postgres://postgres@localhost:5432/replicationload' \
   --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' \
   --table-filter 'good_table' \
-  --s3-bucket 'otan-test-bucket' \
+  --bucket-path 's3://otan-test-bucket' \
   --table-handling 'truncate-if-exists' \ # automatically truncate destination tables before importing
   --cleanup # cleans up any created s3 files
 ```
@@ -194,8 +194,7 @@ molt fetch \
   --source 'postgres://postgres@localhost:5432/replicationload' \
   --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' \
   --table-filter 'good_table' \
-  --gcp-bucket 'otan-test-bucket' \
-  --bucket-path 'test-migrations' \ # writes to a subpath within the bucket (i.e. gs://otan-test-bucket/test-migrations)
+  --bucket-path 'gs://otan-test-bucket/test-migrations' \ # writes to a subpath within the bucket (i.e. gs://otan-test-bucket/test-migrations)
   --cleanup # cleans up any created gcp files
 ```
 
@@ -217,7 +216,7 @@ molt fetch \
   --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' \
   --table-filter 'good_table' \
   --local-path /tmp/basic \
-  --live
+  --use-copy
 ```
 
 Storing CSVs locally and running a file server:
@@ -241,8 +240,8 @@ molt fetch \
   --table-filter 'good_table' \
   --local-path /tmp/basic \
   --local-path-listen-addr '0.0.0.0:9005' \
-  --pg-logical-replication-slot-name 'hi_im_elfo' \
-  --pg-logical-replication-slot-decoding 'pgoutput'
+  --pglogical-replication-slot-name 'hi_im_elfo' \
+  --pglogical-replication-slot-decoding 'pgoutput'
 ```
 
 ### Edge case

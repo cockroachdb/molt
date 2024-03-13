@@ -120,7 +120,7 @@ func Command() *cobra.Command {
 				cfg.DropAndRecreateNewSchema = true
 			}
 
-			isCopyMode := cfg.Live || directCRDBCopy
+			isCopyMode := cfg.UseCopy || directCRDBCopy
 			if isCopyMode {
 				if cfg.Compression == compression.GZIP {
 					return errors.New("cannot run copy mode with compression")
@@ -226,10 +226,10 @@ func Command() *cobra.Command {
 		"Enables direct copy mode, which copies data directly from source to target without using an intermediate store.",
 	)
 	cmd.PersistentFlags().BoolVar(
-		&cfg.Live,
-		"live",
+		&cfg.UseCopy,
+		"use-copy",
 		false,
-		"Whether the table must be queryable during load import.",
+		"Use `COPY FROM` instead of `IMPORT INTO` during the data movement phase. This keeps your table online during the process.",
 	)
 	cmd.PersistentFlags().IntVar(
 		&cfg.FlushSize,
@@ -245,16 +245,16 @@ func Command() *cobra.Command {
 	)
 
 	cmd.PersistentFlags().IntVar(
-		&cfg.Concurrency,
-		"concurrency",
+		&cfg.TableConcurrency,
+		"table-concurrency",
 		4,
 		"Number of tables to move at a time.",
 	)
 	cmd.PersistentFlags().IntVar(
 		&cfg.Shards,
-		"shards",
+		"export-concurrency",
 		4,
-		"Number of shards to use for data export.",
+		"Number of threads to use for data export.",
 	)
 	cmd.PersistentFlags().StringVar(
 		&bucketPath,
@@ -299,19 +299,19 @@ func Command() *cobra.Command {
 	)
 	cmd.PersistentFlags().StringVar(
 		&cfg.ExportSettings.PG.SlotName,
-		"pg-logical-replication-slot-name",
+		"pglogical-replication-slot-name",
 		"",
 		"If set, the name of a replication slot that will be created before taking a snapshot of data.",
 	)
 	cmd.PersistentFlags().StringVar(
 		&cfg.ExportSettings.PG.Plugin,
-		"pg-logical-replication-slot-plugin",
+		"pglogical-replication-slot-plugin",
 		"pgoutput",
-		"If set, the output plugin used for logical replication under pg-logical-replication-slot-name.",
+		"If set, the output plugin used for logical replication under pglogical-replication-slot-name.",
 	)
 	cmd.PersistentFlags().BoolVar(
 		&cfg.ExportSettings.PG.DropIfExists,
-		"pg-logical-replication-slot-drop-if-exists",
+		"pglogical-replication-slot-drop-if-exists",
 		false,
 		"If set, drops the replication slot if it exists.",
 	)
@@ -323,7 +323,7 @@ func Command() *cobra.Command {
 			enumflag.EnumCaseInsensitive,
 		),
 		"compression",
-		"Compression type (default/gzip/none) to use (IMPORT INTO mode only).",
+		"Compression type for IMPORT INTO mode (gzip/none). (default gzip)",
 	)
 	cmd.PersistentFlags().StringVar(
 		&cfg.FetchID,
@@ -341,7 +341,7 @@ func Command() *cobra.Command {
 		&cfg.ContinuationFileName,
 		continuationFileName,
 		"",
-		"If set, restarts the fetch process for at the given file name instead of recorded file in the exceptions table",
+		"If set, restarts the fetch process for at the given file name instead of the recorded file in the exceptions table",
 	)
 
 	const nonInteractiveStr = "non-interactive"

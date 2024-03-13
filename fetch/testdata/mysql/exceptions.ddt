@@ -25,7 +25,7 @@ id	t
 77	ルカス
 tag: SELECT 7
 
-fetch live notruncate expect-error
+fetch useCopy notruncate expect-error
 ----
 ERROR: duplicate key value violates unique constraint "tbl1_pkey" (SQLSTATE 23505)
 
