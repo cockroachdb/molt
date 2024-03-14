@@ -156,11 +156,11 @@ func Fetch(
 				if err != nil {
 					return err
 				}
-				logger.Debug().Msgf("dropping table with %q", dropTableStmt)
+				logger.Debug().Msgf("dropping table with %s", dropTableStmt)
 				if _, err := targetConn.Exec(ctx, dropTableStmt); err != nil {
 					return errors.Wrapf(err, "failed to drop table %q on the target connection", t)
 				}
-				logger.Debug().Msgf("finished dropping table with %q", dropTableStmt)
+				logger.Debug().Msgf("finished dropping table with %s", dropTableStmt)
 
 				createTableStmt, err := GetCreateTableStmt(ctx, logger, conns[0], t)
 				if err != nil {
