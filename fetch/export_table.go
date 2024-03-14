@@ -78,6 +78,7 @@ func exportTable(
 						return sqlWrite.CloseWithError(errors.Newf("forced error for exporting shard: %s", shard.String()))
 					}
 				}
+				cancellableCtx = context.WithValue(cancellableCtx, "exportmode", testingKnobs.ExpMode)
 				if err := sqlSrcConn.Export(cancellableCtx, sqlWrite, table, shard); err != nil {
 					return errors.CombineErrors(err, sqlWrite.CloseWithError(err))
 				}

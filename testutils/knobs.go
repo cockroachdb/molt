@@ -2,6 +2,13 @@ package testutils
 
 import "github.com/cockroachdb/cockroachdb-parser/pkg/sql/sem/tree"
 
+type ExportMode int
+
+const (
+	ExportWithSelect ExportMode = iota
+	ExportWithCopy
+)
+
 type FetchTestingKnobs struct {
 	// Used to simulate testing when the CSV input file is wrong.
 	TriggerCorruptCSVFile bool
@@ -12,6 +19,8 @@ type FetchTestingKnobs struct {
 
 	// To simulate failure when exporting a certain shard.
 	FailedToExportForShard *FailedToExportForShardKnob
+
+	ExpMode ExportMode
 }
 
 type FailedWriteToBucketKnob struct {

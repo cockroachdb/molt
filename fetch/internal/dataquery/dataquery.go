@@ -9,13 +9,17 @@ import (
 	"github.com/cockroachdb/molt/utils"
 )
 
-func NewPGCopyTo(table dbtable.VerifiedTable) string {
+func NewPGCopyTo(
+	table dbtable.VerifiedTable, startPKVals []tree.Datum, endPKVals []tree.Datum,
+) string {
+	selectStmt := rowiterator.NewPGBaseSelectClause(rowiterator.Table{
+		Name:              table.Name,
+		ColumnNames:       table.Columns,
+		PrimaryKeyColumns: table.PrimaryKeyColumns,
+	})
+	rowiterator.AppendSelectWithPKRanges(selectStmt, table.Columns, startPKVals, endPKVals)
 	copyFrom := &tree.CopyTo{
-		Statement: rowiterator.NewPGBaseSelectClause(rowiterator.Table{
-			Name:              table.Name,
-			ColumnNames:       table.Columns,
-			PrimaryKeyColumns: table.PrimaryKeyColumns,
-		}),
+		Statement: selectStmt,
 		Options: tree.CopyOptions{
 			CopyFormat: tree.CopyFormatCSV,
 			HasFormat:  true,

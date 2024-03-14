@@ -101,7 +101,7 @@ func TestDataDriven(t *testing.T) {
 				}
 				t.Logf("successfully connected to both source and target")
 
-				datadriven.RunTest(t, path, func(t *testing.T, d *datadriven.TestData) string {
+				datadriven.RunTest(t, path, func(t *testing.T, d *datadriven.TestData) (ddtRes string) {
 					// Extract common arguments.
 					args := d.CmdArgs[:0]
 					var expectError bool
@@ -205,6 +205,8 @@ func TestDataDriven(t *testing.T) {
 						var failedRowCnt *int
 						var failedWhenExportType exportFailureCase
 
+						var showFetchElapsed bool
+
 						knobs := testutils.FetchTestingKnobs{}
 
 						for _, cmd := range d.CmdArgs {
@@ -240,6 +242,18 @@ func TestDataDriven(t *testing.T) {
 								flushRows = flushRowsAtoi
 							case "create-files":
 								createFiles = strings.Split(cmd.Vals[0], ",")
+							case "show-fetch-elapsed":
+								showFetchElapsed = true
+							case "export-mode":
+								expMdStr := cmd.Vals[0]
+								switch strings.ToLower(expMdStr) {
+								case "select":
+									knobs.ExpMode = testutils.ExportWithSelect
+								case "copy":
+									knobs.ExpMode = testutils.ExportWithCopy
+								default:
+									t.Fatalf("unknown export mode: %s", expMdStr)
+								}
 							case "bucket-path":
 								bucketPath = cmd.Vals[0]
 								url, err := url.Parse(bucketPath)
@@ -396,7 +410,7 @@ func TestDataDriven(t *testing.T) {
 						default:
 						}
 
-						if elapsedComp.elapsed != 0 {
+						if elapsedComp.elapsed != 0 || showFetchElapsed {
 							fetchStartTime = time.Now()
 						}
 
@@ -434,15 +448,23 @@ func TestDataDriven(t *testing.T) {
 							}
 						}()
 
-						if elapsedComp.elapsed != 0 {
+						if elapsedComp.elapsed != 0 || showFetchElapsed {
 							fetchFinishTime = time.Now()
 							actualElapsed := fetchFinishTime.Sub(fetchStartTime)
-							if elapsedComp.comp == longer {
-								require.GreaterOrEqual(t, actualElapsed, elapsedComp.elapsed)
-							} else if elapsedComp.comp == shorter {
-								require.LessOrEqual(t, actualElapsed, elapsedComp.elapsed)
-							} else {
-								t.Fatalf("elapsed duration comparison must be > or <")
+							if showFetchElapsed {
+								defer func() {
+									ddtRes = strings.Join([]string{fmt.Sprintf("elapsed:%s", actualElapsed), ddtRes}, "\n")
+								}()
+							}
+
+							if elapsedComp.elapsed != 0 {
+								if elapsedComp.comp == longer {
+									require.GreaterOrEqual(t, actualElapsed, elapsedComp.elapsed)
+								} else if elapsedComp.comp == shorter {
+									require.LessOrEqual(t, actualElapsed, elapsedComp.elapsed)
+								} else {
+									t.Fatalf("elapsed duration comparison must be > or <")
+								}
 							}
 						}
 

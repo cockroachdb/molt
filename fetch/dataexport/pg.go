@@ -8,7 +8,9 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/dbconn"
 	"github.com/cockroachdb/molt/dbtable"
+	"github.com/cockroachdb/molt/fetch/internal/dataquery"
 	"github.com/cockroachdb/molt/rowiterator"
+	"github.com/cockroachdb/molt/testutils"
 	"github.com/cockroachdb/molt/verify/rowverify"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -116,26 +118,39 @@ type pgSourceConn struct {
 func (p *pgSourceConn) Export(
 	ctx context.Context, writer io.Writer, table dbtable.VerifiedTable, shard rowverify.TableShard,
 ) error {
-	return scanWithRowIterator(ctx, p.src.settings, p.conn, writer, rowiterator.ScanTable{
-		Table: rowiterator.Table{
-			Name:              table.Name,
-			ColumnNames:       table.Columns,
-			ColumnOIDs:        table.ColumnOIDs[0],
-			PrimaryKeyColumns: table.PrimaryKeyColumns,
-		},
-		StartPKVals: shard.StartPKVals,
-		EndPKVals:   shard.EndPKVals,
-	})
-	// TODO: Figure out if we can still use CopyTo with a select clause
-	// or if doing chunked selects we no longer need the benefit of CopyTo.
 
-	// if _, err := p.tx.Conn().PgConn().CopyTo(
-	// 	ctx,
-	// 	writer,
-	// 	dataquery.NewPGCopyTo(table),
-	// ); err != nil {
-	// 	return err
-	// }
+	expMode := ctx.Value("exportmode")
+	if expMode == nil {
+		return errors.New("the export mode is not found")
+	}
+
+	switch expMode {
+	case testutils.ExportWithSelect:
+		fmt.Println("select mode on!!")
+		return scanWithRowIterator(ctx, p.src.settings, p.conn, writer, rowiterator.ScanTable{
+			Table: rowiterator.Table{
+				Name:              table.Name,
+				ColumnNames:       table.Columns,
+				ColumnOIDs:        table.ColumnOIDs[0],
+				PrimaryKeyColumns: table.PrimaryKeyColumns,
+			},
+			StartPKVals: shard.StartPKVals,
+			EndPKVals:   shard.EndPKVals,
+		})
+	case testutils.ExportWithCopy:
+		fmt.Println("copy mode on!!")
+		if _, err := p.tx.Conn().PgConn().CopyTo(
+			ctx,
+			writer,
+			dataquery.NewPGCopyTo(table, shard.StartPKVals, shard.EndPKVals),
+		); err != nil {
+			return err
+		}
+		return nil
+	default:
+		return errors.Newf("unknown export mode: %d", expMode)
+	}
+
 }
 
 func (p *pgSourceConn) Close(ctx context.Context) error {
