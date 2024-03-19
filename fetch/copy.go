@@ -41,13 +41,15 @@ func Copy(
 	}()
 
 	dataLogger := moltlogger.GetDataLogger(logger)
-	ret := CopyResult{
-		StartTime: time.Now(),
-	}
+	var ret CopyResult
 
 	rowsSoFar := 0
 	conn := baseConn.(*dbconn.PGConn).Conn
-
+	// Set the session variables required for COPY
+	if err := datablobstorage.SetCopyEnvVars(ctx, conn); err != nil {
+		return ret, err
+	}
+	ret.StartTime = time.Now()
 	for i, resource := range resources {
 		key, err := resource.Key()
 		if err != nil {
