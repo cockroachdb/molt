@@ -84,6 +84,19 @@ func TestDataDrivenMySQL(t *testing.T) {
 	)
 }
 
+func TestDataDrivenCRDB(t *testing.T) {
+	datadriven.Walk(
+		t,
+		"testdata/datadriven/crdb",
+		func(t *testing.T, path string) {
+			testDataDriven(t, path, []connArg{
+				{id: "crdb", connStr: testutils.CRDBConnStr()},
+				{id: "crdb", connStr: testutils.CRDBTargetConnStr()},
+			})
+		},
+	)
+}
+
 func testDataDriven(t *testing.T, path string, connArgs []connArg) {
 	ctx := context.Background()
 

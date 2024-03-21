@@ -1,0 +1,24 @@
+# Test that a dropped column can result in a successful fetch
+
+exec all
+CREATE TABLE t_drop (i1 INT4 NOT NULL, i2 INT4 NOT NULL, t TEXT NOT NULL, CONSTRAINT pkey PRIMARY KEY (i2, i1))
+----
+[crdb] CREATE TABLE
+[crdb] CREATE TABLE
+
+exec all
+ALTER TABLE t_drop DROP COLUMN t
+----
+[crdb] ALTER TABLE
+[crdb] ALTER TABLE
+
+verify
+----
+{"level":"info","message":"starting verify on public.t_drop, shard 1/1"}
+{"level":"info","type":"summary","table_schema":"public","table_name":"t_drop","num_truth_rows":0,"num_success":0,"num_conditional_success":0,"num_missing":0,"num_mismatch":0,"num_extraneous":0,"num_live_retry":0,"num_column_mismatch":0,"message":"finished row verification on public.t_drop (shard 1/1)"}
+
+exec all
+DROP TABLE t_drop
+----
+[crdb] DROP TABLE
+[crdb] DROP TABLE
