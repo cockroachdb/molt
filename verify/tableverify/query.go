@@ -44,7 +44,7 @@ WHERE pg_database.datname = pg_catalog.current_database()`,
 attname, atttypid, attnotnull, collname
 FROM pg_attribute
 LEFT OUTER JOIN pg_collation ON (pg_collation.oid = pg_attribute.attcollation)
-WHERE attrelid = $1 AND attnum > 0
+WHERE attrelid = $1 AND attnum > 0 AND attisdropped = false
 ORDER BY attnum`,
 			table.OID,
 		)
