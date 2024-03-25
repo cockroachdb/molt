@@ -41,6 +41,12 @@ func (c *copyCRDBDirect) CreateFromReader(
 	if err != nil {
 		return nil, err
 	}
+
+	// Set the session variables required for COPY
+	if err := SetCopyEnvVars(ctx, conn); err != nil {
+		return nil, err
+	}
+
 	if testingKnobs.FailedWriteToBucket.FailedBeforeReadFromPipe {
 		return nil, errors.New(DirectCopyWriterMockErrMsg)
 	}

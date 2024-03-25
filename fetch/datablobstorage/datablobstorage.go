@@ -159,3 +159,13 @@ func GenerateDatastore(
 
 	return src, err
 }
+
+func SetCopyEnvVars(ctx context.Context, conn *pgx.Conn) error {
+	if _, err := conn.Exec(ctx, "SET copy_from_retries_enabled = true"); err != nil {
+		return err
+	}
+	if _, err := conn.Exec(ctx, "SET copy_from_atomic_enabled = false"); err != nil {
+		return err
+	}
+	return nil
+}
