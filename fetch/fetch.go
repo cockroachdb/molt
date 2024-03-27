@@ -49,6 +49,7 @@ type Config struct {
 	Truncate bool
 
 	DropAndRecreateNewSchema bool
+	CustomizedTypeMapPath    string
 
 	// NonInteractive relates to if user input should be prompted. If false,
 	// user prompting is initiating before certain actions like wiping data.
@@ -127,6 +128,9 @@ func Fetch(
 	}
 
 	if !cfg.DropAndRecreateNewSchema {
+		if cfg.CustomizedTypeMapPath != "" {
+			logger.Warn().Msgf("not in drop-on-target-and-recreate mode, ignoring customized type mapping")
+		}
 		for _, tbl := range dbTables.MissingTables {
 			logger.Warn().
 				Str("table", tbl.SafeString()).
