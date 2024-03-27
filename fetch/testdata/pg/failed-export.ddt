@@ -22,3 +22,88 @@ ALTER TABLE foo ADD COLUMN b TEXT;
 fetch shards=2 failed-conn-export expect-error
 ----
 forced error when establishing conn for export
+
+# Try a successful fetch, get the sense of elapsed duration.
+fetch shards=4 fetch-elapsed=>40s
+----
+
+query all
+SELECT a FROM foo LIMIT 5
+----
+[source]:
+a
+1
+2
+3
+4
+5
+tag: SELECT 5
+[target]:
+a
+1
+2
+3
+4
+5
+tag: SELECT 5
+
+# The fetch process should finish rather instantly (compared to the successful one with >40s) once a certain shard hits an error.
+fetch failed-export-type=export-to-pipe shards=4 failed-shard-idx=2 fetch-elapsed=<2s expect-error
+----
+forced error for exporting shard: shard [2/4] for table {{"public" "foo"} ["a"] ["a" "b"] [['\x17' '\x19'] ['\x14' '\x19']]}, pk range ["500"] -> ["999"]
+
+query all
+SELECT a FROM foo LIMIT 5
+----
+[source]:
+a
+1
+2
+3
+4
+5
+tag: SELECT 5
+[target]:
+a
+tag: SELECT 0
+
+# The fetch process should finish rather instantly (compared to the successful one with >40s) once a certain shard hits an error.
+fetch failed-export-type=init-new-writer shards=4 failed-shard-idx=2 failed-iter-idx=2 flush-rows=100 fetch-elapsed=<10s expect-error
+----
+io: read/write on closed pipe
+
+query all
+SELECT a FROM foo LIMIT 5
+----
+[source]:
+a
+1
+2
+3
+4
+5
+tag: SELECT 5
+[target]:
+a
+tag: SELECT 0
+
+# The fetch process should finish rather instantly (compared to the successful one with >40s) once a certain shard hits an error.
+fetch failed-export-type=write-to-csv shards=4 failed-shard-idx=2 failed-row-cnt=150 flush-rows=100 fetch-elapsed=<15s expect-error
+----
+forced error when writing to csv writer
+
+query all
+SELECT a FROM foo LIMIT 5
+----
+[source]:
+a
+1
+2
+3
+4
+5
+tag: SELECT 5
+[target]:
+a
+tag: SELECT 0
+

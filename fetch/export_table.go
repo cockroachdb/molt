@@ -72,6 +72,13 @@ func exportTable(
 		}
 		return errors.CombineErrors(
 			func() error {
+				// Simulate error when exporting data into sqlWrite.
+				if testingKnobs.FailedToExportForShard != nil && testingKnobs.FailedToExportForShard.FailedExportDataToPipeCondition != nil {
+					if testingKnobs.FailedToExportForShard.FailedExportDataToPipeCondition(shard.Table, shard.ShardNum) {
+						return sqlWrite.CloseWithError(errors.Newf("forced error for exporting shard: %s", shard.String()))
+					}
+				}
+				cancellableCtx = context.WithValue(cancellableCtx, "exportmode", testingKnobs.ExpMode)
 				if err := sqlSrcConn.Export(cancellableCtx, sqlWrite, table, shard); err != nil {
 					return errors.CombineErrors(err, sqlWrite.CloseWithError(err))
 				}
@@ -100,6 +107,11 @@ func exportTable(
 		resourceWG.Go(func() error {
 			itNum++
 			if err := func() error {
+				if testingKnobs.FailedToExportForShard != nil && testingKnobs.FailedToExportForShard.FailedReadDataFromPipeInitWriterCondition != nil {
+					if testingKnobs.FailedToExportForShard.FailedReadDataFromPipeInitWriterCondition(shard.Table, shard.ShardNum, itNum) {
+						return errors.Newf("forced error when init new writer when reading data from pipe")
+					}
+				}
 				resource, err := datasource.CreateFromReader(ctx, fRW, table, itNum, importFileExt, numRowsCh, testingKnobs, shard.ShardNum)
 				if err != nil {
 					return err

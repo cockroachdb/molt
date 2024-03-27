@@ -305,6 +305,36 @@ func newMySQLBaseSelectClause(table Table) *ast.SelectStmt {
 	}
 }
 
+func AppendSelectWithPKRanges(
+	stmt *tree.Select, columnNames []tree.Name, startPKVals []tree.Datum, endPKVals []tree.Datum,
+) {
+	andClause := &tree.AndExpr{
+		Left:  tree.DBoolTrue,
+		Right: tree.DBoolTrue,
+	}
+
+	if len(startPKVals) > 0 {
+		andClause.Left = makePGCompareExpr(
+			treecmp.MakeComparisonOperator(treecmp.GE),
+			columnNames,
+			startPKVals,
+		)
+	}
+
+	if len(endPKVals) > 0 {
+		andClause.Right = makePGCompareExpr(
+			treecmp.MakeComparisonOperator(treecmp.LT),
+			columnNames,
+			endPKVals,
+		)
+	}
+
+	stmt.Select.(*tree.SelectClause).Where = &tree.Where{
+		Type: tree.AstWhere,
+		Expr: andClause,
+	}
+}
+
 func (sq *scanQuery) generate(pkCursor tree.Datums) (string, []any, error) {
 	switch stmt := sq.base.(type) {
 	case *tree.Select:

@@ -27,6 +27,10 @@ type TableShard struct {
 	TotalShards int
 }
 
+func (s *TableShard) String() string {
+	return fmt.Sprintf("shard [%d/%d] for table %q, pk range %q -> %q", s.ShardNum, s.TotalShards, s.VerifiedTable, s.StartPKVals, s.EndPKVals)
+}
+
 func VerifyRowsOnShard(
 	ctx context.Context,
 	conns dbconn.OrderedConns,

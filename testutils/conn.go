@@ -22,6 +22,19 @@ const (
 	CRDBSourceDialect
 )
 
+func ConnStrForDialect(dia Dialect) string {
+	switch dia {
+	case PostgresDialect:
+		return PGConnStr()
+	case MySQLDialect:
+		return MySQLConnStr()
+	case CRDBSourceDialect:
+		return CRDBConnStr()
+	default:
+		panic(fmt.Sprintf("unknown dialect: %s", dia.String()))
+	}
+}
+
 func PGConnStr() string {
 	pgInstanceURL := "postgres://postgres:postgres@127.0.0.1:5432/defaultdb"
 	if override, ok := os.LookupEnv("POSTGRES_URL"); ok {
