@@ -36,7 +36,6 @@ id | t
 ----+---
 (0 rows)
 
-
 fetch --source 'postgres://postgres@localhost:5432/defaultdb' --target 'postgres://root@localhost:26257/defaultdb?sslmode=disable' --table-filter 'tbl1' --local-path /tmp/basic --local-path-listen-addr '0.0.0.0:9005' --non-interactive
 ----
 {"level":"info","message":"default compression to GZIP"}
