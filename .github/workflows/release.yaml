@@ -33,6 +33,10 @@ jobs:
       run: | 
           echo "Ref: ${GITHUB_REF_NAME#v}"
           echo "tag=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+    - name: Make API version constant changes
+      if: ${{ github.event_name == 'release' }}
+      run: |
+        ./scripts/replace-api-version.sh "${{steps.extract.outputs.tag}}"
     - name: Build for all OS and architecture combinations using tag # When triggered by a release.
       if: ${{ github.event_name == 'release' }}
       run: |
@@ -87,6 +91,43 @@ jobs:
       if: ${{ github.event_name == 'release' }}
       run: |
         gcloud compute url-maps invalidate-cdn-cache molt-lms-release-artifacts-prod-default --path "/molt/cli/*" --async
+
+  create-pull-request:
+    if: ${{ github.event_name == 'release' }}
+    needs: [ release-cli ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Extract the ref or tag from the GITHUB_REF
+        id: extract
+        run: |
+          echo "Ref: ${GITHUB_REF_NAME#v}"
+          echo "tag=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+      - name: Make API version constant changes
+        run: |
+          ./scripts/replace-api-version.sh "${{steps.extract.outputs.tag}}"
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'apiconstants: bump version to ${{steps.extract.outputs.tag}}'
+          committer: GitHub <noreply@github.com>
+          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+          signoff: false
+          base: main
+          branch: 'bump-to-${{steps.extract.outputs.tag}}'
+          delete-branch: true
+          title: 'apiversion: bump version to ${{steps.extract.outputs.tag}}'
+          body: |
+            Bump to ${{steps.extract.outputs.tag}}
+            [1]: https://github.com/peter-evans/create-pull-request
+          labels: |
+            release
+            automated pr
+          assignees: ryanluu12345, ZhouXing19, Jeremyyang920
+          reviewers: ryanluu12345, ZhouXing19, Jeremyyang920
+          draft: false
 
   create-docs-ticket:
     if: ${{ github.event_name == 'release' }}
