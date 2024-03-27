@@ -22,7 +22,9 @@ type columnsWithType []columnWithType
 
 // CRDBCreateTableStmt returns a create table statement string with columnsWithType
 // as the column clause.
-func (cs columnsWithType) CRDBCreateTableStmt(logger zerolog.Logger) (string, error) {
+func (cs columnsWithType) CRDBCreateTableStmt(
+	logger zerolog.Logger, customizedTypeMapPath string,
+) (string, error) {
 	tName, err := parser.ParseQualifiedTableName(cs[0].tableName)
 	if err != nil {
 		return "", err
@@ -43,7 +45,7 @@ func (cs columnsWithType) CRDBCreateTableStmt(logger zerolog.Logger) (string, er
 	// that group all the selected columns, thus result in different syntax.
 	includePkForEachCol := len(pkList) <= 1
 	for _, col := range cs {
-		colDef, err := col.CRDBColDef(includePkForEachCol, logger)
+		colDef, err := col.CRDBColDef(includePkForEachCol, logger, "")
 		if err != nil {
 			return "", err
 		}
@@ -87,7 +89,7 @@ type columnWithType struct {
 }
 
 func (t *columnWithType) CRDBColDef(
-	includePk bool, logger zerolog.Logger,
+	includePk bool, logger zerolog.Logger, cusomizedTypeMapPath string,
 ) (*tree.ColumnTableDef, error) {
 	var colType tree.ResolvableTypeReference
 	var err error
@@ -153,6 +155,7 @@ func GetColumnTypes(
 	conn dbconn.Conn,
 	table dbtable.DBTable,
 	skipUnsupportedTypeErr bool,
+	customizedTypeMapPath string,
 ) (columnsWithType, error) {
 	const (
 		pgQuery = `SELECT DISTINCT
@@ -359,9 +362,13 @@ func GetDropTableStmt(table dbtable.DBTable) (string, error) {
 }
 
 func GetCreateTableStmt(
-	ctx context.Context, logger zerolog.Logger, conn dbconn.Conn, table dbtable.DBTable,
+	ctx context.Context,
+	logger zerolog.Logger,
+	conn dbconn.Conn,
+	table dbtable.DBTable,
+	customizedTypeMapPath string,
 ) (string, error) {
-	newCols, err := GetColumnTypes(ctx, logger, conn, table, false /* skipUnsupportedTypeErr */)
+	newCols, err := GetColumnTypes(ctx, logger, conn, table, false, "")
 	if err != nil {
 		return "", errors.Wrapf(err, "failed get columns for target table: %s", table.String())
 	}
@@ -373,7 +380,7 @@ func GetCreateTableStmt(
 			res = strings.Join([]string{res, col.udtDefinition}, " ")
 		}
 	}
-	createTableStmt, err := newCols.CRDBCreateTableStmt(logger)
+	createTableStmt, err := newCols.CRDBCreateTableStmt(logger, "")
 	if err != nil {
 		return "", err
 	}

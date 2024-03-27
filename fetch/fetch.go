@@ -166,7 +166,7 @@ func Fetch(
 				}
 				logger.Debug().Msgf("finished dropping table with %q", dropTableStmt)
 
-				createTableStmt, err := GetCreateTableStmt(ctx, logger, conns[0], t)
+				createTableStmt, err := GetCreateTableStmt(ctx, logger, conns[0], t, "")
 				if err != nil {
 					return err
 				}
