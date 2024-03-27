@@ -43,7 +43,7 @@ jobs:
         VERSION=${GITHUB_REF_NAME#v}
         make build_molt_cli version="$VERSION"
     - name: Build for all OS and architecture combinations using sha # When kicked off without a release.
-      if: ${{ github.event_name != 'release' }}
+      if: ${{ github.event_name == 'release' }}
       run: make build_molt_cli version="g${{ github.sha }}"
     - name: 'auth'
       uses: 'google-github-actions/auth@v1'
@@ -115,7 +115,7 @@ jobs:
           committer: GitHub <noreply@github.com>
           author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
           signoff: false
-          base: main
+          base: version-flag
           branch: 'bump-to-${{steps.extract.outputs.tag}}'
           delete-branch: true
           title: 'apiversion: bump version to ${{steps.extract.outputs.tag}}'
@@ -132,7 +132,7 @@ jobs:
   create-docs-ticket:
     if: ${{ github.event_name == 'release' }}
     needs: [release-cli]
-    environment: ${{ github.event_name == 'release' && 'prod' || 'dev' }}
+    environment: ${{ github.event_name == 'release' && 'prod' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
