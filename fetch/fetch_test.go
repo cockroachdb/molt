@@ -128,7 +128,7 @@ func TestDataDriven(t *testing.T) {
 
 							for _, missingTable := range missingTables {
 								srcConn := conns[0]
-								stmt, err := GetCreateTableStmt(ctx, logger, srcConn, missingTable.DBTable)
+								stmt, err := GetCreateTableStmt(ctx, logger, srcConn, missingTable.DBTable, "")
 								if err != nil {
 									stmts = append(stmts, err.Error())
 									// Somehow we need to recreate the connection, otherwise pg will show "conn busy" error.

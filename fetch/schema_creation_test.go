@@ -484,7 +484,7 @@ func TestGetColumnTypes(t *testing.T) {
 			res := make(map[string]map[string]columnWithType)
 
 			for _, missingTable := range missingTables {
-				newCols, err := GetColumnTypes(ctx, logger, conns[0], missingTable.DBTable, true /* skipUnsupportedTypeErr */)
+				newCols, err := GetColumnTypes(ctx, logger, conns[0], missingTable.DBTable, true, "")
 				require.NoError(t, err)
 				res[missingTable.String()] = make(map[string]columnWithType)
 				for _, c := range newCols {

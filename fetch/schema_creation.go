@@ -22,7 +22,9 @@ type columnsWithType []columnWithType
 
 // CRDBCreateTableStmt returns a create table statement string with columnsWithType
 // as the column clause.
-func (cs columnsWithType) CRDBCreateTableStmt(logger zerolog.Logger) (string, error) {
+func (cs columnsWithType) CRDBCreateTableStmt(
+	logger zerolog.Logger, customizedTypeMapPath string,
+) (string, error) {
 	tName, err := parser.ParseQualifiedTableName(cs[0].tableName)
 	if err != nil {
 		return "", err
@@ -42,8 +44,18 @@ func (cs columnsWithType) CRDBCreateTableStmt(logger zerolog.Logger) (string, er
 	// pk. If there are more than one pks, we need to create a pk constraint
 	// that group all the selected columns, thus result in different syntax.
 	includePkForEachCol := len(pkList) <= 1
+
+	var overrideTypeMap typeconv.ColumnTypeMap
+
+	if customizedTypeMapPath != "" {
+		overrideTypeMap, err = typeconv.GetOverrideTypeMapFromFile(customizedTypeMapPath, logger)
+		if err != nil {
+			return "", errors.Wrapf(err, "failed to get the overriding type map for schema creation")
+		}
+	}
+
 	for _, col := range cs {
-		colDef, err := col.CRDBColDef(includePkForEachCol, logger)
+		colDef, err := col.CRDBColDef(includePkForEachCol, logger, overrideTypeMap[col.columnName])
 		if err != nil {
 			return "", err
 		}
@@ -87,7 +99,7 @@ type columnWithType struct {
 }
 
 func (t *columnWithType) CRDBColDef(
-	includePk bool, logger zerolog.Logger,
+	includePk bool, logger zerolog.Logger, overrideTypeMap typeconv.TypeKV,
 ) (*tree.ColumnTableDef, error) {
 	var colType tree.ResolvableTypeReference
 	var err error
@@ -102,27 +114,35 @@ func (t *columnWithType) CRDBColDef(
 			return nil, errors.Wrapf(err, "unable to parse the type name %q", t.udtName)
 		}
 	} else {
-		if t.mysqlMeta == nil {
-			// If this is from a PG source.
-			colType = crdbtypes.OidToType[t.typeOid]
+		// Prioritize the overriding rules for type mapping.
+		if overridingType, ok := overrideTypeMap[t.columnType]; ok {
+			colType = overridingType
+			logger.Info().Msgf("use customized mapping for column %s.%s: %s -> %s", t.tableName, t.columnName, t.columnType, colType.SQLString())
+			// If no overriding rule is specified for this type, look for the default mapping.
 		} else {
-			// If this is from a mysql source.
-			colType, scs = t.mysqlMeta.ToDefaultCRDBType(t.dataType, t.columnName)
-			for _, sc := range scs {
-				if sc.Blocking {
-					err = errors.Newf(
-						"failed to get crdb type from mysql type %s for column %s.%s: %s",
-						t.dataType,
-						t.tableName,
-						t.columnName,
-						sc.ShortDescription,
-					)
-					logger.Err(err)
-					return nil, err
+			if t.mysqlMeta == nil {
+				// If this is from a PG source.
+				colType = crdbtypes.OidToType[t.typeOid]
+			} else {
+				// If this is from a mysql source.
+				colType, scs = t.mysqlMeta.ToDefaultCRDBType(t.dataType, t.columnName)
+				for _, sc := range scs {
+					if sc.Blocking {
+						err = errors.Newf(
+							"failed to get crdb type from mysql type %s for column %s.%s: %s",
+							t.dataType,
+							t.tableName,
+							t.columnName,
+							sc.ShortDescription,
+						)
+						logger.Err(err)
+						return nil, err
+					}
+					logger.Warn().Msgf("mysql type %s for column %s.%s: %s", t.dataType, t.tableName, t.columnName, sc.ShortDescription)
 				}
-				logger.Warn().Msgf("mysql type %s for column %s.%s: %s", t.dataType, t.tableName, t.columnName, sc.ShortDescription)
 			}
 		}
+
 	}
 
 	res := &tree.ColumnTableDef{
@@ -153,6 +173,7 @@ func GetColumnTypes(
 	conn dbconn.Conn,
 	table dbtable.DBTable,
 	skipUnsupportedTypeErr bool,
+	customizedTypeMapPath string,
 ) (columnsWithType, error) {
 	const (
 		pgQuery = `SELECT DISTINCT
@@ -359,9 +380,13 @@ func GetDropTableStmt(table dbtable.DBTable) (string, error) {
 }
 
 func GetCreateTableStmt(
-	ctx context.Context, logger zerolog.Logger, conn dbconn.Conn, table dbtable.DBTable,
+	ctx context.Context,
+	logger zerolog.Logger,
+	conn dbconn.Conn,
+	table dbtable.DBTable,
+	customizedTypeMapPath string,
 ) (string, error) {
-	newCols, err := GetColumnTypes(ctx, logger, conn, table, false /* skipUnsupportedTypeErr */)
+	newCols, err := GetColumnTypes(ctx, logger, conn, table, false, "")
 	if err != nil {
 		return "", errors.Wrapf(err, "failed get columns for target table: %s", table.String())
 	}
@@ -373,7 +398,7 @@ func GetCreateTableStmt(
 			res = strings.Join([]string{res, col.udtDefinition}, " ")
 		}
 	}
-	createTableStmt, err := newCols.CRDBCreateTableStmt(logger)
+	createTableStmt, err := newCols.CRDBCreateTableStmt(logger, "")
 	if err != nil {
 		return "", err
 	}

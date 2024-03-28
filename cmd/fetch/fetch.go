@@ -368,6 +368,36 @@ or as an automated job. If not set, prompts user for confirmation before perform
 		),
 	)
 
+	cmd.PersistentFlags().StringVar(&cfg.CustomizedTypeMapPath, "string", "",
+		`The path to a json file that add to or override specified type mapping from the source dialect to CockroachDB for given column. 
+This is used for automatic schema recreation enabled via --table-handling=drop-on-target-and-recreate. 
+Example format of json:
+[
+  {
+    "column": "age",
+    "type-kvs": [
+      {
+        "source-type": "int",
+        "crdb-type": "INT"
+      },
+      {
+        "source-type": "float",
+        "crdb-type": "FLOAT"
+      }
+    ]
+  },
+  {
+    "column": "name",
+    "type-kvs": [
+      {
+        "source-type": "string",
+        "crdb-type": "TEXT"
+      }
+    ]
+  }
+]
+`)
+
 	if err := cmd.PersistentFlags().MarkHidden(testOnlyFlagStr); err != nil {
 		panic(err)
 	}
