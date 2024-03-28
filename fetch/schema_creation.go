@@ -143,7 +143,7 @@ func (t *columnWithType) Name() string {
 }
 
 func (t *columnWithType) String() string {
-	return fmt.Sprintf("schema:%q, table:%q, column:%q, type:%q, typeoid: %d, nullable:%t, pk:%t\n",
+	return fmt.Sprintf("schema:%s, table:%s, column:%s, type:%s, typeoid: %d, nullable:%t, pk:%t\n",
 		t.schemaName, t.tableName, t.columnName, t.dataType, t.typeOid, t.nullable, t.isPrimaryKey)
 }
 
