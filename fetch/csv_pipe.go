@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"io"
 
+	"github.com/cockroachdb/errors"
 	"github.com/cockroachdb/molt/dbtable"
 	"github.com/cockroachdb/molt/fetch/fetchmetrics"
 	"github.com/cockroachdb/molt/moltlogger"
@@ -84,6 +85,12 @@ func (p *csvPipe) Pipe(tn dbtable.Name) error {
 		}
 		if err := p.csvWriter.Write(record); err != nil {
 			return err
+		}
+
+		if p.testingKnobs.FailedToExportForShard != nil &&
+			p.testingKnobs.FailedToExportForShard.FailedReadDataFromPipeWriteToCSVWriterCondition != nil &&
+			p.testingKnobs.FailedToExportForShard.FailedReadDataFromPipeWriteToCSVWriterCondition(tn.Table, p.shardNum, p.numRows) {
+			return errors.Newf("forced error when writing to csv writer")
 		}
 
 		if p.testingKnobs.TriggerCorruptCSVFile {

@@ -212,8 +212,6 @@ func TestFailedWriteToStore(t *testing.T) {
 							dataSrc, err := genDataStore(ctx, logger, storageType.name, conns)
 							require.NoError(t, err)
 
-							require.NoError(t, err)
-
 							_, err = exportTable(
 								ctx,
 								fetchCfg,
