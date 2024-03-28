@@ -66,14 +66,21 @@ func (m columnTypeMapsJson) String() string {
 type ColumnTypeMap map[string]TypeKV
 
 // TypeKV: source type -> crdb type.
-type TypeKV map[string]*CRDBType
+type TypeKV map[string]*types.T
 
-// CRDBType is defined so that we can redefine the string representation.
-type CRDBType types.T
-
-func (t CRDBType) String() string {
-	tmp := types.T(t)
-	return fmt.Sprintf("{%s}", strings.TrimSuffix(tmp.DebugString(), " "))
+func (tkv TypeKV) String() string {
+	b := strings.Builder{}
+	cnt := 0
+	b.WriteString("[")
+	for srcType, crdbType := range tkv {
+		b.WriteString(fmt.Sprintf("%s:{%s}", srcType, strings.TrimSuffix(crdbType.DebugString(), " ")))
+		if cnt != len(tkv)-1 {
+			b.WriteString(",")
+		}
+		cnt++
+	}
+	b.WriteString("]")
+	return b.String()
 }
 
 // toColumnTypeMap is to converted the marshalled "json" struct to the map struct.
@@ -82,12 +89,11 @@ func (ms columnTypeMapsJson) toColumnTypeMap() (ColumnTypeMap, error) {
 	for _, m := range ms {
 		res[m.ColumnName] = make(TypeKV)
 		for _, kv := range m.TypeKVsJson {
-			crdbT, err := getTypeFromName(strings.ToLower(kv.CrdbType))
+			crdbTyp, err := getTypeFromName(strings.ToLower(kv.CrdbType))
 			if err != nil {
 				return nil, errors.Newf("cannot get the crdb type for %s", kv.CrdbType)
 			}
-			crdbTyp := CRDBType(*crdbT)
-			res[m.ColumnName][kv.SourceType] = &crdbTyp
+			res[m.ColumnName][kv.SourceType] = crdbTyp
 		}
 	}
 	return res, nil
@@ -97,18 +103,18 @@ func GetOverrideTypeMapFromFile(filepath string, logger zerolog.Logger) (ColumnT
 	var jsonRes = columnTypeMapsJson{}
 	bytesValus, err := os.ReadFile(filepath)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to read json file %s for type map", filepath)
+		return nil, errors.Wrapf(err, "failed to read json file %s for type mapping", filepath)
 	}
 	if err := json.Unmarshal(bytesValus, &jsonRes); err != nil {
 		return nil, err
 	}
-	logger.Debug().Msgf("received type map: %s", jsonRes.String())
+	logger.Debug().Msgf("received type mapping: %s", jsonRes.String())
 
 	res, err := jsonRes.toColumnTypeMap()
 	if err != nil {
 		return nil, err
 	}
-	logger.Debug().Msgf("converted type map: %s", res)
+	logger.Info().Msgf("converted type mapping: %s", res)
 	return res, nil
 }
 
